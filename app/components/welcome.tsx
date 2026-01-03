@@ -1,0 +1,130 @@
+import { router } from "expo-router";
+import React from "react";
+import {
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { images } from "../../assets";
+import PrimaryButton from "../shared/PrimaryButton";
+import commonStyles, { colors } from "../shared/commonStyles";
+
+export default function WelcomeScreen() {
+  const handleContinue = () => {
+    try {
+      console.log("Navigating to terms screen...");
+      router.push("/components/verify-details");
+    } catch (error) {
+      console.error("Error navigating to terms:", error);
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: "#F2F6FF" }}>
+      <StatusBar barStyle="light-content" translucent={false} animated />
+      <SafeAreaView style={[styles.container]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            {/* Welcome Image */}
+            <Image
+              source={images.welcome}
+              style={styles.welcomeImage}
+              resizeMode="contain"
+            />
+
+            {/* Welcome To Text */}
+            <Text style={styles.welcomeText}>WELCOME TO</Text>
+
+            {/* Logo */}
+            <Image
+              source={images.logoFull}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            {/* <images.curonnLogo style={styles.logo} /> */}
+
+            {/* Support Message */}
+            <Text style={styles.supportText}>
+              Our Support team will always be there to help you in delivering
+              quality care.
+            </Text>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <PrimaryButton
+              title="Let's Get Start"
+              onPress={handleContinue}
+              style={{ width: "100%" }}
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    // backgroundColor: colors.statusbar_black,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
+    justifyContent: "space-between",
+    ...commonStyles.container_layout,
+    // paddingHorizontal: getResponsiveSpacing(15),
+    // paddingBottom: getResponsiveSpacing(40),
+    paddingTop:10,
+    // minHeight: hp(100) - getResponsiveSpacing(100), // Account for safe area and padding
+    backgroundColor: "#FFFFFF",
+  },
+  header: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    // backgroundColor: '#2B2C43'
+  },
+  welcomeImage: {
+    width: "100%",
+    // height: 55,
+    marginBottom: 60,
+    // backgroundColor: '#9D9D9F'
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: "semibold",
+    color: colors.black,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  logo: {
+    width: "80%",
+    // height: hp(15),
+    // resizeMode: "contain",
+    marginBottom: 30,
+  },
+  supportText: {
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 24,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  buttonContainer: {
+    alignItems: "center",
+    // paddingBottom: getResponsiveSpacing(20),
+    width: "100%",
+    // backgroundColor: '#1A82F7'
+  },
+});
