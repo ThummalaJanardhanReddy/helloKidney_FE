@@ -52,7 +52,7 @@ export default function TermsScreen() {
           showsVerticalScrollIndicator={true}
         >
           <View style={styles.termsContainer}>
-            <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
+            <Text style={styles.sectionTitle}>1. Standard terms-and-conditions</Text>
             <Text style={styles.termsText}>
               By accessing and using the Curronn application, you accept and
               agree to be bound by the terms and provision of this agreement.

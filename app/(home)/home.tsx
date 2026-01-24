@@ -80,6 +80,8 @@ export default function Home() {
   };
 
   const closeGuide = () => {
+    setCurrentStep(0);
+    goToStep(0);
     Animated.timing(slideAnim, {
       toValue: screenHeight,
       duration: 280,
@@ -132,19 +134,23 @@ export default function Home() {
       <View style={styles.startSection}>
         <RoundButton
           size={200}
-          borderWidth={20}
+          borderWidth={22}
           content="START TEST"
           backgroundColor="#ffffff"
           textColor="red"
           borderColor="#3A4665"
-          onPress={() => navigate('/components/TimerCameraUploader')}
+          onPress={() => navigate("/components/TimerCameraUploader")}
         />
       </View>
 
       {/* ───────────────────────── Bottom BG ───────────────────────── */}
       <View style={styles.bottomBackground}>
         <Text style={styles.bottomTitle}>{`Live\nHealthy`}</Text>
-        <Text style={styles.subtitle}>Prevention is better than Cure.</Text>
+        <View style={{ alignItems: "center", display: "flex", flexDirection: 'row' }}>
+          <Text style={[styles.subtitle, {marginRight: 10}]}>Prevention</Text>
+          <Image source={images.heart} resizeMode="contain" style={styles.heartImage}/>
+          <Text style={styles.subtitle}>is better than Cure.</Text>
+        </View>
       </View>
 
       {/* ───────────────────────── Info Card ───────────────────────── */}
@@ -156,11 +162,11 @@ export default function Home() {
         />
         <View style={{ flex: 1 }}>
           <Text style={styles.infoText}>
-            Before starting the test, {"\n"} please view the
+            Before starting the test, {"\n"}view the user guide.
           </Text>
 
           <TouchableOpacity style={styles.userGuideBtn} onPress={openGuide}>
-            <Text style={styles.userGuideBtnText}>User Guide</Text>
+            <Text style={styles.userGuideBtnText}>View</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -187,7 +193,7 @@ export default function Home() {
               </View>
 
               {/* Steps Slider */}
-              <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+              <View style={{ flex: 1, }} {...panResponder.panHandlers}>
                 <Animated.View
                   style={{
                     flexDirection: "row",
@@ -271,11 +277,12 @@ const styles = StyleSheet.create({
   bottomBackground: {
     position: "absolute",
     bottom: 0,
+    left: 0,
     width: "100%",
     height: "35%",
     backgroundColor: colors.bg_home,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 18,
     alignItems: "center",
     justifyContent: "flex-end",
     paddingBottom: 30,
@@ -303,11 +310,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     gap: 20,
+    // alignItems: "center",
+    alignContent: "center",
   },
 
   infoImage: { height: 60, width: 60 },
-
   infoText: { fontSize: 16, fontWeight: "500" },
+
+  heartImage: { width: 24, height: 24, },
 
   userGuideBtn: {
     marginTop: 6,
@@ -335,7 +345,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: "hidden",
-    height: screenHeight * 0.60,
+    height: screenHeight * 0.6,
   },
 
   modalHeader: {
@@ -345,11 +355,11 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 30,
     borderBottomWidth: 1,
-    borderBottomColor: "#d80606ff",
+    borderBottomColor: "#b0b2b8",
     position: "relative",
   },
 
-  modalTitle: { fontSize: 20, fontWeight: "700", color: "#333" },
+  modalTitle: { fontSize: 20, fontWeight: "700", color: "#000" },
 
   closeIcon: { width: 26, height: 26 },
 
@@ -358,36 +368,41 @@ const styles = StyleSheet.create({
     width: screenWidth,
     alignItems: "center",
     padding: 24,
+    paddingBottom: 0,
+    // backgroundColor: '#6e96d1ff'
   },
 
   stepCounter: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
     marginBottom: 10,
-    color: "#1A82F7",
+    color: "#000",
   },
 
   stepTopText: {
     fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 20,
+    fontWeight: "400",
+    marginBottom: 10,
     textAlign: "center",
   },
 
-  stepImage: { width: 90, height: 90, marginBottom: 20 },
+  stepImage: { width: "40%", height: "40%", marginBottom: 15 },
 
   stepBottomText: {
     fontSize: 16,
     textAlign: "center",
-    marginBottom: 25,
+    marginBottom: 10,
     color: "#666",
   },
 
   stepButton: {
     backgroundColor: colors.primary,
+    // height: ,
     paddingVertical: 12,
     paddingHorizontal: 35,
+    // paddingTop:0,
     borderRadius: 40,
+    marginTop: 0,
   },
 
   stepButtonText: { color: "white", fontSize: 16, fontWeight: "700" },
@@ -396,6 +411,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     paddingBottom: 18,
+    // backgroundColor: "black"
   },
 
   dot: {

@@ -6,15 +6,17 @@ import {
   Linking,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { logout } from "../../src/services/auth";
 import { colors } from "../shared/commonStyles";
-import { logout } from "../shared/services/auth";
 
 const ProfileItems = [
   {
@@ -31,7 +33,7 @@ export default function ProfilePage() {
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [sheetType, setSheetType] = useState("");
- const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   const openBottomSheet = (type) => {
@@ -60,28 +62,23 @@ export default function ProfilePage() {
       );
       return;
     }
-    openBottomSheet(type);
+    getSheetContent(type);
+    // openBottomSheet(type);
   };
 
-  const getSheetContent = () => {
-    switch (sheetType) {
+  const getSheetContent = (type) => {
+    switch (type) {
       case "about":
-        return {
-          title: "About HelloKidney",
-          text: "HelloKidney is a digital health companion that helps patients manage their kidney health effectively.",
-        };
+        Linking.openURL("https://hellokidney.ai/index.php");
+        return;
       case "terms":
-        return {
-          title: "Terms & Conditions",
-          text: "These are the terms and conditions governing the use of the HelloKidney application...",
-        };
+        Linking.openURL("https://hellokidney.ai/terms-and-conditions.php");
+        return;
       case "privacy":
-        return {
-          title: "Privacy Policy",
-          text: "Your privacy is important to us. This policy describes how HelloKidney collects and uses your data...",
-        };
+        Linking.openURL("https://hellokidney.ai/privacy-policy.php");
+        return;
       default:
-        return { title: "", text: "" };
+        return {};
     }
   };
 
@@ -109,7 +106,7 @@ export default function ProfilePage() {
             onPress={() => handleItemPress(item.type)}
           >
             <View style={styles.itemLeft}>
-              <Ionicons name={item.icon} size={22} color="#3B82F6" />
+              <Ionicons name={item.icon} size={22} color="#888" />
               <Text style={styles.itemText}>{item.title}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#888" />
@@ -130,8 +127,12 @@ export default function ProfilePage() {
 
       {/* App Version */}
       <Text style={styles.version}>
-        Version {Constants.expoConfig?.version || "1.0.0"}
+        Version {Constants.expoConfig?.version || "1.0"}
       </Text>
+
+      <View style={{marginHorizontal: 'auto', paddingVertical: 10, }}>
+        <Text style={{fontWeight: '600', color: 'black'}}>© 4P Healthcare Pvt. Ltd.</Text>
+      </View>
 
       {/* Logout Popup */}
       <Modal transparent animationType="fade" visible={logoutVisible}>
@@ -170,10 +171,10 @@ export default function ProfilePage() {
         >
           <SafeAreaView style={{ flex: 1 }}>
             <View style={{ flex: 1, padding: 16 }}>
-              <Text style={styles.sheetTitle}>{getSheetContent().title}</Text>
+              {/* <Text style={styles.sheetTitle}>{getSheetContent().title}</Text>
               <ScrollView showsVerticalScrollIndicator={false}>
                 <Text style={styles.sheetText}>{getSheetContent().text}</Text>
-              </ScrollView>
+              </ScrollView> */}
 
               <TouchableOpacity
                 style={styles.closeSheetBtn}
@@ -193,6 +194,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F3F4F6",
+    position: 'relative'
+    // backgroundColor: "#db1557ff",
     // paddingTop: 60,
     // paddingHorizontal: 20,
   },

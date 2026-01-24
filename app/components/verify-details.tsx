@@ -1,4 +1,5 @@
 // import useKeyboardVisible from "@/src/hooks/useKeyboardVisible";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -10,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -21,8 +23,8 @@ import {
 import { images } from "../../assets";
 import PrimaryButton from "../shared/PrimaryButton";
 // import { useUser } from "../shared/context/UserContext";
+import { login } from "../../src/services/auth";
 import commonStyles, { colors } from "../shared/commonStyles";
-import { login } from "../shared/services/auth";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -49,6 +51,7 @@ export default function VerifyDetailsScreen() {
   const [isLoading, setIsLoading] = useState(false);
   // const keyboardVisible = useKeyboardVisible();
   const insets = useSafeAreaInsets();
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   // const theme = useTheme();
   // const customTheme = {
@@ -109,7 +112,7 @@ export default function VerifyDetailsScreen() {
       password.length > VALIDATION_RULES.PASSWORD.maxLength
     ) {
       setCommonError(
-        `Password must be between ${VALIDATION_RULES.PASSWORD.minLength} and ${VALIDATION_RULES.PASSWORD.maxLength} characters`
+        `Password must be between ${VALIDATION_RULES.PASSWORD.minLength} and ${VALIDATION_RULES.PASSWORD.maxLength} characters`,
       );
       return false;
     }
@@ -127,8 +130,7 @@ export default function VerifyDetailsScreen() {
     setCommonError("");
 
     try {
-      const res = await login(email.trim(), password);
-      console.log("✅ Logged in", res);
+      await login(email.trim(), password);
       router.replace("/(home)/home");
     } catch (err: any) {
       if (err?.response?.data?.detail) {
@@ -149,10 +151,11 @@ export default function VerifyDetailsScreen() {
     router.push("/components/terms");
   };
 
-  const isFormValid =
-    email.trim() &&
-    !emailError &&
-    !commonError;
+  const isFormValid = email.trim() && !emailError && !commonError;
+
+  const handleSignup = () => {
+    router.push("/components/register");
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F2F6FF" }}>
@@ -176,10 +179,10 @@ export default function VerifyDetailsScreen() {
 
             {/* FORM */}
             <View style={styles.formContainer}>
-              <Text style={styles.label}>User Email</Text>
+              <Text style={styles.label}>User Name</Text>
 
               <TextInput
-                placeholder="Email id"
+                placeholder="Enter Email Id"
                 placeholderTextColor="#9D9D9F"
                 value={email}
                 onChangeText={(text) => {
@@ -194,22 +197,40 @@ export default function VerifyDetailsScreen() {
               />
               {/* EMAIL */}
               <Text style={styles.label}>Password</Text>
-
-              <TextInput
-                placeholder="Enter password"
-                secureTextEntry
-                placeholderTextColor="#9D9D9F"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  setCommonError("");
-                }}
-                onBlur={() => validatePassword(password)}
-                style={styles.textInput}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="visible-password"
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  placeholder="Enter Password"
+                  secureTextEntry={!isPasswordVisible}
+                  placeholderTextColor="#9D9D9F"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    setCommonError("");
+                  }}
+                  onBlur={() => validatePassword(password)}
+                  style={[
+                    styles.textInput,
+                    styles.passwordInput,
+                    { color: "black" },
+                  ]}
+                  // autoCapitalize="none"
+                  // autoCorrect={false}
+                  // keyboardType="default"
+                />
+                <TouchableOpacity
+                  onPress={() => setIsPasswordVisible((prev) => !prev)}
+                  style={styles.eyeIcon}
+                  accessibilityLabel={
+                    isPasswordVisible ? "Hide password" : "Show password"
+                  }
+                >
+                  <Ionicons
+                    name={isPasswordVisible ? "eye-off" : "eye"}
+                    size={22}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
               {commonError ? (
                 <Text role="log" style={styles.commonError}>
                   {commonError}
@@ -225,27 +246,53 @@ export default function VerifyDetailsScreen() {
                   style={styles.continueButton}
                 />
               </View>
-              <Text
+              {/* <Text
                 style={{ textAlign: "center", marginTop: 20 }}
                 onPress={() => {
                   console.log("forgot password pressed!");
                 }}
               >
                 Forgot Password?
-              </Text>
+              </Text> */}
+              <TouchableOpacity
+                onPress={() => router.push("/components/forgot-password")}
+              >
+                <Text
+                  style={{
+                    color: colors.primary,
+                    marginTop: 20,
+                    textAlign: "center",
+                  }}
+                >
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+              {/* To-Do: un comment once the signup ready */}
+              <View style={styles.signupContainer}>
+                <Text style={styles.signupText}>
+                  Don&apos;t have an account?{" "}
+                  <Text style={styles.signupLinkText} onPress={handleSignup}>
+                    Sign up
+                  </Text>
+                </Text>
+              </View>
             </View>
 
             {/* ⭐ FORM FOOTER — Now Part of the Form Layout */}
             <View style={styles.bottomContainer}>
               {/* Terms */}
               <Text style={styles.termsText}>
-                By signing up, you are agreeing to our{"\n"}
-                <Text
-                  style={styles.linkText}
-                  onPress={handleTermsAndConditions}
-                >
-                  Terms and Conditions.
-                </Text>
+                By Signing up, you agree to HelloKidney{"\n"}
+                <View style={{ flexDirection: "row", gap: 5 }}>
+                  <Text
+                    style={styles.linkText}
+                    // onPress={handleTermsAndConditions}
+                  >
+                    Terms & Services
+                  </Text>
+                  <Text style={{ color: colors.textSecondary }}>and</Text>
+                  <Text style={styles.linkText}>Privacy Policy.</Text>
+                </View>
               </Text>
             </View>
           </KeyboardAwareScrollView>
@@ -298,7 +345,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: colors.black,
-    marginBottom: 8,
+    marginBottom: 3,
     marginTop: 16,
   },
   textInput: {
@@ -308,6 +355,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderRadius: 8,
     height: 50,
+    borderWidth: 1,
+    borderColor: "#d4d4d9",
   },
   textInputContent: {
     borderRadius: 50,
@@ -326,8 +375,10 @@ const styles = StyleSheet.create({
   // },
   linkText: {
     fontSize: 14,
-    color: "#1A82F7",
-    // textDecorationLine: "underline",
+    color: colors.textSecondary,
+    textDecorationLine: "underline",
+    textDecorationColor: "#da0f0fff",
+    textDecorationStyle: "dashed",
     // fontWeight: '500',
   },
   commonError: {
@@ -378,5 +429,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: "100%",
     // backgroundColor: '#da2626ff'
+  },
+  signupContainer: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  signupText: {
+    fontSize: 14,
+    color: colors.black,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  signupLinkText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#196ff8",
+  },
+
+  passwordContainer: {
+    position: "relative",
+    width: "100%",
+  },
+
+  passwordInput: {
+    paddingRight: 45, // space for eye icon
+  },
+
+  eyeIcon: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    transform: [{ translateY: -14 }],
   },
 });

@@ -1,6 +1,6 @@
+import { AntDesign } from "@expo/vector-icons";
 import React from 'react';
 import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
-import { tabsImages as images } from '../../assets';
 import { colors } from './commonStyles';
 
 interface BackButtonProps {
@@ -44,6 +44,12 @@ export default function BackButton({
         fill={finalArrowColor}
         color={finalArrowColor}
       /> */}
+      <AntDesign
+        name="arrow-left"
+        size={20}
+        color={finalArrowColor}
+        style={styles.arrowIcon}
+      />
       <Text style={[styles.buttonText, { color }, textStyle]}>
         {title}
       </Text>
@@ -63,6 +69,8 @@ const styles = StyleSheet.create({
   },
   arrowIcon: {
     marginRight: 8,
+    fontWeight: '700',
+    fontSize: 18,
   },
   buttonText: {
     fontSize: 16,

@@ -13,6 +13,7 @@ export const images = {
   logoFull: require("./images/logo_full.png"),
   cust_rep: require("./images/support_ic_home.png"),
   close: require("./images/close_ic.png"),
+  heart: require("./images/heart.png"),
 
   userGuide: {
     step1: require("./images/step_1_img.png"),
@@ -22,4 +23,3 @@ export const images = {
     step5: require("./images/step_5_img.png"),
   },
 };
-

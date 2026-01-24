@@ -3,16 +3,18 @@ import { router, useNavigation } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import axiosClient from "../shared/services/axiosClient";
+import axiosClient from "../../src/services/axiosClient";
+import { useSessionStore } from "../stores/sessionStore";
 
 export default function TimerCameraUploader() {
-  const [countdown, setCountdown] = useState(60);
+  const [countdown, setCountdown] = useState(60); //60
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showResultPopup, setShowResultPopup] = useState(false);
@@ -22,6 +24,8 @@ export default function TimerCameraUploader() {
   const navigation = useNavigation();
 
   const [permission, requestPermission] = useCameraPermissions();
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const session = useSessionStore((state) => state.session);
 
   useEffect(() => {
     if (!permission?.granted) {
@@ -37,7 +41,7 @@ export default function TimerCameraUploader() {
       setShowCamera(true);
     }
     if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 100);
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [countdown]);
@@ -45,11 +49,7 @@ export default function TimerCameraUploader() {
   // -----------------------------------------
   // UPLOAD API FUNCTION
   // -----------------------------------------
-  const uploadPhoto = async (
-    photoUri: string,
-    patientId: number,
-    testId: number
-  ) => {
+  const uploadPhoto = async (photoUri: string, email: string) => {
     setLoading(true);
     setShowResultPopup(true);
     setResultStatus(null);
@@ -69,29 +69,19 @@ export default function TimerCameraUploader() {
         type: "image/jpeg",
       } as any);
 
-      formData.append("patient_id", patientId.toString());
-      formData.append("test_id", testId.toString());
+      formData.append("email_id", session?.userEmail || "test");
 
-      // if (!isValid) {
-      //   setResultStatus("error");
-      //   return;
-      // }
-
-      const response = await axiosClient.post(
-        "http://192.168.1.8:8082/users/process-test",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await axiosClient.post("/users/process-test", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       console.log(response);
-      
+
       setResultStatus("success");
       router.replace({
         pathname: "/components/test-results",
-        params: {result: JSON.stringify(response), refresh: 'true' },
+        params: { result: JSON.stringify(response), refresh: "true" },
       });
     } catch (error) {
       console.log(error);
@@ -111,7 +101,8 @@ export default function TimerCameraUploader() {
       quality: 0.7,
     });
 
-    uploadPhoto(photo.uri, 123, 456); // replace with actual patientId and testId
+    setPreviewPhoto(photo.uri);
+    // uploadPhoto(photo.uri, user_mail); // replace with actual patientId and testId
   };
 
   if (!permission?.granted) {
@@ -137,7 +128,7 @@ export default function TimerCameraUploader() {
       )}
 
       {/* CAMERA */}
-      {showCamera && (
+      {showCamera && !previewPhoto && (
         <View style={styles.cameraScreen}>
           <View style={styles.cameraContainer}>
             <CameraView ref={cameraRef} style={styles.camera} />
@@ -201,6 +192,36 @@ export default function TimerCameraUploader() {
           </View>
         </View>
       </Modal>
+
+      {/* PREVIEW MODAL */}
+      <Modal transparent visible={!!previewPhoto} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.previewBox}>
+            <Text style={styles.previewTitle}>Preview</Text>
+
+            <Image source={{ uri: previewPhoto }} style={styles.previewImage} />
+
+            <View style={styles.previewButtons}>
+              <TouchableOpacity
+                style={[styles.previewBtn, { backgroundColor: "#666" }]}
+                onPress={() => setPreviewPhoto(null)}
+              >
+                <Text style={styles.previewText}>Retake</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.previewBtn, { backgroundColor: "#28A745" }]}
+                onPress={() => {
+                  uploadPhoto(previewPhoto!, session?.userEmail || "test");
+                  setPreviewPhoto(null);
+                }}
+              >
+                <Text style={styles.previewText}>Upload</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -214,6 +235,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
+    backgroundColor: "#f2f6ff",
   },
 
   cameraScreen: {
@@ -222,25 +244,26 @@ const styles = StyleSheet.create({
   },
 
   cameraContainer: {
-    flex: 4,
+    flex: 5,
     width: "100%",
   },
 
   camera: { flex: 1 },
 
   waitBox: {
-    borderColor: "#3563d6",
+    borderColor: "#b6b7b7",
     borderWidth: 1,
     padding: 25,
     marginTop: 22,
     borderRadius: 10,
+    backgroundColor: "#f6f7f7",
   },
 
   circleButton: {
     width: 180,
     height: 180,
     borderRadius: 180,
-    borderWidth: 15,
+    borderWidth: 22,
     borderColor: "#3A4665",
     justifyContent: "center",
     alignItems: "center",
@@ -255,6 +278,45 @@ const styles = StyleSheet.create({
   waitText: {
     fontSize: 18,
     textAlign: "center",
+  },
+  previewBox: {
+    width: "90%",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 20,
+    alignItems: "center",
+  },
+
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+
+  previewImage: {
+    width: "100%",
+    height: "80%",
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+
+  previewButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+
+  previewBtn: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+
+  previewText: {
+    color: "#fff",
+    fontWeight: "700",
   },
 
   buttonsContainer: {

@@ -2,6 +2,7 @@ import { router, Tabs, usePathname } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Image } from "react-native";
 
+import { useDoubleBackExit } from "@/src/services/useDoubleBackExit";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tabsImages } from "../../assets";
 import { colors } from "../shared/commonStyles";
@@ -10,14 +11,15 @@ export default function MainLayout() {
   const [activeTab, setActiveTab] = useState(0);
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-
+  // const { isAuthenticated, isLoading } = useAuth();
+  useDoubleBackExit();
   // Tab configuration
   const tabs = useMemo(
     () => [
       { key: "home", title: "Home", image: tabsImages.home, route: "/home" },
       {
         key: "tests",
-        title: "Tests List",
+        title: "Tests",
         image: tabsImages.tests,
         route: "/tests",
       },
@@ -28,7 +30,7 @@ export default function MainLayout() {
         route: "/profile",
       },
     ],
-    []
+    [],
   );
 
   // Update active tab based on current route
@@ -47,8 +49,14 @@ export default function MainLayout() {
       // Navigate to the tab's route
       router.push(tab.route as any);
     },
-    [tabs]
+    [tabs],
   );
+
+  // useEffect(() => {
+  //   if (isLoading) console.log("Auth loading...");
+  //   if (!isAuthenticated)
+  //     console.log("User not authenticated, redirecting to welcome...");
+  // }, [isAuthenticated, isLoading]);
 
   return (
     <Tabs
@@ -68,7 +76,7 @@ export default function MainLayout() {
         // 🔥 Align label close to icon
         tabBarLabelStyle: {
           marginTop: 2,
-          color: '#fff'
+          // color: '#fff'
         },
 
         // 🔥 Outer tab item container
@@ -87,6 +95,7 @@ export default function MainLayout() {
           paddingTop: 7,
         },
       }}
+      initialRouteName="home"
     >
       {tabs.map((tab) => (
         <Tabs.Screen

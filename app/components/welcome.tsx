@@ -1,23 +1,19 @@
 import { router } from "expo-router";
 import React from "react";
-import {
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../assets";
 import PrimaryButton from "../shared/PrimaryButton";
 import commonStyles, { colors } from "../shared/commonStyles";
 
 export default function WelcomeScreen() {
+  // const {isAuthenticated, isLoading} = useAuth();
   const handleContinue = () => {
     try {
-      console.log("Navigating to terms screen...");
-      router.push("/components/verify-details");
+      // console.log("Navigating to terms screen...");
+      router.push("/components/user-guide");
+      // router.replace("/(home)/home");
+      // router.push("/components/verify-details");
     } catch (error) {
       console.error("Error navigating to terms:", error);
     }
@@ -25,7 +21,7 @@ export default function WelcomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F2F6FF" }}>
-      <StatusBar barStyle="light-content" translucent={false} animated />
+      {/* <StatusBar barStyle="light-content" translucent={false} animated /> */}
       <SafeAreaView style={[styles.container]}>
         <ScrollView
           style={styles.scrollView}
@@ -53,8 +49,8 @@ export default function WelcomeScreen() {
 
             {/* Support Message */}
             <Text style={styles.supportText}>
-              Our Support team will always be there to help you in delivering
-              quality care.
+              HelloKidney.ai offers a convenient smartphone-powered urine ACR
+              test for early kidney disease detection.
             </Text>
           </View>
 
@@ -85,7 +81,7 @@ const styles = StyleSheet.create({
     ...commonStyles.container_layout,
     // paddingHorizontal: getResponsiveSpacing(15),
     // paddingBottom: getResponsiveSpacing(40),
-    paddingTop:10,
+    paddingTop: 10,
     // minHeight: hp(100) - getResponsiveSpacing(100), // Account for safe area and padding
     backgroundColor: "#FFFFFF",
   },
@@ -117,7 +113,7 @@ const styles = StyleSheet.create({
   supportText: {
     fontSize: 16,
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 20,
     paddingHorizontal: 20,
     marginBottom: 20,
   },

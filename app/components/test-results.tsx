@@ -23,13 +23,16 @@ const TestResults = () => {
   const { creatinineInfo, microalbuminInfo, uacrInfo } = parsedResult?.result;
 
   const handleBackPress = () => {
-    if(refresh === 'true'){
-      router.replace({pathname:'/(home)/tests', params: { refresh: refresh || undefined }});
+    if (refresh === "true") {
+      router.replace({
+        pathname: "/(home)/tests",
+        params: { refresh: refresh || undefined },
+      });
       return;
     }
     router.back();
     // router.replace({pathname:'/(home)/tests', params: { refresh: refresh || undefined }});
-  }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -38,15 +41,15 @@ const TestResults = () => {
         <TouchableOpacity onPress={handleBackPress}>
           <Ionicons name="arrow-back" size={26} color="#ffffffff" />
         </TouchableOpacity>
-        <Text style={styles.header}>Test Results</Text>
+        <Text style={styles.header}>Urine ACR Test Results</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        style={{ paddingHorizontal: 20, paddingVertical: 20 }}
+        style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#F2f6ff' }}
       >
-        <Text style={[styles.sectionTitle, { fontSize: 22 }]}>Parameters</Text>
+        <Text style={[styles.sectionTitle, { fontSize: 18 }]}>Parameters</Text>
         {/* Creatinine + Microalbumin */}
         <View style={styles.row}>
           {/* Creatinine */}
@@ -64,7 +67,7 @@ const TestResults = () => {
             <Text style={styles.metricTitle}>{creatinineInfo.pod_color}</Text>
             <View style={styles.metricBottom}>
               <Text style={styles.metricValue}>{creatinineInfo.value}</Text>
-              <Text style={styles.metricUnit}>mg/dL</Text>
+              <Text style={styles.metricUnit}>Leu/µL</Text>
             </View>
           </View>
 
@@ -83,18 +86,34 @@ const TestResults = () => {
             <Text style={styles.metricTitle}>{microalbuminInfo.pod_color}</Text>
             <View style={styles.metricBottom}>
               <Text style={styles.metricValue}>{microalbuminInfo.value}</Text>
-              <Text style={styles.metricUnit}>mg/L</Text>
+              <Text style={styles.metricUnit}>Mg/dL</Text>
             </View>
           </View>
         </View>
 
         {/* UACR */}
         <View style={styles.uacrCard}>
-          <Text style={styles.sectionTitle}>UACR VALUE</Text>
-          <Text style={styles.uacrValue}>{uacrInfo.value} mg/g</Text>
+          <Text style={[styles.sectionTitle, {color: '#fd6e05'}]}>UACR VALUE</Text>
+          <Text style={styles.uacrValue}>{uacrInfo.value} Mg/dL</Text>
           {/* <Text style={styles.uacrUnit}>mg/g</Text> */}
         </View>
+
+        {/* <View style={{ alignItems: "center" }}>
+          <TouchableOpacity style={styles.downloadBtn}>
+            <Ionicons name="download" size={20} color="#fff" />
+            <Text style={styles.downloadText}>Download Report</Text>
+          </TouchableOpacity>
+          <Text style={styles.subText}>
+            Download a detailed report of your test results.
+          </Text>
+        </View> */}
+
+        {/* <View style={{ height: 30 }} /> */}
       </ScrollView>
+
+      <TouchableOpacity style={styles.done} onPress={handleBackPress}>
+        <Text style={{color: 'white', fontSize: 18}}>Done</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -104,7 +123,8 @@ export default TestResults;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F9FC",
+    // backgroundColor: "#F2f6ff",
+    backgroundColor: 'white'
     // paddingHorizontal: 20,
     // paddingTop: 20,
   },
@@ -160,8 +180,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 10,
-    marginTop: 10,
-    color: "#222",
+    // marginTop: 10,
+    color: "black",
   },
   paramCard: {
     backgroundColor: "#fff",
@@ -241,7 +261,7 @@ const styles = StyleSheet.create({
   metricCard: {
     width: "48%",
     height: 140,
-    borderRadius: 18,
+    borderRadius: 8,
     padding: 16,
     justifyContent: "space-between",
     elevation: 2,
@@ -273,22 +293,39 @@ const styles = StyleSheet.create({
   },
 
   uacrCard: {
-    backgroundColor: "#EEF3FF",
-    borderRadius: 18,
+    backgroundColor: "white",
+    borderRadius: 8,
     padding: 24,
+    paddingVertical: 10,
     alignItems: "flex-start",
-    marginTop: 10,
+    marginTop: 15,
+    borderColor: '#d3d0d0',
+    borderWidth: 1
   },
 
   uacrValue: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#1A237E",
+    color: "black",
   },
 
   uacrUnit: {
     fontSize: 14,
     marginTop: 4,
     color: "#555",
+  },
+
+  done: {
+    backgroundColor: "red",
+    paddingVertical: 10,
+    position: "fixed",
+    bottom: 0,
+    // marginHorizontal:25,
+    alignItems: 'center',
+    borderRadius: 8,
+    marginTop: 20,
+    width: 150,
+    margin: 'auto',
+    color: 'white'
   },
 });
