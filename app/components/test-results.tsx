@@ -103,9 +103,6 @@ const TestResults = () => {
             <Ionicons name="download" size={20} color="#fff" />
             <Text style={styles.downloadText}>Download Report</Text>
           </TouchableOpacity>
-          <Text style={styles.subText}>
-            Download a detailed report of your test results.
-          </Text>
         </View> */}
 
         {/* <View style={{ height: 30 }} /> */}
@@ -236,6 +233,7 @@ const styles = StyleSheet.create({
     marginTop: 25,
     backgroundColor: "#4A90E2",
     paddingVertical: 14,
+    paddingHorizontal: 25,
     borderRadius: 14,
     flexDirection: "row",
     justifyContent: "center",
@@ -279,6 +277,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flexWrap: "wrap"
   },
 
   metricValue: {
@@ -300,7 +299,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginTop: 15,
     borderColor: '#d3d0d0',
-    borderWidth: 1
+    borderWidth: 1,
+    flexWrap: 'wrap'
   },
 
   uacrValue: {

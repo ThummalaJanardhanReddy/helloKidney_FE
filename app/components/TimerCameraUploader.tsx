@@ -12,13 +12,17 @@ import {
 } from "react-native";
 import axiosClient from "../../src/services/axiosClient";
 import { useSessionStore } from "../stores/sessionStore";
+import { colors } from "../shared/commonStyles";
 
 export default function TimerCameraUploader() {
   const [countdown, setCountdown] = useState(60); //60
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showResultPopup, setShowResultPopup] = useState(false);
-  const [resultStatus, setResultStatus] = useState(null); // "success" | "error" | null
+  const [resultStatus, setResultStatus] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
   const cameraRef = useRef(null);
   const navigation = useNavigation();
@@ -78,14 +82,22 @@ export default function TimerCameraUploader() {
       });
       console.log(response);
 
-      setResultStatus("success");
+      setResultStatus({ message: "Successfully Completed", type: "success" });
       router.replace({
         pathname: "/components/test-results",
         params: { result: JSON.stringify(response), refresh: "true" },
       });
     } catch (error) {
-      console.log(error);
-      setResultStatus("error");
+      if (error && error.response && error?.response?.data?.detail)
+        setResultStatus({
+          message: JSON.parse(error.response.data.detail).error,
+          type: "error",
+        });
+      else
+        setResultStatus({
+          message: "Invalid image. Please try again.",
+          type: "error",
+        });
     } finally {
       setLoading(false);
     }
@@ -124,6 +136,16 @@ export default function TimerCameraUploader() {
               accurate.
             </Text>
           </View>
+
+          <TouchableOpacity
+            style={[
+              styles.actionBtn,
+              { backgroundColor: colors.primary, marginVertical: 40 },
+            ]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.actionText}>Back to Home</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -165,7 +187,7 @@ export default function TimerCameraUploader() {
               </>
             )}
 
-            {!loading && resultStatus === "success" && (
+            {!loading && resultStatus?.type === "success" && (
               <View style={[styles.statusBox, { backgroundColor: "#28A745" }]}>
                 <Text style={styles.statusText}>
                   🎉 Your test was successfully completed!
@@ -173,10 +195,12 @@ export default function TimerCameraUploader() {
               </View>
             )}
 
-            {!loading && resultStatus === "error" && (
+            {!loading && resultStatus?.type === "error" && (
               <View style={[styles.statusBox, { backgroundColor: "#DC3545" }]}>
                 <Text style={styles.statusText}>
-                  ❌ Invalid image. Please try again.
+                  {resultStatus.message
+                    ? resultStatus.message
+                    : `❌ Invalid image. Please try again.`}
                 </Text>
               </View>
             )}

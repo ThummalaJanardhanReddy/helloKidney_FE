@@ -5,15 +5,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../assets";
 import PrimaryButton from "../shared/PrimaryButton";
 import commonStyles, { colors } from "../shared/commonStyles";
+import responsive from "@/src/utils/responsive";
 
 export default function WelcomeScreen() {
   // const {isAuthenticated, isLoading} = useAuth();
   const handleContinue = () => {
     try {
-      // console.log("Navigating to terms screen...");
-      router.push("/components/user-guide");
-      // router.replace("/(home)/home");
-      // router.push("/components/verify-details");
+      // 2-2-2026: hiding this route as per the requirement now. Enable based on future request
+      // router.push("/components/user-guide");
+      router.push("/components/verify-details");
     } catch (error) {
       console.error("Error navigating to terms:", error);
     }
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     width: "80%",
     // height: hp(15),
     // resizeMode: "contain",
-    marginBottom: 30,
+    marginBottom: responsive.getResponsiveSpacing(20),
   },
   supportText: {
     fontSize: 16,

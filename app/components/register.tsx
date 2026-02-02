@@ -200,7 +200,7 @@ export default function Register() {
                 placeholder="name@companyname.com"
                 placeholderTextColor="#9ca3af"
                 keyboardType="email-address"
-                value={formData.email_id}
+                value={formData.email_id.toLowerCase()}
                 onChangeText={(value) => handleChange("email_id", value)}
               />
             </View>

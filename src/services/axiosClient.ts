@@ -1,10 +1,9 @@
 import { useSessionStore } from "@/app/stores/sessionStore";
 import axios from "axios";
-import { handleLogout } from "../utils/logout";
 
 // ✅ Create Axios instance
 const axiosClient = axios.create({
-  baseURL: "https://uacrapi.hellokidney.ai", //"http://192.168.1.8:8082", //
+  baseURL: "https://uacrapi.hellokidney.ai", //"http://192.168.1.35:8082", //
   timeout: 10000, // optional timeout (ms)
   headers: {
     "Content-Type": "application/json",
@@ -53,7 +52,8 @@ axiosClient.interceptors.response.use(
       console.error("🌐 Network error — check backend IP " + error);
     } else if (error.response.status === 401) {
       console.warn("🔒 Unauthorized");
-      await handleLogout();
+      // await handleLogout()
+      throw error;
     } else {
       console.error("❌ API Error:", error.response.data);
     }

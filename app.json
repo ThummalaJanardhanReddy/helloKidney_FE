@@ -2,15 +2,22 @@
   "expo": {
     "name": "HelloKidney",
     "slug": "hellokidney",
-    "version": "2.2",
+    "version": "1.1.44",
     "orientation": "portrait",
     "icon": "./assets/images/app_icon.png",
     "scheme": "hellokidney",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "ai.hellokidney",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "3"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,8 +25,11 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "ai.hellokidney",
-      "versionCode": 66,
-      "permissions": ["CAMERA", "INTERNET"]
+      "versionCode": 56,
+      "permissions": [
+        "CAMERA",
+        "INTERNET"
+      ]
     },
     "web": {
       "output": "static",
@@ -43,8 +53,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "64eaea5e-a9dd-4504-a275-463f838d9ecb"
+        "projectId": "e9d0bc0f-ab78-44ec-bbf2-7cb1774caf6d"
       }
-    }
+    },
+    "owner": "janardhanreddy"
   }
 }

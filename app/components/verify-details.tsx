@@ -376,9 +376,9 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 14,
     color: colors.textSecondary,
-    textDecorationLine: "underline",
-    textDecorationColor: "#da0f0fff",
-    textDecorationStyle: "dashed",
+    // textDecorationLine: "underline",
+    // textDecorationColor: "#da0f0fff",
+    // textDecorationStyle: "dashed",
     // fontWeight: '500',
   },
   commonError: {
