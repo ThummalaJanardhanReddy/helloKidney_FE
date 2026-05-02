@@ -3,9 +3,8 @@ import axios from "axios";
 
 // ✅ Create Axios instance
 const axiosClient = axios.create({
-  // baseURL: "https://uacrapi.hellokidney.ai", 
-  baseURL: "http://192.168.1.35:8082", 
-  // timeout: 10000, // optional timeout (ms)
+  baseURL: "https://uacrapi.hellokidney.ai", //"http://192.168.1.35:8082", //
+  timeout: 10000, // optional timeout (ms)
   headers: {
     Accept: "application/json",
   },

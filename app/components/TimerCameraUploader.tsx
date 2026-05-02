@@ -388,6 +388,7 @@ export default function TimerCameraUploader() {
               </View>
             )}
 
+          
             {!loading && resultStatus?.type === "error" && (
               <View style={[styles.statusBox, { backgroundColor: "#DC3545" }]}>
                 <Text style={styles.statusText}>
