@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,7 +12,10 @@ import {
   View,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import BackButton from "../shared/BackButton";
 import commonStyles, { colors } from "../shared/commonStyles";
 import Toast from "../shared/Toast";
@@ -50,14 +54,6 @@ export default function Register() {
       [name]: value,
     }));
   };
-
-  // useEffect(() => {
-  //   setToast({
-  //     message: "Registration Screen - Under Development",
-  //     type: "success",
-  //   });
-  // }, []);
-
   const passwordRules = {
     length: formData.password.length >= 8 && formData.password.length <= 16,
     uppercase: /[A-Z]/.test(formData.password),
@@ -75,6 +71,20 @@ export default function Register() {
       return;
     }
 
+    // if (!/^\d{10}$/.test(mobile_no)) {
+    //   setToast({
+    //     message: "Enter a valid 10-digit mobile number",
+    //     type: "error",
+    //   });
+    //   return;
+    // }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email_id)) {
+      setToast({ message: "Enter a valid email address", type: "error" });
+      return;
+    }
+
     if (!isPasswordValid) {
       setToast({
         message: "Password does not meet requirements",
@@ -87,26 +97,30 @@ export default function Register() {
       setToast({ message: "Enter a valid age", type: "error" });
       return;
     }
-    // Call register API
-    const result = await registerUser(formData);
+
+    let result;
+    try {
+      result = await registerUser({
+        ...formData,
+        email_id: email_id.toLowerCase(),
+      });
+    } catch {
+      setToast({
+        message: "Network error. Please try again.",
+        type: "error",
+      });
+      return;
+    }
 
     if ((result as any).type === "success") {
       setToast({
         message: "Registration successful! Please log in.",
         type: "success",
       });
-      setFormData({
-        full_name: "",
-        age: "",
-        gender: "",
-        mobile_no: "",
-        email_id: "",
-        password: "",
-        role: "patient",
-      });
+
       setTimeout(() => {
         router.replace("/components/verify-details");
-      }, 3000);
+      }, 2000);
     } else {
       setToast({
         message: (result as any).message || "Registration failed. Try again.",
@@ -119,161 +133,183 @@ export default function Register() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <ScrollView style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.layout_container}>
-          <BackButton
-            title="Back"
-            onPress={() => router.back()}
-            arrowColor={colors.primary}
-          />
-          {/* TO-DO: Add age, gender, address. Order: Name, Age, Gender, Phone number, email, password */}
-          <View style={styles.formContainer}>
-            <Text style={styles.title}>Welcome to HelloKidney</Text>
+    <View style={{ flex: 1, backgroundColor: colors.statusbar }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView
+            contentContainerStyle={[
+              {
+                flexGrow: 1,
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter"
-                placeholderTextColor="#9ca3af"
-                value={formData.full_name}
-                onChangeText={(value) => handleChange("full_name", value)}
+                // paddingBottom: insets.bottom,
+              },
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={[styles.layout_container]}>
+              <BackButton
+                title="Back"
+                onPress={handleBack}
+                arrowColor={colors.primary}
               />
-            </View>
+              {/* TO-DO: Add age, gender, address. Order: Name, Age, Gender, Phone number, email, password */}
+              <View style={styles.formContainer}>
+                <Text style={styles.title}>Welcome to HelloKidney</Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Age</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter"
-                placeholderTextColor="#9ca3af"
-                keyboardType="number-pad"
-                value={formData.age}
-                onChangeText={(value) =>
-                  handleChange("age", value.replace(/[^0-9]/g, ""))
-                }
-              />
-            </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Full Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter"
+                    placeholderTextColor="#9ca3af"
+                    value={formData.full_name}
+                    onChangeText={(value) => handleChange("full_name", value)}
+                  />
+                </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gender</Text>
-              <View style={styles.genderRow}>
-                {["Male", "Female", "Other"].map((g) => (
-                  <TouchableOpacity
-                    key={g}
-                    style={[
-                      styles.genderButton,
-                      formData.gender === g && styles.genderSelected,
-                    ]}
-                    onPress={() => handleChange("gender", g)}
-                  >
-                    <Text
-                      style={[
-                        styles.genderText,
-                        formData.gender === g && { color: "#fff" },
-                      ]}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Age</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="number-pad"
+                    value={formData.age}
+                    onChangeText={(value) =>
+                      handleChange("age", value.replace(/[^0-9]/g, ""))
+                    }
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Gender</Text>
+                  <View style={styles.genderRow}>
+                    {["Male", "Female", "Other"].map((g) => (
+                      <TouchableOpacity
+                        key={g}
+                        style={[
+                          styles.genderButton,
+                          formData.gender === g && styles.genderSelected,
+                        ]}
+                        onPress={() => handleChange("gender", g)}
+                      >
+                        <Text
+                          style={[
+                            styles.genderText,
+                            formData.gender === g && { color: "#fff" },
+                          ]}
+                        >
+                          {g}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Phone Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="phone-pad"
+                    value={formData.mobile_no}
+                    onChangeText={(value) => handleChange("mobile_no", value)}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Email Id (User Name)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="name@companyname.com"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="email-address"
+                    value={formData.email_id}
+                    onChangeText={(value) =>
+                      handleChange("email_id", value.toLowerCase())
+                    }
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Password</Text>
+                  <View style={styles.passwordWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Enter"
+                      placeholderTextColor="#9ca3af"
+                      secureTextEntry={!showPassword}
+                      value={formData.password}
+                      onChangeText={(value) => handleChange("password", value)}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
                     >
-                      {g}
+                      <Ionicons
+                        name={showPassword ? "eye-off" : "eye"}
+                        size={22}
+                        color="#6b7280"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text
+                    style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}
+                  >
+                    (8–16 characters, At least 1 uppercase letter, 1 number, 1
+                    special character)
+                  </Text>
+                </View>
+
+                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+                  <Text style={styles.buttonText}>Submit</Text>
+                </TouchableOpacity>
+
+                <View style={styles.signupContainer}>
+                  <Text style={styles.signupText}>
+                    Already have an account?{" "}
+                  </Text>
+                  <TouchableOpacity onPress={handleBack}>
+                    <Text style={styles.signupLinkText} onPress={handleBack}>
+                      Log in
                     </Text>
                   </TouchableOpacity>
-                ))}
+                </View>
               </View>
-            </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter"
-                placeholderTextColor="#9ca3af"
-                keyboardType="phone-pad"
-                value={formData.mobile_no}
-                onChangeText={(value) => handleChange("mobile_no", value)}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Id (User Name)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="name@companyname.com"
-                placeholderTextColor="#9ca3af"
-                keyboardType="email-address"
-                value={formData.email_id}
-                onChangeText={(value) => handleChange("email_id", value)}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordWrapper}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter"
-                  placeholderTextColor="#9ca3af"
-                  secureTextEntry={!showPassword}
-                  value={formData.password}
-                  onChangeText={(value) => handleChange("password", value)}
+              {toast && (
+                <Toast
+                  message={toast.message}
+                  type={toast.type}
+                  onClose={() => setToast(null)}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={22}
-                    color="#6b7280"
-                  />
-                </TouchableOpacity>
-              </View>
-              <Text style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                (8–16 characters, At least 1 uppercase letter, 1 number, 1
-                special character)
-              </Text>
+              )}
             </View>
-
-            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-              <Text style={styles.buttonText}>Submit</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Already have an account? </Text>
-            <TouchableOpacity onPress={handleBack}>
-              <Text style={styles.signupLinkText} onPress={handleBack}>
-                Log in
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {toast && (
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={() => setToast(null)}
-            />
-          )}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: colors.bg_primary,
+    // flex: 1,
+    flexGrow: 1,
   },
   layout_container: {
-    ...commonStyles.container_layout,
+    // ...commonStyles.container_layout,
+    paddingTop: 10,
+    paddingHorizontal: 30,
     flex: 1,
-    // padding: 30,
     backgroundColor: colors.bg_primary,
   },
   formContainer: {
-    // padding: 32,
-    // backgroundColor: "white",
-    marginTop: 20,
-    // marginHorizontal: 16,
+    flex: 1,
+    marginTop: 10,
     borderRadius: 8,
   },
   title: {
@@ -307,10 +343,12 @@ const styles = StyleSheet.create({
   button: {
     width: "100%",
     backgroundColor: colors.primary,
-    paddingVertical: 8,
+    // paddingVertical: 8,
     borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
+    height: 45,
   },
   buttonText: {
     color: "white",
@@ -318,11 +356,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   signupContainer: {
-    marginTop: 20,
+    marginTop: 15,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
-    // backgroundColor: colors.bg_secondary,
   },
   signupText: {
     fontSize: 16,

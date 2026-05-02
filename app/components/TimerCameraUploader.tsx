@@ -1,5 +1,9 @@
-import { CameraView, useCameraPermissions } from "expo-camera";
-import { router, useNavigation } from "expo-router";
+import {
+  CameraView,
+  BarcodeScanningResult,
+  useCameraPermissions,
+} from "expo-camera";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -10,22 +14,47 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as ImageManipulator from "expo-image-manipulator";
+import { Dimensions } from "react-native";
 import axiosClient from "../../src/services/axiosClient";
-import { useSessionStore } from "../stores/sessionStore";
+import { colors } from "../shared/commonStyles";
+import BackButton from "../shared/BackButton";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useUserStore } from "../stores/userStore";
+import { IPatient } from "@/src/utils/constants";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+const STRIP_WIDTH = Math.max(160, Math.min(SCREEN_WIDTH * 0.48, 260));
+
+const STRIP_HEIGHT = STRIP_WIDTH * 2.8;
 
 export default function TimerCameraUploader() {
-  const [countdown, setCountdown] = useState(60); //60
+  const [countdown, setCountdown] = useState(2); //60
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showResultPopup, setShowResultPopup] = useState(false);
-  const [resultStatus, setResultStatus] = useState(null); // "success" | "error" | null
+  const [resultStatus, setResultStatus] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
   const cameraRef = useRef(null);
   const navigation = useNavigation();
 
   const [permission, requestPermission] = useCameraPermissions();
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
-  const session = useSessionStore((state) => state.session);
+  const user = useUserStore((state) => state.user);
+  const userType = useUserStore((s) => s.user?.userType);
+  const [previewLayout, setPreviewLayout] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [qrData, setQrData] = useState<string | null>(null);
+  const [qrLocked, setQrLocked] = useState(false);
+  const [takePhotoDisabled, setTakePhotoDisabled] = useState(true);
+  const insets = useSafeAreaInsets();
+  const patient = useUserStore((state) => state.patient);
 
   useEffect(() => {
     if (!permission?.granted) {
@@ -53,15 +82,14 @@ export default function TimerCameraUploader() {
     setLoading(true);
     setShowResultPopup(true);
     setResultStatus(null);
+    setTakePhotoDisabled(true);
 
     try {
-      // Simulated delay
-      //await new Promise((res) => setTimeout(res, 2000));
-
-      // Simulated API success/failure
-      //const isValid = Math.random() > 0.5;
-
       const formData = new FormData();
+      console.log("photo uri: ", photoUri);
+      const normalizedUri = photoUri.startsWith("file://")
+        ? photoUri
+        : `file://${photoUri}`;
 
       formData.append("image", {
         uri: photoUri,
@@ -69,25 +97,56 @@ export default function TimerCameraUploader() {
         type: "image/jpeg",
       } as any);
 
-      formData.append("email_id", session?.userEmail || "test");
+      formData.append("email_id", user?.userEmail || "test");
+      formData.append("qr_code", qrData);
+      formData.append("role", userType || "patient");
+      formData.append("hw_id", user?.userId || "unknown");
+      formData.append("patient_id", patient?.patient_id.toString() || "null");
 
+      // await new Promise((r) => setTimeout(r, 5000));
       const response = await axiosClient.post("/users/process-test", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      console.log(response);
+      console.log("process test response: ", response);
 
-      setResultStatus("success");
-      router.replace({
-        pathname: "/components/test-results",
-        params: { result: JSON.stringify(response), refresh: "true" },
+      setResultStatus({ message: "Successfully Completed", type: "success" });
+      if (userType === "patient") {
+        router.replace({
+          pathname: "/components/test-results",
+          params: { result: JSON.stringify(response), refresh: "true" },
+        });
+      } else {
+        router.replace({
+          pathname: "/(home)/patients/[id]",
+          params: {
+            id: patient?.patient_id || 0,
+            data: JSON.stringify(patient),
+          },
+        });
+      }
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail;
+
+      let message =
+        "Something went wrong. Please wait for 30 seconds and try again.";
+
+      if (Array.isArray(detail)) {
+        message = detail.map((d) => d.msg).join(", ");
+      } else if (typeof detail === "string") {
+        message = detail;
+      } else if (detail?.message) {
+        message = detail.message;
+      }
+      setResultStatus({
+        message: message,
+        type: "error",
       });
-    } catch (error) {
-      console.log(error);
-      setResultStatus("error");
     } finally {
       setLoading(false);
+      setQrLocked(false);
+      setQrData(null);
     }
   };
 
@@ -98,10 +157,12 @@ export default function TimerCameraUploader() {
     if (!cameraRef.current) return;
 
     const photo = await cameraRef.current.takePictureAsync({
-      quality: 0.7,
+      quality: 1,
+      skipProcessing: true,
     });
+    const croppedStrip = await cropToStripFrame(photo);
 
-    setPreviewPhoto(photo.uri);
+    setPreviewPhoto(croppedStrip.uri);
     // uploadPhoto(photo.uri, user_mail); // replace with actual patientId and testId
   };
 
@@ -109,20 +170,91 @@ export default function TimerCameraUploader() {
     return <Text>Waiting for camera permission...</Text>;
   }
 
+  const cropToStripFrame = async (photo: any) => {
+    if (!previewLayout) return photo;
+
+    const previewWidth = previewLayout.width;
+    const previewHeight = previewLayout.height;
+
+    // scale from preview → captured image
+    const scaleX = photo.width / previewWidth;
+    const scaleY = photo.height / previewHeight;
+
+    // frame position inside preview
+    const frameX = (previewWidth - STRIP_WIDTH) / 2;
+    const frameY = (previewHeight - STRIP_HEIGHT) / 2;
+
+    return ImageManipulator.manipulateAsync(
+      photo.uri,
+      [
+        {
+          crop: {
+            originX: Math.round(frameX * scaleX),
+            originY: Math.round(frameY * scaleY),
+            width: Math.round(STRIP_WIDTH * scaleX),
+            height: Math.round(STRIP_HEIGHT * scaleY),
+          },
+        },
+      ],
+      {
+        compress: 0.95,
+        format: ImageManipulator.SaveFormat.JPEG,
+      },
+    );
+  };
+
+  const onBarcodeScanned = ({ data, type }: any) => {
+    if (qrLocked) return;
+
+    if (type === "qr") {
+      console.log("QR VALUE:", data);
+      setQrLocked(true); // lock scanning
+      setQrData(data);
+      setTakePhotoDisabled(false);
+    }
+  };
+
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.statusbar,
+        paddingTop: insets.top,
+      }}
+    >
       {/* TIMER */}
       {!showCamera && (
-        <View style={styles.timerContainer}>
-          <TouchableOpacity style={styles.circleButton}>
-            <Text style={styles.timerText}>{countdown}</Text>
-          </TouchableOpacity>
+        <View style={{ flex: 1, backgroundColor: colors.bg_primary }}>
+          <BackButton
+            title="Back"
+            onPress={() => navigation.goBack()}
+            arrowColor={colors.primary}
+            style={{
+              paddingTop: 30,
+              paddingHorizontal: 20,
+            }}
+          />
+          <View style={styles.timerContainer}>
+            <TouchableOpacity style={styles.circleButton}>
+              <Text style={styles.timerText}>{countdown}</Text>
+            </TouchableOpacity>
 
-          <View style={styles.waitBox}>
-            <Text style={styles.waitText}>
-              Please wait for 60 seconds to ensure your test results are
-              accurate.
-            </Text>
+            <View style={styles.waitBox}>
+              <Text style={styles.waitText}>
+                Please wait for 60 seconds to ensure your test results are
+                accurate.
+              </Text>
+            </View>
+
+            {/* <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                { backgroundColor: colors.primary, marginVertical: 40 },
+              ]}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.actionText}>Back to Home</Text>
+            </TouchableOpacity> */}
           </View>
         </View>
       )}
@@ -130,8 +262,84 @@ export default function TimerCameraUploader() {
       {/* CAMERA */}
       {showCamera && !previewPhoto && (
         <View style={styles.cameraScreen}>
-          <View style={styles.cameraContainer}>
-            <CameraView ref={cameraRef} style={styles.camera} />
+          <View
+            style={styles.cameraContainer}
+            onLayout={(e) => setPreviewLayout(e.nativeEvent.layout)}
+          >
+            <CameraView
+              ref={cameraRef}
+              style={styles.camera}
+              barcodeScannerSettings={{
+                barcodeTypes: ["qr"],
+              }}
+              onBarcodeScanned={onBarcodeScanned}
+            />
+
+            {previewLayout && (
+              <View style={StyleSheet.absoluteFill}>
+                {/* TOP MASK */}
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    backgroundColor: "rgba(0,0,0,0.55)",
+                  }}
+                />
+
+                {/* BOTTOM MASK */}
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    backgroundColor: "rgba(0,0,0,0.55)",
+                  }}
+                />
+
+                {/* SIDE MASKS */}
+                <View
+                  style={{
+                    position: "absolute",
+                    top: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    bottom: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    left: 0,
+                    width: (previewLayout.width - STRIP_WIDTH) / 2,
+                    backgroundColor: "rgba(0,0,0,0.55)",
+                  }}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    top: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    bottom: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    right: 0,
+                    width: (previewLayout.width - STRIP_WIDTH) / 2,
+                    backgroundColor: "rgba(0,0,0,0.55)",
+                  }}
+                />
+
+                {/* FRAME + TEXT */}
+                <View
+                  style={{
+                    position: "absolute",
+                    top: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    left: (previewLayout.width - STRIP_WIDTH) / 2,
+                    width: STRIP_WIDTH,
+                    alignItems: "center",
+                  }}
+                >
+                  <View style={styles.stripFrame} />
+                  <Text style={styles.frameText}>
+                    Align full strip inside the frame
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
 
           <View style={styles.buttonsContainer}>
@@ -143,7 +351,14 @@ export default function TimerCameraUploader() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "red" }]}
+              style={[
+                styles.actionBtn,
+                {
+                  backgroundColor: takePhotoDisabled ? "gray" : "red",
+                  opacity: takePhotoDisabled ? 0.3 : 1,
+                },
+              ]}
+              disabled={takePhotoDisabled}
               onPress={handleTakePhoto}
             >
               <Text style={styles.actionText}>Take Photo</Text>
@@ -153,7 +368,7 @@ export default function TimerCameraUploader() {
       )}
 
       {/* RESULT POPUP */}
-      <Modal transparent visible={showResultPopup} animationType="fade">
+      <Modal visible={showResultPopup} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             {loading && (
@@ -165,7 +380,7 @@ export default function TimerCameraUploader() {
               </>
             )}
 
-            {!loading && resultStatus === "success" && (
+            {!loading && resultStatus?.type === "success" && (
               <View style={[styles.statusBox, { backgroundColor: "#28A745" }]}>
                 <Text style={styles.statusText}>
                   🎉 Your test was successfully completed!
@@ -173,10 +388,12 @@ export default function TimerCameraUploader() {
               </View>
             )}
 
-            {!loading && resultStatus === "error" && (
+            {!loading && resultStatus?.type === "error" && (
               <View style={[styles.statusBox, { backgroundColor: "#DC3545" }]}>
                 <Text style={styles.statusText}>
-                  ❌ Invalid image. Please try again.
+                  {resultStatus?.message
+                    ? resultStatus.message
+                    : `❌ Something went wrong. Please wait for 30 seconds and try again.`}
                 </Text>
               </View>
             )}
@@ -212,7 +429,7 @@ export default function TimerCameraUploader() {
               <TouchableOpacity
                 style={[styles.previewBtn, { backgroundColor: "#28A745" }]}
                 onPress={() => {
-                  uploadPhoto(previewPhoto!, session?.userEmail || "test");
+                  uploadPhoto(previewPhoto!, user?.userEmail || "test");
                   setPreviewPhoto(null);
                 }}
               >
@@ -326,6 +543,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-evenly",
     alignItems: "center",
     backgroundColor: "#ffffff20",
+    paddingBottom: 30,
   },
 
   actionBtn: {
@@ -387,5 +605,65 @@ const styles = StyleSheet.create({
   closeBtnText: {
     color: "#fff",
     fontWeight: "700",
+  },
+  /* ================= OVERLAY ================= */
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  /* Dark blur masks */
+  topMask: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+
+  bottomMask: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+
+  middleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  sideMask: {
+    width: "50%",
+    height: STRIP_HEIGHT,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+
+  /* ================= STRIP FRAME ================= */
+  stripWrapper: {
+    width: STRIP_WIDTH,
+    alignItems: "center",
+  },
+  stripFrame: {
+    width: STRIP_WIDTH,
+    height: STRIP_HEIGHT,
+    borderWidth: 2,
+    borderColor: "#00E5FF",
+    borderRadius: 12,
+    // backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  frameText: {
+    // position: "absolute",
+    // bottom: -28,
+    marginTop: 8,
+    color: "#00E5FF",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

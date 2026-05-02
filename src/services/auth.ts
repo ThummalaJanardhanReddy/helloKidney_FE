@@ -1,8 +1,8 @@
-import { useSessionStore } from "@/app/stores/sessionStore";
 import { router } from "expo-router";
 import { jwtDecode } from "jwt-decode";
 import axiosClient from "./axiosClient";
 import { clearAccessToken } from "./tokenStorage";
+import { useUserStore } from "@/app/stores/userStore";
 
 type JwtPayload = {
   sub: string;
@@ -10,6 +10,7 @@ type JwtPayload = {
   iat: number;
   email?: string;
   roles?: string[];
+  username?: string;
 };
 
 export const decodeToken = (token: string): JwtPayload => {
@@ -18,16 +19,39 @@ export const decodeToken = (token: string): JwtPayload => {
 
 export const login = async (email: string, password: string) => {
   try {
-    const response = await axiosClient.post("/users/login", {
+    const response = await axiosClient.post("/auth/login", {
       email,
       password,
     });
     const { access_token } = response;
     const user = decodeToken(access_token);
-    useSessionStore.getState().setSession({
+    useUserStore.getState().setUser({
       userId: user.sub,
       userEmail: user.email || "",
       token: access_token,
+      userName: user.username
+    
+    });
+    // await setAccessToken(access_token);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const hw_login = async (email: string, password: string) => {
+  try {
+    const response = await axiosClient.post("/auth/hw-login", {
+      email,
+      password,
+    });
+    const { access_token } = response;
+    const user = decodeToken(access_token);
+    useUserStore.getState().updateUser({
+      userId: user.sub,
+      userEmail: user.email || "",
+      token: access_token,
+      userName: user.username
     });
     // await setAccessToken(access_token);
     return response;
@@ -39,7 +63,7 @@ export const login = async (email: string, password: string) => {
 export const logout = async () => {
   try {
     // await axiosClient.post('/auth/logout');
-    useSessionStore.getState().clearSession();
+    useUserStore.getState().clearUser();
     await clearAccessToken();
     router.replace("/components/welcome");
   } catch (error) {

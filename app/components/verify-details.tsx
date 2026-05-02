@@ -23,8 +23,10 @@ import {
 import { images } from "../../assets";
 import PrimaryButton from "../shared/PrimaryButton";
 // import { useUser } from "../shared/context/UserContext";
-import { login } from "../../src/services/auth";
+import { hw_login, login } from "../../src/services/auth";
 import commonStyles, { colors } from "../shared/commonStyles";
+import { useUserStore } from "../stores/userStore";
+import BackButton from "../shared/BackButton";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -49,17 +51,12 @@ export default function VerifyDetailsScreen() {
   const [emailError, setEmailError] = useState("");
   const [commonError, setCommonError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  // const keyboardVisible = useKeyboardVisible();
   const insets = useSafeAreaInsets();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-  // const theme = useTheme();
-  // const customTheme = {
-  //   ...theme,
-  //   roundness: 8,
-  // };
-
   const bottomAnim = useRef(new Animated.Value(0)).current;
+  const userType = useUserStore((s) => s.user?.userType);
+  console.log("UserType in VerifyDetailsScreen:", userType);
 
   useEffect(() => {
     const showEvent =
@@ -130,7 +127,13 @@ export default function VerifyDetailsScreen() {
     setCommonError("");
 
     try {
-      await login(email.trim(), password);
+      if (userType === "patient") {
+        const response = await login(email.trim(), password);
+      } else if (userType === "healthworker") {
+        // For non-patient users, you might want to implement a different login flow or validation
+        // For now, we'll just set the user in the store without an API call
+        await hw_login(email.trim(), password);
+      }
       router.replace("/(home)/home");
     } catch (err: any) {
       if (err?.response?.data?.detail) {
@@ -171,19 +174,28 @@ export default function VerifyDetailsScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            <BackButton
+              title="Back"
+              onPress={handleBack}
+              arrowColor={colors.black}
+              color={colors.black}
+            />
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Login to</Text>
-              <Image source={images.logoFull} />
+              <Image
+                source={images.logoFull1}
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
-
             {/* FORM */}
             <View style={styles.formContainer}>
               <Text style={styles.label}>User Name</Text>
 
               <TextInput
-                placeholder="Enter Email Id"
-                placeholderTextColor="#9D9D9F"
+                placeholder="Enter your email"
+                placeholderTextColor="#8b94a9"
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
@@ -199,9 +211,9 @@ export default function VerifyDetailsScreen() {
               <Text style={styles.label}>Password</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
-                  placeholder="Enter Password"
+                  placeholder="Enter your password"
                   secureTextEntry={!isPasswordVisible}
-                  placeholderTextColor="#9D9D9F"
+                  placeholderTextColor="#8b94a9"
                   value={password}
                   onChangeText={(text) => {
                     setPassword(text);
@@ -259,7 +271,7 @@ export default function VerifyDetailsScreen() {
               >
                 <Text
                   style={{
-                    color: colors.primary,
+                    color: colors.black,
                     marginTop: 20,
                     textAlign: "center",
                   }}
@@ -268,14 +280,16 @@ export default function VerifyDetailsScreen() {
                 </Text>
               </TouchableOpacity>
               {/* To-Do: un comment once the signup ready */}
-              <View style={styles.signupContainer}>
-                <Text style={styles.signupText}>
-                  Don&apos;t have an account?{" "}
-                  <Text style={styles.signupLinkText} onPress={handleSignup}>
-                    Sign up
+              {userType === "patient" && (
+                <View style={styles.signupContainer}>
+                  <Text style={styles.signupText}>
+                    Don&apos;t have an account?{" "}
+                    <Text style={styles.signupLinkText} onPress={handleSignup}>
+                      Sign up
+                    </Text>
                   </Text>
-                </Text>
-              </View>
+                </View>
+              )}
             </View>
 
             {/* ⭐ FORM FOOTER — Now Part of the Form Layout */}
@@ -308,7 +322,7 @@ const styles = StyleSheet.create({
     flex: 1,
     // minHeight: 100,
     // paddingBottom: getResponsivePadding(40),
-    backgroundColor: "#F2F6FF", // '#ffffff',
+    backgroundColor: "#F2F6FF",
   },
   scrollContainer: {
     flex: 1,
@@ -320,11 +334,15 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "flex-start",
     marginTop: 70,
-    marginBottom: 30,
+    marginBottom: 10,
   },
   image: {
     marginBottom: 20,
     resizeMode: "contain",
+  },
+  logo: {
+    width: "80%",
+    height: 60,
   },
   title: {
     fontSize: 22,
@@ -343,7 +361,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "400",
     color: colors.black,
     marginBottom: 3,
     marginTop: 16,
@@ -352,11 +370,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingHorizontal: 16,
     // paddingVertical: 1,
-    marginBottom: 8,
+    marginBottom: 0,
     borderRadius: 8,
     height: 50,
     borderWidth: 1,
-    borderColor: "#d4d4d9",
+    borderColor: "#c3c4c6",
   },
   textInputContent: {
     borderRadius: 50,
@@ -375,10 +393,10 @@ const styles = StyleSheet.create({
   // },
   linkText: {
     fontSize: 14,
-    color: colors.textSecondary,
-    textDecorationLine: "underline",
-    textDecorationColor: "#da0f0fff",
-    textDecorationStyle: "dashed",
+    color: "#8b94a9",
+    // textDecorationLine: "underline",
+    // textDecorationColor: "#da0f0fff",
+    // textDecorationStyle: "dashed",
     // fontWeight: '500',
   },
   commonError: {
@@ -405,7 +423,7 @@ const styles = StyleSheet.create({
 
   termsText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: "#8b94a9", // colors.textSecondary,
     lineHeight: 20,
     textAlign: "center",
     marginBottom: 16,
@@ -414,7 +432,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: "row",
     // justifyContent: "space-between",
-    paddingTop: 10,
+    paddingTop: 20,
     width: "100%",
     // gap: 16,
     // backgroundColor: '#2B2C43'

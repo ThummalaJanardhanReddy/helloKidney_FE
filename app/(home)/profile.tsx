@@ -5,6 +5,7 @@ import {
   Animated,
   Linking,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -36,46 +37,30 @@ export default function ProfilePage() {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  const openBottomSheet = (type) => {
-    setSheetType(type);
-    setSheetVisible(true);
-
-    Animated.timing(slideAnim, {
-      toValue: 1,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const closeBottomSheet = () => {
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => setSheetVisible(false));
-  };
-
   const handleItemPress = (type) => {
     if (type === "rate") {
-      Linking.openURL(
-        "https://play.google.com/store/apps/details?id=your.app.id"
-      );
+      const androidUrl =
+        "https://play.google.com/store/apps/details?id=ai.hellokidney";
+
+      const iosUrl = "https://apps.apple.com/in/app/hellokidney/id1619042064"; // 👈 App Store ID
+
+      const url = Platform.OS === "ios" ? iosUrl : androidUrl;
+      Linking.openURL(url);
       return;
     }
     getSheetContent(type);
-    // openBottomSheet(type);
   };
 
   const getSheetContent = (type) => {
     switch (type) {
       case "about":
-        Linking.openURL("https://hellokidney.ai/index.php");
+        Linking.openURL("https://hellokidney.ai");
         return;
       case "terms":
-        Linking.openURL("https://hellokidney.ai/terms-and-conditions.php");
+        Linking.openURL("https://hellokidney.ai/terms-and-conditions.html");
         return;
       case "privacy":
-        Linking.openURL("https://hellokidney.ai/privacy-policy.php");
+        Linking.openURL("https://hellokidney.ai/privacy-policy.html");
         return;
       default:
         return {};
@@ -94,98 +79,83 @@ export default function ProfilePage() {
   });
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <Text style={styles.header}>Profile</Text>
+    <View
+      style={{
+        flex: 1,
+        paddingTop: insets.top,
+        backgroundColor: colors.statusbar,
+      }}
+    >
+      <View style={[styles.container]}>
+        {/* Header */}
+        <Text style={styles.header}>Profile</Text>
 
-      <View style={styles.card}>
-        {ProfileItems.map((item, index) => (
+        <View style={styles.card}>
+          {ProfileItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.item}
+              onPress={() => handleItemPress(item.type)}
+            >
+              <View style={styles.itemLeft}>
+                <Ionicons name={item.icon} size={22} color="#888" />
+                <Text style={styles.itemText}>{item.title}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#888" />
+            </TouchableOpacity>
+          ))}
+
+          {/* Logout Item */}
           <TouchableOpacity
-            key={index}
-            style={styles.item}
-            onPress={() => handleItemPress(item.type)}
+            style={[styles.item, { borderBottomWidth: 0 }]}
+            onPress={() => setLogoutVisible(true)}
           >
             <View style={styles.itemLeft}>
-              <Ionicons name={item.icon} size={22} color="#888" />
-              <Text style={styles.itemText}>{item.title}</Text>
+              <Ionicons name="log-out-outline" size={22} color="red" />
+              <Text style={[styles.itemText, { color: "red" }]}>Logout</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#888" />
           </TouchableOpacity>
-        ))}
-
-        {/* Logout Item */}
-        <TouchableOpacity
-          style={[styles.item, { borderBottomWidth: 0 }]}
-          onPress={() => setLogoutVisible(true)}
-        >
-          <View style={styles.itemLeft}>
-            <Ionicons name="log-out-outline" size={22} color="red" />
-            <Text style={[styles.itemText, { color: "red" }]}>Logout</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* App Version */}
-      <Text style={styles.version}>
-        Version {Constants.expoConfig?.version || "1.0"}
-      </Text>
-
-      <View style={{marginHorizontal: 'auto', paddingVertical: 10, }}>
-        <Text style={{fontWeight: '600', color: 'black'}}>© 4P Healthcare Pvt. Ltd.</Text>
-      </View>
-
-      {/* Logout Popup */}
-      <Modal transparent animationType="fade" visible={logoutVisible}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Logout</Text>
-            <Text style={styles.modalMsg}>
-              Are you sure you want to logout?
-            </Text>
-
-            <View style={styles.modalActions}>
-              <Pressable
-                style={[styles.modalBtn, styles.cancelBtn]}
-                onPress={() => setLogoutVisible(false)}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.modalBtn, styles.logoutBtn]}
-                onPress={handleLogout}
-              >
-                <Text style={styles.logoutText}>Logout</Text>
-              </Pressable>
-            </View>
-          </View>
         </View>
-      </Modal>
 
-      {/* Bottom Modal Sheet */}
-      <Modal transparent visible={sheetVisible} animationType="none">
-        <Pressable style={styles.sheetOverlay} onPress={closeBottomSheet} />
+        {/* App Version */}
+        <Text style={styles.version}>
+          Version {Constants.expoConfig?.version || "1.0"}
+        </Text>
 
-        <Animated.View
-          style={[styles.bottomSheet, { transform: [{ translateY }] }]}
-        >
-          <SafeAreaView style={{ flex: 1 }}>
-            <View style={{ flex: 1, padding: 16 }}>
-              {/* <Text style={styles.sheetTitle}>{getSheetContent().title}</Text>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.sheetText}>{getSheetContent().text}</Text>
-              </ScrollView> */}
+        <View style={{ marginHorizontal: "auto", paddingVertical: 10 }}>
+          <Text style={{ fontWeight: "600", color: "black" }}>
+            © 4P Healthcare Pvt. Ltd.
+          </Text>
+        </View>
 
-              <TouchableOpacity
-                style={styles.closeSheetBtn}
-                onPress={closeBottomSheet}
-              >
-                <Text style={styles.closeSheetText}>Close</Text>
-              </TouchableOpacity>
+        {/* Logout Popup */}
+        <Modal transparent animationType="fade" visible={logoutVisible}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Logout</Text>
+              <Text style={styles.modalMsg}>
+                Are you sure you want to logout?
+              </Text>
+
+              <View style={styles.modalActions}>
+                <Pressable
+                  style={[styles.modalBtn, styles.cancelBtn]}
+                  onPress={() => setLogoutVisible(false)}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.modalBtn, styles.logoutBtn]}
+                  onPress={handleLogout}
+                >
+                  <Text style={styles.logoutText}>Logout</Text>
+                </Pressable>
+              </View>
             </View>
-          </SafeAreaView>
-        </Animated.View>
-      </Modal>
+          </View>
+        </Modal>
+      </View>
     </View>
   );
 }
@@ -194,7 +164,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F3F4F6",
-    position: 'relative'
+    position: "relative",
     // backgroundColor: "#db1557ff",
     // paddingTop: 60,
     // paddingHorizontal: 20,

@@ -1,10 +1,9 @@
-import { decodeToken } from "@/src/services/auth";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,12 +17,14 @@ import * as Animatable from "react-native-animatable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import axiosClient from "../../src/services/axiosClient";
 import { colors } from "../shared/commonStyles";
-import { useSessionStore } from "../stores/sessionStore";
+import { useUserStore } from "../stores/userStore";
+import { IPatient } from "@/src/utils/constants";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-type testResponse = {
+// Types
+type TestResponse = {
   id: number;
   patient_id: number;
   test_id: number;
@@ -34,202 +35,310 @@ type testResponse = {
   created_timestamp: string;
 };
 
+type HealthworkerTestResponse = {
+  id: number;
+  patient_id: number;
+  patient_uniqueid: string;
+  test_id: number;
+  isactive: boolean;
+  output_metrics: string;
+  created_on: string;
+  hw_id: number;
+  full_name: string;
+};
+
+type FetchTestsParams = {
+  pageNumber?: number;
+  refresh?: boolean;
+};
+
+// Constants
+const SKELETON_CARD_COUNT = 6;
+const END_REACHED_THRESHOLD = 0.3;
+const LOADING_INDICATOR_COLOR = "#4A90E2";
+
 export default function TestList() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ refresh?: string }>();
 
-  const [tests, setTests] = useState<testResponse[]>([]);
+  // Session
+  const user = useUserStore((state) => state.user);
+  const userId = user?.userId;
+
+  // State
+  const [tests, setTests] = useState<
+    TestResponse[] | HealthworkerTestResponse[]
+  >([]);
+  const [healthworkerTests, setHealthworkerTests] = useState<
+    HealthworkerTestResponse[]
+  >([]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isMoreLoading, setIsMoreLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ refresh?: string }>();
-  const didInitialLoadRef = useRef(false);
-  const session = useSessionStore((state) => state.session);
 
-  useEffect(() => {
-    const token =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6WyIxODMzNyIsImNrZHNjcmVlbmluZ2hlYWx0aHdvcmtlckBnbWFpbC5jb20iXSwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbW9iaWxlcGhvbmUiOiI5NTAyODQ4MjQ4IiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvZW1haWxhZGRyZXNzIjoiY2tkc2NyZWVuaW5naGVhbHRod29ya2VyQGdtYWlsLmNvbSIsImV4cCI6MTc3MjUxODIwNSwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6NDQzNDkvIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6NDQzNDkvIn0.hsRL-yTEyyobALMJdMIAuSrE1m2WWCZTMsGXmn-ubss";
-    const token1 =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2xvY2FsaG9zdDo0NDM0OS8iLCJhdWQiOiJodHRwczovL2xvY2FsaG9zdDo0NDM0OS8iLCJleHAiOjE3NzQyNzEyMTYsImlhdCI6MTc2OTA4NzIxNiwic3ViIjoiMiIsInVzZXJuYW1lIjoiamFuYXJkaGFuIHRodW1tYWxhIiwibW9iaWxlIjoiODk3ODI5ODI4OSIsImVtYWlsIjoiamFuYUB0ZXN0LmNvbSJ9.YaDv9jBaFvpSlENSa8YGlhla_BoIwntAAymTI799ets";
-    const appBearer = decodeToken(token1);
-    const bearer = decodeToken(token);
-    console.log("decoded fixed token:", bearer);
-    console.log("decoded app token:", appBearer);
+  // Refs
+  const didInitialLoadRef = useRef(false);
+
+  // Utility Functions
+  const formatDate = useCallback((date: string): string => {
+    try {
+      const fixed = date.includes(".")
+        ? date.replace(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}).*$/, "$1")
+        : date;
+
+      const normalized = fixed.endsWith("Z") ? fixed : `${fixed}Z`;
+      return dayjs(normalized).format("DD MMM YYYY: hh:mm A");
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "Invalid Date";
+    }
   }, []);
 
-  const fetchTests = async (pageNumber = 1, refresh = false) => {
-    try {
-      if (refresh) setRefreshing(true);
-      if (pageNumber === 1 && !refresh) setLoading(true);
-      if (!session?.userId) return;
+  const navigateToTestResults = useCallback(
+    async (item: TestResponse | HealthworkerTestResponse) => {
+      const patientId = "patient_id" in item ? item.patient_id : null;
+      if (!patientId) {
+        console.warn("Cannot navigate: patient_id is missing");
+        return;
+      }
+      const patientData = await fetchPatientById(patientId);
+      console.log("Fetched patient data for navigation:", patientData);
 
-      const data = await axiosClient.get<testResponse[]>("/users/tests", {
-        params: { patient_Id: session.userId },
+      router.push({
+        pathname: "/components/test-results",
+        params: {
+          data: JSON.stringify(item),
+          patientData: JSON.stringify(patientData?.patient) || null,
+        },
       });
+    },
+    [router],
+  );
 
-      setTests(refresh ? data : [...tests, ...data]);
-      setHasMore(false);
-    } catch (err) {
-      console.error("Failed to fetch tests", err);
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-      setIsMoreLoading(false);
+  // API Functions
+  const fetchTests = useCallback(
+    async ({ pageNumber = 1, refresh = false }: FetchTestsParams = {}) => {
+      if (!userId) {
+        console.warn("Cannot fetch tests: No userId available");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Set appropriate loading state
+        if (refresh) {
+          setRefreshing(true);
+        } else if (pageNumber === 1) {
+          setLoading(true);
+        } else {
+          setIsMoreLoading(true);
+        }
+        let data = null;
+        if (user?.userType === "healthworker") {
+          data = await axiosClient.get<HealthworkerTestResponse[]>(
+            "/healthworker/tests",
+            {
+              params: { hw_id: userId },
+            },
+          );
+          setHealthworkerTests(data);
+        } else {
+          data = await axiosClient.get<TestResponse[]>("/users/tests", {
+            params: { patient_id: userId },
+          });
+        }
+
+        // Update tests list
+        setTests((prev) =>
+          refresh || pageNumber === 1 ? data : [...prev, ...data],
+        );
+        setHasMore(data?.length > 0);
+      } catch (error) {
+        console.error("Failed to fetch tests:", error);
+        setHasMore(false);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+        setIsMoreLoading(false);
+      }
+    },
+    [userId],
+  );
+
+  const fetchPatientById = useCallback(async (patientId: number) => {
+    try {
+      const response = await axiosClient.get<IPatient>(
+        `/healthworker/get-patient/${patientId}`,
+      );
+      return response;
+    } catch (error) {
+      console.error("Failed to fetch patient details:", error);
+      return null;
     }
-  };
+  }, []);
 
+  // Event Handlers
+  const handleRefresh = useCallback(() => {
+    setHasMore(true);
+    fetchTests({ pageNumber: 1, refresh: true });
+  }, [fetchTests]);
+
+  const handleLoadMore = useCallback(() => {
+    if (!isMoreLoading && hasMore) {
+      setIsMoreLoading(true);
+      // Note: Actual pagination would require tracking page number
+      // and calling fetchTests({ pageNumber: currentPage + 1 })
+    }
+  }, [isMoreLoading, hasMore]);
+
+  const clearRefreshParam = useCallback(() => {
+    setTimeout(() => {
+      router.setParams({ refresh: undefined });
+    }, 0);
+  }, [router]);
+
+  // Effects
   useFocusEffect(
     useCallback(() => {
+      // Initial load on first mount
       if (!didInitialLoadRef.current) {
-        fetchTests(1);
+        fetchTests({ pageNumber: 1 });
         didInitialLoadRef.current = true;
         return;
       }
+
+      // Refresh when navigating back with refresh param
       if (params.refresh === "true") {
-        fetchTests(1, true);
-
-        // 🔥 clear the flag so it doesn't refetch again
-        setTimeout(() => {
-          router.setParams({ refresh: undefined });
-        }, 0);
+        fetchTests({ pageNumber: 1, refresh: true });
+        clearRefreshParam();
       }
-    }, [params.refresh]),
+    }, [params.refresh, fetchTests, clearRefreshParam]),
   );
 
-  // useEffect(() => {
-  //   fetchTests(1);
-  // }, []);
-
-  const onRefresh = useCallback(() => {
-    setHasMore(true);
-    fetchTests(1, true);
-  }, []);
-
-  const loadMore = () => {
-    if (!isMoreLoading && hasMore) {
-      setIsMoreLoading(true);
-    }
-  };
-
-  const SkeletonCard = () => (
-    <Animatable.View
-      animation="pulse"
-      easing="ease-out"
-      iterationCount="infinite"
-      style={styles.skeletonCard}
-    >
-      <View style={styles.skeletonIcon} />
-      <View style={{ flex: 1 }}>
-        <View style={styles.skeletonLine} />
-        <View style={[styles.skeletonLine, { width: "50%", marginTop: 8 }]} />
-      </View>
-    </Animatable.View>
+  // Render Components
+  const SkeletonCard = useCallback(
+    () => (
+      <Animatable.View
+        animation="pulse"
+        easing="ease-out"
+        iterationCount="infinite"
+        style={styles.skeletonCard}
+      >
+        <View style={styles.skeletonIcon} />
+        <View style={{ flex: 1 }}>
+          <View style={styles.skeletonLine} />
+          <View style={[styles.skeletonLine, { width: "50%", marginTop: 8 }]} />
+        </View>
+      </Animatable.View>
+    ),
+    [],
   );
 
-  const formatDate = (date: string, tz = dayjs.tz.guess()) => {
-    const fixed = date.includes(".")
-      ? date.replace(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}).*$/, "$1")
-      : date;
+  const renderTestItem = useCallback(
+    ({ item }: { item: HealthworkerTestResponse | TestResponse }) => (
+      <TouchableOpacity
+        style={styles.item}
+        onPress={() => navigateToTestResults(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.iconBox}>
+          <Ionicons name="document-text-outline" size={26} />
+        </View>
 
-    const _d = fixed.endsWith("Z") ? fixed : fixed + "Z";
-    const parsedDate = dayjs(_d).format("DD MMM YYYY: hh:mm A");
+        <View style={{ flex: 1 }}>
+          <Text style={styles.patientname}>
+            {item.full_name} |{" "}
+            {String(item.patient_uniqueid || item.patient_id).padStart(4, "0")}
+          </Text>
+          {/* <Text style={styles.testId}>PID: {String(item.patient_uniqueid || item.patient_id).padStart(4, "0")}</Text> */}
+          <Text style={styles.dateTime}>Test ID: {item.test_id} |  {formatDate(item.created_timestamp || item.created_on)}</Text>
+          {/* <Text style={styles.dateTime}>
+            {formatDate(item.created_timestamp || item.created_on)}
+          </Text> */}
+        </View>
 
-    return parsedDate;
-  };
-
-  // const formatDate = (date: string) => {
-  //   const d = new Date(date);
-
-  //   const datePart = d.toLocaleDateString("en-GB", {
-  //     day: "2-digit",
-  //     month: "short",
-  //     year: "numeric",
-  //   });
-
-  //   const timePart = d.toLocaleTimeString("en-US", {
-  //     hour: "2-digit",
-  //     minute: "2-digit",
-  //     hour12: true,
-  //   });
-
-  //   return `${datePart}: ${timePart}`;
-  // };
-
-  const renderItem = ({ item }: { item: testResponse }) => (
-    <TouchableOpacity
-      style={styles.item}
-      onPress={() =>
-        router.push({
-          pathname: "/components/test-results",
-          params: { result: JSON.stringify({ result: item.output_metrics }) },
-        })
-      }
-    >
-      <View style={styles.iconBox}>
-        <Ionicons name="document-text-outline" size={26} />
-      </View>
-
-      <View style={{ flex: 1 }}>
-        <Text style={styles.testId}>Test ID: {item.test_id}</Text>
-        <Text style={styles.dateTime}>
-          {formatDate(item.created_timestamp)}
-        </Text>
-      </View>
-
-      <Ionicons name="chevron-forward" size={20} color="#999" />
-    </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={20} color="#999" />
+      </TouchableOpacity>
+    ),
+    [formatDate, navigateToTestResults],
   );
 
+  const renderEmptyState = useCallback(
+    () => (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No Tests Found</Text>
+      </View>
+    ),
+    [],
+  );
+
+  const renderListFooter = useCallback(
+    () =>
+      isMoreLoading ? (
+        <ActivityIndicator size="small" color={LOADING_INDICATOR_COLOR} />
+      ) : null,
+    [isMoreLoading],
+  );
+
+  const renderItemSeparator = useCallback(
+    () => <View style={{ height: 0 }} />,
+    [],
+  );
+
+  const keyExtractor = useCallback(
+    (item: TestResponse | HealthworkerTestResponse, index: number) =>
+      `${item.id}-${index}`,
+    [],
+  );
+
+  // Loading State
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Test List</Text>
+        </View>
+        <View style={styles.skeletonContainer}>
+          {Array.from({ length: 2 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  // Main Render
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* HEADER */}
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerText}>Test List</Text>
       </View>
 
-      {loading ? (
-        <View style={{ padding: 16 }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </View>
-      ) : tests.length > 0 ? (
-        <FlatList
-          data={tests}
-          keyExtractor={(item, index) => `${item.id}-${index}`} // ✅ Fix duplicate keys
-          renderItem={renderItem}
-          contentContainerStyle={{
-            paddingVertical: 0,
-            paddingBottom: 0, // ✅ Remove bottom space
-          }}
-          ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.3}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListFooterComponent={
-            isMoreLoading ? (
-              <ActivityIndicator size="small" color="#4A90E2" />
-            ) : null
-          }
-          ListFooterComponentStyle={{
-            paddingBottom: 0, // ✅ Remove footer space
-          }}
-        />
-      ) : (
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ fontSize: 24 }}>No Tests Found.</Text>
-        </View>
-      )}
+      {/* Content */}
+      <FlatList
+        data={tests}
+        keyExtractor={keyExtractor}
+        renderItem={renderTestItem}
+        alwaysBounceVertical={true}
+        contentContainerStyle={
+          tests.length === 0
+            ? styles.emptyListContent // Full height for empty state
+            : styles.listContent
+        }
+        ItemSeparatorComponent={renderItemSeparator}
+        // onEndReached={handleLoadMore}
+        // onEndReachedThreshold={END_REACHED_THRESHOLD}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+        // ListFooterComponent={renderListFooter}
+        // ListFooterComponentStyle={styles.listFooter}
+        ListEmptyComponent={renderEmptyState} // Show empty state when no data
+      />
     </View>
   );
 }
@@ -245,14 +354,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   headerText: {
-    fontSize: 22,
+    fontSize: 18,
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "600",
   },
 
   item: {
     backgroundColor: "#fff",
-    padding: 16,
+    padding: 12,
     // borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -265,8 +374,8 @@ const styles = StyleSheet.create({
   },
 
   iconBox: {
-    width: 46,
-    height: 46,
+    width: 32,
+    height: 32,
     borderRadius: 10,
     backgroundColor: "#ECF4FF",
     justifyContent: "center",
@@ -274,18 +383,26 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
 
+  patientname: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.black,
+  },
+
   testId: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "600",
     color: "#333",
   },
 
   dateTime: {
-    fontSize: 14,
+    fontSize: 10,
     color: "#666",
     marginTop: 2,
   },
-
+  skeletonContainer: {
+    padding: 16,
+  },
   skeletonCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -309,5 +426,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#E2E8F0",
     borderRadius: 6,
     width: "70%",
+  },
+  listContent: {
+    paddingVertical: 0,
+    paddingBottom: 0,
+  },
+  listFooter: {
+    paddingBottom: 0,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 24,
+    color: colors.white,
+  },
+
+  emptyListContent: {
+    flexGrow: 1, // Makes the content take full height so empty state centers
+    paddingVertical: 0,
+    paddingBottom: 0,
   },
 });

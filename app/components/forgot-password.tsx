@@ -6,6 +6,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,7 +17,10 @@ import {
 } from "react-native";
 
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import BackButton from "../shared/BackButton";
 import { colors } from "../shared/commonStyles";
 import Toast from "../shared/Toast";
@@ -116,135 +120,152 @@ export default function ForgotPassword() {
   };
 
   return (
-    <TouchableWithoutFeedback
-      onPress={() => {
-        Keyboard.dismiss();
-        validateEmailDebounced(email);
-      }}
-    >
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView style={{ flex: 1 }}>
-          <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-            <BackButton
-              title="Back"
-              onPress={() => router.back()}
-              arrowColor={colors.primary}
-            />
-            <Text style={styles.title}>Reset Password</Text>
-
-            {/* 📧 Email */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                placeholder="Enter Registered Email"
-                placeholderTextColor={colors.black}
-                value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  setIsEmailValid(null);
-                  validateEmailDebounced(t);
-                }}
-                // onBlur={validateEmail}
-                style={styles.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              {emailLoading ? (
-                <ActivityIndicator size="small" />
-              ) : (
-                isEmailValid !== null && (
-                  <Ionicons
-                    name={isEmailValid ? "checkmark-circle" : "close-circle"}
-                    size={22}
-                    color={isEmailValid ? "green" : "red"}
-                  />
-                )
-              )}
-            </View>
-
-            {/* 🔑 New Password */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                placeholder="New Password"
-                placeholderTextColor={colors.black}
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-                style={styles.input}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={22}
-                  color="#555"
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* 🔁 Confirm Password */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                placeholder="Confirm Password"
-                placeholderTextColor={colors.black}
-                secureTextEntry={!showConfirmPassword}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                style={styles.input}
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? "eye-off" : "eye"}
-                  size={22}
-                  color="#555"
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* ✅ Password Rules */}
-            <View style={styles.rulesContainer}>
-              <Rule text="8–16 characters" valid={passwordRules.length} />
-              <Rule
-                text="At least 1 uppercase letter"
-                valid={passwordRules.uppercase}
-              />
-              <Rule text="At least 1 number" valid={passwordRules.number} />
-              <Rule
-                text="At least 1 special character"
-                valid={passwordRules.special}
-              />
-              <Rule text="Passwords match" valid={isConfirmValid} />
-            </View>
-
-            {/* 🚀 Submit */}
-            <TouchableOpacity
-              style={[
-                styles.button,
-                !(isEmailValid && isPasswordValid && isConfirmValid) && {
-                  opacity: 0.5,
-                },
-              ]}
-              disabled={!(isEmailValid && isPasswordValid && isConfirmValid)}
-              onPress={onSubmit}
+    <View style={{ flex: 1, backgroundColor: colors.statusbar }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <TouchableWithoutFeedback
+            onPress={() => {
+              Keyboard.dismiss();
+              validateEmailDebounced(email);
+            }}
+            accessible={false}
+          >
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
             >
-              {submitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Continue</Text>
-              )}
-            </TouchableOpacity>
+              <View style={styles.container}>
+                <BackButton
+                  title="Back"
+                  onPress={() => router.back()}
+                  arrowColor={colors.primary}
+                />
 
-            {toast && (
-              <Toast
-                message={toast.message}
-                type={toast.type}
-                onClose={() => setToast(null)}
-              />
-            )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+                <Text style={styles.title}>Reset Password</Text>
+
+                {/* 📧 Email */}
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    placeholder="Enter Registered Email"
+                    placeholderTextColor={colors.black}
+                    value={email}
+                    onChangeText={(t) => {
+                      setEmail(t.toLowerCase());
+                      setIsEmailValid(null);
+                      validateEmailDebounced(t);
+                    }}
+                    style={styles.input}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                  {emailLoading ? (
+                    <ActivityIndicator size="small" />
+                  ) : (
+                    isEmailValid !== null && (
+                      <Ionicons
+                        name={
+                          isEmailValid ? "checkmark-circle" : "close-circle"
+                        }
+                        size={22}
+                        color={isEmailValid ? "green" : "red"}
+                      />
+                    )
+                  )}
+                </View>
+
+                {/* 🔑 New Password */}
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    placeholder="New Password"
+                    placeholderTextColor={colors.black}
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    style={styles.input}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off" : "eye"}
+                      size={22}
+                      color="#555"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* 🔁 Confirm Password */}
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    placeholder="Confirm Password"
+                    placeholderTextColor={colors.black}
+                    secureTextEntry={!showConfirmPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    style={styles.input}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? "eye-off" : "eye"}
+                      size={22}
+                      color="#555"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* ✅ Password Rules */}
+                <View style={styles.rulesContainer}>
+                  <Rule text="8–16 characters" valid={passwordRules.length} />
+                  <Rule
+                    text="At least 1 uppercase letter"
+                    valid={passwordRules.uppercase}
+                  />
+                  <Rule text="At least 1 number" valid={passwordRules.number} />
+                  <Rule
+                    text="At least 1 special character"
+                    valid={passwordRules.special}
+                  />
+                  <Rule text="Passwords match" valid={isConfirmValid} />
+                </View>
+
+                {/* 🚀 Submit */}
+                <TouchableOpacity
+                  style={[
+                    styles.button,
+                    !(isEmailValid && isPasswordValid && isConfirmValid) && {
+                      opacity: 0.5,
+                    },
+                  ]}
+                  disabled={
+                    !(isEmailValid && isPasswordValid && isConfirmValid)
+                  }
+                  onPress={onSubmit}
+                >
+                  {submitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>Continue</Text>
+                  )}
+                </TouchableOpacity>
+
+                {toast && (
+                  <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                  />
+                )}
+              </View>
+            </ScrollView>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -264,8 +285,10 @@ function Rule({ text, valid }: { text: string; valid: boolean }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 20,
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    paddingTop: 20,
     backgroundColor: "#F2F6FF",
   },
   title: {

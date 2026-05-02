@@ -35,7 +35,7 @@ export default function BackButton({
       ]}
       onPress={onPress}
       disabled={disabled}
-      activeOpacity={0.7}
+      activeOpacity={0.9}
     >
       {/* <images.icons.arrow_left
         width={15}

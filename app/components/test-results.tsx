@@ -1,28 +1,95 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
+  ActionSheetIOS,
+  Alert,
+  Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
 import { colors } from "../shared/commonStyles";
+import ReportDetails from "@/src/reports/ReportDetailsScreen";
+import { useUserStore } from "../stores/userStore";
+import { formatDate, generatePDF } from "@/src/utils/helper";
 
+// Helper to convert RGB string to color
 const rgbStringToColor = (rgb: string) =>
-  rgb.replace("RGB", "rgb").replace(/\s/g, "");
+  rgb?.replace("RGB", "rgb").replace(/\s/g, "") || "#CCCCCC";
+
+// Format date and time
+const formatDateTime = (timestamp: string | number) => {
+  if (!timestamp) return "N/A";
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleString("en-US", {
+      month: "numeric",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return "N/A";
+  }
+};
 
 const TestResults = () => {
   const router = useRouter();
-  const { result, refresh } = useLocalSearchParams<any>();
+  const { result, refresh, data, patientData } = useLocalSearchParams<any>();
+  const viewShotRef = useRef<View>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const user = useUserStore((s) => s.user);
 
-  const parsedResult = JSON.parse(result);
+  // Parse result safely
+  let parsedResult;
+  try {
+    parsedResult = JSON.parse(result || data || "{}");
+  } catch (error) {
+    console.error("Error parsing result:", error);
+    parsedResult = {};
+  }
 
-  const { creatinineInfo, microalbuminInfo, uacrInfo } = parsedResult?.result;
+  const { creatinineInfo, microalbuminInfo, uacrInfo, testInfo, patientInfo } =
+    parsedResult?.result || {};
 
-  const handleBackPress = () => {
+  const patientdetails = JSON.parse(patientData || "{}");
+
+  const formattedReports = [parsedResult]?.map((item) => {
+    const metrics = JSON.parse(item.output_metrics);
+
+    return {
+      id: item.id || patientdetails?.patient_id || "N/A",
+      patientId: item.patient_uniqueid || patientdetails?.patient_uniqueid || "N/A",
+      patientName: patientdetails?.full_name,
+      age: patientdetails?.age,
+      gender: patientdetails?.gender,
+      testId: item.test_id,
+      date: formatDate(item.created_timestamp || item.created_on || patientdetails?.created_on),
+      testedBy: user?.userName || "N/A",
+
+      albumin: metrics.microalbuminInfo?.value,
+      creatinine: metrics.creatinineInfo?.value,
+      uacr: metrics.uacrInfo?.value,
+      stage: metrics.uacrInfo?.stage,
+      reference: metrics.uacrInfo?.reference_range,
+      confidence: metrics.uacrInfo?.confidence_pct,
+
+      image: item.output_image_path,
+    };
+  });
+  console.log("Formatted reports:", formattedReports);
+  const handleBackPress = useCallback(() => {
     if (refresh === "true") {
       router.replace({
         pathname: "/(home)/tests",
@@ -31,301 +98,463 @@ const TestResults = () => {
       return;
     }
     router.back();
-    // router.replace({pathname:'/(home)/tests', params: { refresh: refresh || undefined }});
+  }, [refresh, router]);
+
+  const shareAsImage = async () => {
+    try {
+      setIsSharing(true);
+
+      if (!viewShotRef.current) {
+        throw new Error("Unable to capture report");
+      }
+
+      // Capture the view as image
+      const uri = await captureRef(viewShotRef, {
+        format: "png",
+        quality: 1,
+        result: "tmpfile",
+      });
+
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+
+      if (!isAvailable) {
+        // Fallback to native share if expo-sharing not available
+        await Share.share({
+          url: uri,
+          title: "UACR Test Report",
+        });
+        return;
+      }
+
+      // Share using expo-sharing
+      await Sharing.shareAsync(uri, {
+        mimeType: "image/png",
+        dialogTitle: "Share Test Report",
+      });
+    } catch (error) {
+      console.error("Error sharing image:", error);
+      Alert.alert("Error", "Failed to share report. Please try again.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const shareAsText = async () => {
+    try {
+      setIsSharing(true);
+
+      const reportText = `
+HelloKidney - UACR Test Report
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PATIENT DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Name: ${patientInfo?.name || "N/A"}
+Age: ${patientInfo?.age || "N/A"} years
+Gender: ${patientInfo?.gender || "N/A"}
+Patient ID: ${patientInfo?.patientId || "N/A"}
+Test ID: ${testInfo?.testId || "N/A"}
+Report Date: ${testInfo?.reportDate ? formatDateTime(testInfo.reportDate) : "N/A"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UACR TEST RESULTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Creatinine: ${creatinineInfo?.value || "N/A"}
+• Microalbumin: ${microalbuminInfo?.value || "N/A"}
+• UACR Value: ${uacrInfo?.value || "N/A"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generated by HelloKidney App
+      `.trim();
+
+      const result = await Share.share({
+        message: reportText,
+        title: "UACR Test Report",
+      });
+
+      if (result.action === Share.dismissedAction) {
+        console.log("Share dismissed");
+      }
+    } catch (error) {
+      console.error("Error sharing text:", error);
+      Alert.alert("Error", "Failed to share report.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const saveAsImage = async () => {
+    try {
+      setIsSharing(true);
+
+      if (!viewShotRef.current) {
+        throw new Error("Unable to capture report");
+      }
+
+      // Capture the view as image
+      const uri = await captureRef(viewShotRef, {
+        format: "png",
+        quality: 1,
+      });
+
+      // Generate filename with timestamp
+      const timestamp = new Date().getTime();
+      const filename = `HelloKidney_Report_${testInfo?.testId || timestamp}.png`;
+      const downloadPath = `${FileSystem.Directory}${filename}`;
+
+      // Copy to permanent location
+      await FileSystem.copyAsync({
+        from: uri,
+        to: downloadPath,
+      });
+
+      Alert.alert(
+        "Success",
+        `Report saved successfully!\n\nLocation: ${downloadPath}`,
+        [{ text: "OK" }],
+      );
+    } catch (error) {
+      console.error("Error saving image:", error);
+      Alert.alert("Error", "Failed to save report.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleSharePress = () => {
+    if (Platform.OS === "ios") {
+      // iOS: Show ActionSheet
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Cancel", "Share as Image", "Share as Text", "Save Image"],
+          cancelButtonIndex: 0,
+          title: "Share Report",
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            shareAsImage();
+          } else if (buttonIndex === 2) {
+            shareAsText();
+          } else if (buttonIndex === 3) {
+            saveAsImage();
+          }
+        },
+      );
+    } else {
+      // Android: Show Alert
+      Alert.alert(
+        "Share Report",
+        "Choose sharing option",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Share as Image", onPress: shareAsImage },
+          { text: "Share as Text", onPress: shareAsText },
+          { text: "Save Image", onPress: saveAsImage },
+        ],
+        { cancelable: true },
+      );
+    }
+  };
+
+  const handleShareAsPDF = async () => {
+    generatePDF(formattedReports?.[0]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={handleBackPress}>
-          <Ionicons name="arrow-back" size={26} color="#ffffffff" />
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleBackPress}
+          style={styles.headerButton}
+          activeOpacity={0.7}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          disabled={isSharing}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.header}>Urine ACR Test Results</Text>
-        <View style={{ width: 26 }} />
+
+        <Text style={styles.headerTitle}>Test Report</Text>
+
+        <TouchableOpacity
+          onPress={handleShareAsPDF}
+          style={styles.headerButton}
+          activeOpacity={0.7}
+          accessibilityLabel="Share report" 
+          accessibilityRole="button"
+          disabled={isSharing}
+        >
+          {isSharing ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="share-outline" size={24} color="#fff" />
+          )}
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#F2f6ff' }}
-      >
-        <Text style={[styles.sectionTitle, { fontSize: 18 }]}>Parameters</Text>
-        {/* Creatinine + Microalbumin */}
-        <View style={styles.row}>
-          {/* Creatinine */}
-          <View
-            style={[
-              styles.metricCard,
-              {
-                backgroundColor: rgbStringToColor(creatinineInfo.rgb_value),
-              },
-            ]}
-          >
-            <Text style={[styles.metricTitle, { fontWeight: 400 }]}>
-              Creatinine
-            </Text>
-            <Text style={styles.metricTitle}>{creatinineInfo.pod_color}</Text>
-            <View style={styles.metricBottom}>
-              <Text style={styles.metricValue}>{creatinineInfo.value}</Text>
-              <Text style={styles.metricUnit}>Leu/µL</Text>
-            </View>
-          </View>
-
-          {/* Microalbumin */}
-          <View
-            style={[
-              styles.metricCard,
-              {
-                backgroundColor: rgbStringToColor(microalbuminInfo.rgb_value),
-              },
-            ]}
-          >
-            <Text style={[styles.metricTitle, { fontWeight: 400 }]}>
-              Microalbumin
-            </Text>
-            <Text style={styles.metricTitle}>{microalbuminInfo.pod_color}</Text>
-            <View style={styles.metricBottom}>
-              <Text style={styles.metricValue}>{microalbuminInfo.value}</Text>
-              <Text style={styles.metricUnit}>Mg/dL</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* UACR */}
-        <View style={styles.uacrCard}>
-          <Text style={[styles.sectionTitle, {color: '#fd6e05'}]}>UACR VALUE</Text>
-          <Text style={styles.uacrValue}>{uacrInfo.value} Mg/dL</Text>
-          {/* <Text style={styles.uacrUnit}>mg/g</Text> */}
-        </View>
-
-        {/* <View style={{ alignItems: "center" }}>
-          <TouchableOpacity style={styles.downloadBtn}>
-            <Ionicons name="download" size={20} color="#fff" />
-            <Text style={styles.downloadText}>Download Report</Text>
-          </TouchableOpacity>
-          <Text style={styles.subText}>
-            Download a detailed report of your test results.
-          </Text>
-        </View> */}
-
-        {/* <View style={{ height: 30 }} /> */}
-      </ScrollView>
-
-      <TouchableOpacity style={styles.done} onPress={handleBackPress}>
-        <Text style={{color: 'white', fontSize: 18}}>Done</Text>
-      </TouchableOpacity>
+      <ReportDetails report={formattedReports?.[0]} />
+      {/* Bottom Action Button */}
+      {/* <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.doneButton}
+          onPress={handleBackPress}
+          activeOpacity={0.8}
+          accessibilityLabel="Done"
+          accessibilityRole="button"
+          disabled={isSharing}
+        >
+          <Text style={styles.doneButtonText}>Done</Text>
+        </TouchableOpacity>
+      </View> */}
     </SafeAreaView>
   );
 };
+
+// Reusable Components
+const DetailRow = ({ label, value }: { label: string; value?: string }) => (
+  <View style={styles.detailRow}>
+    <Text style={styles.detailLabel}>{label}:</Text>
+    <Text style={styles.detailValue}>{value || "N/A"}</Text>
+  </View>
+);
+
+const ResultItem = ({ label, value }: { label: string; value: string }) => (
+  <View style={styles.resultItem}>
+    <View style={styles.resultBullet} />
+    <Text style={styles.resultText}>
+      {label} - {value}
+    </Text>
+  </View>
+);
 
 export default TestResults;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: "#F2f6ff",
-    backgroundColor: 'white'
-    // paddingHorizontal: 20,
-    // paddingTop: 20,
+    backgroundColor: colors.bg_home,
   },
-  headerRow: {
+
+  // Header
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 60,
-    // marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: colors.bg_home,
-    paddingHorizontal: 20,
   },
-  header: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: colors.white,
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  card: {
-    backgroundColor: "#fff",
-    padding: 18,
-    borderRadius: 14,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#E6E6E6",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  testName: {
+  headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    marginBottom: 4,
-    color: "#333",
-  },
-  testId: {
-    fontSize: 14,
-    color: "#777",
-    marginBottom: 10,
+    color: "#fff",
   },
 
-  label: {
-    color: "#777",
-    fontSize: 14,
+  // ScrollView
+  scrollView: {
+    flex: 1,
   },
-  value: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#222",
+  scrollContent: {
+    paddingBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 10,
-    // marginTop: 10,
-    color: "black",
-  },
-  paramCard: {
+
+  // Report Container (for screenshot)
+  reportContainer: {
     backgroundColor: "#fff",
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#ECECEC",
+    margin: 16,
+    borderRadius: 8,
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+
+  // Logo Header
+  logoHeader: {
+    backgroundColor: "#2C3E50",
+    paddingVertical: 20,
+    paddingHorizontal: 24,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  paramName: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  paramValue: {
-    fontSize: 14,
-    color: "#555",
-    marginTop: 3,
-  },
-
-  // Status Badge
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  statusText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  normal: { backgroundColor: "#4CAF50" },
-  high: { backgroundColor: "#E53935" },
-  low: { backgroundColor: "#FB8C00" },
-
-  notesCard: {
-    backgroundColor: "#fff",
-    padding: 18,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E6E6E6",
-  },
-  notesText: {
-    fontSize: 15,
-    color: "#333",
-    lineHeight: 22,
-  },
-
-  downloadBtn: {
-    marginTop: 25,
-    backgroundColor: "#4A90E2",
-    paddingVertical: 14,
-    borderRadius: 14,
+  logoContainer: {
     flexDirection: "row",
+    alignItems: "center",
+  },
+  logoText: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  logoKidney: {
+    color: "#E74C3C",
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#E74C3C",
     justifyContent: "center",
     alignItems: "center",
   },
-  downloadText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  subText: {
-    fontSize: 13,
-    color: "#333",
-    marginTop: 4,
+  kidneyIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#fff",
   },
 
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  // Section
+  section: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
-
-  metricCard: {
-    width: "48%",
-    height: 140,
-    borderRadius: 8,
-    padding: 16,
-    justifyContent: "space-between",
-    elevation: 2,
+  sectionHeader: {
+    backgroundColor: "#F5F5F5",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginHorizontal: -24,
+    marginTop: -20,
+    marginBottom: 16,
   },
-
-  metricTitle: {
+  sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111",
-    textTransform: "uppercase",
-  },
-
-  metricBottom: {
-    // alignItems: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-
-  metricValue: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#111",
-  },
-
-  metricUnit: {
-    fontSize: 13,
     color: "#333",
   },
 
-  uacrCard: {
-    backgroundColor: "white",
-    borderRadius: 8,
-    padding: 24,
-    paddingVertical: 10,
+  // Patient Details
+  patientDetailsGrid: {
+    gap: 10,
+  },
+  detailRow: {
+    flexDirection: "row",
     alignItems: "flex-start",
-    marginTop: 15,
-    borderColor: '#d3d0d0',
-    borderWidth: 1
   },
-
-  uacrValue: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "black",
-  },
-
-  uacrUnit: {
-    fontSize: 14,
-    marginTop: 4,
-    color: "#555",
-  },
-
-  done: {
-    backgroundColor: "red",
-    paddingVertical: 10,
-    position: "fixed",
-    bottom: 0,
-    // marginHorizontal:25,
-    alignItems: 'center',
-    borderRadius: 8,
-    marginTop: 20,
+  detailLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#333",
     width: 150,
-    margin: 'auto',
-    color: 'white'
+  },
+  detailValue: {
+    fontSize: 15,
+    color: "#333",
+    flex: 1,
+  },
+
+  // Results Container
+  resultsContainer: {
+    gap: 8,
+  },
+  medicalConditions: {
+    gap: 8,
+  },
+  resultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  resultBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#333",
+    marginRight: 12,
+  },
+  resultText: {
+    fontSize: 15,
+    color: "#333",
+  },
+
+  // Kidney Risk Stage
+  riskStageContainer: {
+    paddingVertical: 8,
+  },
+  riskStageText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+  },
+
+  // Disease Information
+  diseaseInfoSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  diseaseInfoContainer: {
+    backgroundColor: "#F5A76D",
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  diseaseWarningIcon: {
+    marginBottom: 8,
+  },
+  diseaseRiskText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 8,
+  },
+  diseaseDescText: {
+    fontSize: 14,
+    color: "#333",
+    textAlign: "center",
+  },
+
+  // Footer
+  footer: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E0E0E0",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  doneButton: {
+    backgroundColor: "#E74C3C",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doneButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
   },
 });

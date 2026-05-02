@@ -1,4 +1,4 @@
-import { useSessionStore } from "@/app/stores/sessionStore";
+import { useUserStore } from "@/app/stores/userStore";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 interface AuthContextType {
@@ -16,18 +16,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: Props) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const session = useSessionStore((state) => state.session);
-  const clearSession = useSessionStore((state) => state.clearSession);
+  const user = useUserStore((state) => state.user);
+  const hasHydrated = useUserStore((s) => s.hasHydrated);
+  const clearSession = useUserStore((state) => state.clearUser);
+
+  // useEffect(() => {
+  //   const initAuth = async () => {
+  //     // const token = await getAccessToken();
+  //     if (session?.token) setIsAuthenticated(true);
+  //     else setIsAuthenticated(false);
+  //     setIsLoading(false);
+  //   };
+  //   initAuth();
+  // }, []);
 
   useEffect(() => {
-    const initAuth = async () => {
-      // const token = await getAccessToken();
-      if (session?.token) setIsAuthenticated(true);
-      else setIsAuthenticated(false);
-      setIsLoading(false);
-    };
-    initAuth();
-  }, []);
+    if (!hasHydrated) return;
+
+    setIsAuthenticated(!!user?.token);
+    setIsLoading(false);
+  }, [hasHydrated, user?.token]);
 
   const logout = async () => {
     clearSession();

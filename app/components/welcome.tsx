@@ -1,18 +1,27 @@
 import { router } from "expo-router";
 import React from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../assets";
 import PrimaryButton from "../shared/PrimaryButton";
 import commonStyles, { colors } from "../shared/commonStyles";
+import responsive from "@/src/utils/responsive";
 
 export default function WelcomeScreen() {
   // const {isAuthenticated, isLoading} = useAuth();
   const handleContinue = () => {
     try {
-      // console.log("Navigating to terms screen...");
-      router.push("/components/user-guide");
-      // router.replace("/(home)/home");
+      // 2-2-2026: hiding this route as per the requirement now. Enable based on future request
+      // router.push("/components/user-guide");
+      router.push("/components/Logintype");
       // router.push("/components/verify-details");
     } catch (error) {
       console.error("Error navigating to terms:", error);
@@ -20,50 +29,52 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F2F6FF" }}>
-      {/* <StatusBar barStyle="light-content" translucent={false} animated /> */}
-      <SafeAreaView style={[styles.container]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            {/* Welcome Image */}
-            <Image
-              source={images.welcome}
-              style={styles.welcomeImage}
-              resizeMode="contain"
-            />
+    // <View style={{ flex: 1, backgroundColor: colors.white}}>
 
-            {/* Welcome To Text */}
-            <Text style={styles.welcomeText}>WELCOME TO</Text>
+    <SafeAreaView style={[styles.container]}>
+      <StatusBar backgroundColor={colors.white} barStyle={"dark-content"} translucent={false} animated />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          {/* Welcome Image */}
+          <Image
+            source={images.welcome1}
 
-            {/* Logo */}
-            <Image
-              source={images.logoFull}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            {/* <images.curonnLogo style={styles.logo} /> */}
+            style={styles.welcomeImage}
+            resizeMode="contain"
+          />
 
-            {/* Support Message */}
-            <Text style={styles.supportText}>
-              HelloKidney.ai offers a convenient smartphone-powered urine ACR
-              test for early kidney disease detection.
-            </Text>
-          </View>
+          {/* Welcome To Text */}
+          <Text style={styles.welcomeText}>WELCOME TO</Text>
 
-          <View style={styles.buttonContainer}>
-            <PrimaryButton
-              title="Let's Get Start"
-              onPress={handleContinue}
-              style={{ width: "100%" }}
-            />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+          {/* Logo */}
+          <Image
+            source={images.logoFull1}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          {/* <images.curonnLogo style={styles.logo} /> */}
+
+          {/* Support Message */}
+          <Text style={styles.supportText}>
+            HelloKidney.ai offers a convenient smartphone-powered urine ACR test
+            for early kidney disease detection.
+          </Text>
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <PrimaryButton
+            title="Let's Get Start"
+            onPress={handleContinue}
+            style={{ width: "100%" }}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+    // </View>
   );
 }
 
@@ -77,38 +88,40 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexGrow: 1,
-    justifyContent: "space-between",
+    // justifyContent: "space-between",
     ...commonStyles.container_layout,
     // paddingHorizontal: getResponsiveSpacing(15),
     // paddingBottom: getResponsiveSpacing(40),
-    paddingTop: 10,
+    // paddingTop: 10,
     // minHeight: hp(100) - getResponsiveSpacing(100), // Account for safe area and padding
     backgroundColor: "#FFFFFF",
   },
   header: {
-    flex: 1,
+    flexShrink: 1,
     alignItems: "center",
     justifyContent: "flex-start",
+    width: "100%",
     // backgroundColor: '#2B2C43'
   },
   welcomeImage: {
     width: "100%",
-    // height: 55,
-    marginBottom: 60,
-    // backgroundColor: '#9D9D9F'
+    height: "70%",
+    marginBottom: responsive.getResponsiveSpacing(10),
+    // backgroundColor: 'red'
   },
   welcomeText: {
     fontSize: 28,
-    fontWeight: "semibold",
+    fontWeight: "600",
     color: colors.black,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: responsive.getResponsiveSpacing(20),
   },
   logo: {
-    width: "80%",
+    width: "100%",
+    height: 50,
     // height: hp(15),
     // resizeMode: "contain",
-    marginBottom: 30,
+    marginBottom: responsive.getResponsiveSpacing(18),
   },
   supportText: {
     fontSize: 16,
@@ -116,6 +129,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingHorizontal: 20,
     marginBottom: 20,
+    flexWrap: "wrap",
+    width: "100%",
   },
   buttonContainer: {
     alignItems: "center",
