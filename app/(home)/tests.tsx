@@ -109,7 +109,7 @@ export default function TestList() {
 
       router.push({
         pathname: "/components/test-results",
-        params: {
+        params: { 
           data: JSON.stringify(item),
           patientData: JSON.stringify(patientData?.patient) || null,
         },

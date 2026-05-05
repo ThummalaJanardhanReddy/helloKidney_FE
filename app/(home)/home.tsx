@@ -312,7 +312,7 @@ function HealthWorkerHome() {
   const handlePatientPress = (patient: IPatient) => {
     router.push({
       pathname: "/patients/[id]",
-      params: { id: patient.id, data: JSON.stringify(patient) },
+      params: { id: patient.patient_id, data: JSON.stringify(patient) },
     });
   };
 

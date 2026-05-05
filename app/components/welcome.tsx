@@ -14,7 +14,6 @@ import { images } from "../../assets";
 import PrimaryButton from "../shared/PrimaryButton";
 import commonStyles, { colors } from "../shared/commonStyles";
 import responsive from "@/src/utils/responsive";
-import responsive from "@/src/utils/responsive";
 
 export default function WelcomeScreen() {
   // const {isAuthenticated, isLoading} = useAuth();
