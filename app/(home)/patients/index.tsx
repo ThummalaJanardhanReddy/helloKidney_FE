@@ -74,7 +74,7 @@ function PatientRow({ item, onPress }: { item: Patient; onPress: () => void }) {
           {String(item.patient_uniqueid ?? item.patient_id)?.padStart(4, "0") || '--'} | {item.age} years, {item.gender}
         </Text>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <Ionicons name="chevron-forward" size={20} color="#999" />
     </TouchableOpacity>
   );
 }
@@ -226,8 +226,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
     backgroundColor: "#FFFFFF",
     gap: 14,
     borderColor: colors.BORDER1,
@@ -250,8 +250,8 @@ const styles = StyleSheet.create({
   },
   initialsText: { fontSize: rf(12), fontWeight: "700", color: "#3A6BA8" },
   rowInfo: { flex: 1, gap: 3 },
-  rowName: { fontSize: rf(13), fontWeight: "700", color: colors.black },
-  rowMeta: { fontSize: rf(10), color: colors.black },
+  rowName: { fontSize: rf(14), fontWeight: "700", color: colors.black, marginBottom: 3 },
+  rowMeta: { fontSize: rf(12), color: colors.black },
   chevron: { fontSize: rf(22), color: "#B0C0D8", lineHeight: rf(26) },
   separator: { height: 1, backgroundColor: "#EEF3FA", marginLeft: 90 },
 

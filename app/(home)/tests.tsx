@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -104,16 +105,29 @@ export default function TestList() {
         console.warn("Cannot navigate: patient_id is missing");
         return;
       }
-      const patientData = await fetchPatientById(patientId);
-      console.log("Fetched patient data for navigation:", patientData);
+      if (user?.userType === "healthworker") {
+        const patientData = await fetchHWPatientById(patientId);
+        console.log("Fetched patient data for navigation:", patientData);
 
-      router.push({
-        pathname: "/components/test-results",
-        params: { 
-          data: JSON.stringify(item),
-          patientData: JSON.stringify(patientData?.patient) || null,
-        },
-      });
+        router.push({
+          pathname: "/components/test-results",
+          params: {
+            data: JSON.stringify(item),
+            patientData: JSON.stringify(patientData?.patient) || null,
+          },
+        });
+      } else {
+        const patientData = await fetchPatientById(patientId);
+        console.log("Fetched patient data for navigation:", patientData);
+
+        router.push({
+          pathname: "/components/test-results",
+          params: {
+            data: JSON.stringify(item),
+            patientData: JSON.stringify(patientData?.patient) || null,
+          },
+        });
+      }
     },
     [router],
   );
@@ -149,6 +163,7 @@ export default function TestList() {
           data = await axiosClient.get<TestResponse[]>("/users/tests", {
             params: { patient_id: userId },
           });
+          console.log('fetched tests: ', data);
         }
 
         // Update tests list
@@ -168,7 +183,7 @@ export default function TestList() {
     [userId],
   );
 
-  const fetchPatientById = useCallback(async (patientId: number) => {
+  const fetchHWPatientById = useCallback(async (patientId: number) => {
     try {
       const response = await axiosClient.get<IPatient>(
         `/healthworker/get-patient/${patientId}`,
@@ -176,6 +191,18 @@ export default function TestList() {
       return response;
     } catch (error) {
       console.error("Failed to fetch patient details:", error);
+      return null;
+    }
+  }, []);
+
+  const fetchPatientById = useCallback(async (patientId: number) => {
+    try {
+      const response = await axiosClient.get(`/users/get-patient`, {
+        params: { patient_id: patientId },
+      });
+      return response;
+    } catch (error) {
+      console.log("Failed to fetch patient details: ", error);
       return null;
     }
   }, []);
@@ -249,15 +276,41 @@ export default function TestList() {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.patientname}>
-            {item.full_name} |{" "}
-            {String(item.patient_uniqueid || item.patient_id).padStart(4, "0")}
-          </Text>
+          {item.full_name && (
+            <Text style={styles.patientname}>{item.full_name}</Text>
+          )}
           {/* <Text style={styles.testId}>PID: {String(item.patient_uniqueid || item.patient_id).padStart(4, "0")}</Text> */}
-          <Text style={styles.dateTime}>Test ID: {item.test_id} |  {formatDate(item.created_timestamp || item.created_on)}</Text>
+          <Text style={styles.dateTime}>
+            Test ID: {item.test_id} |{" "}
+            {formatDate(item.created_timestamp || item.created_on)}
+          </Text>
           {/* <Text style={styles.dateTime}>
             {formatDate(item.created_timestamp || item.created_on)}
           </Text> */}
+        </View>
+
+        <Ionicons name="chevron-forward" size={20} color="#999" />
+      </TouchableOpacity>
+    ),
+    [formatDate, navigateToTestResults],
+  );
+
+  const renderHWTestItem = useCallback(
+    ({ item }: { item: HealthworkerTestResponse | TestResponse }) => (
+      <TouchableOpacity
+        style={styles.item}
+        onPress={() => navigateToTestResults(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.iconBox}>
+          <Ionicons name="document-text-outline" size={26} />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={styles.patientname}>Test ID: {item.test_id}</Text>
+          <Text style={styles.dateTime}>
+            {formatDate(item.created_timestamp || item.created_on)}
+          </Text>
         </View>
 
         <Ionicons name="chevron-forward" size={20} color="#999" />
@@ -313,8 +366,9 @@ export default function TestList() {
   // Main Render
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerText}>Test List</Text>
       </View>
 
@@ -322,7 +376,9 @@ export default function TestList() {
       <FlatList
         data={tests}
         keyExtractor={keyExtractor}
-        renderItem={renderTestItem}
+        renderItem={
+          user?.userType === "healthworker" ? renderTestItem : renderHWTestItem
+        }
         alwaysBounceVertical={true}
         contentContainerStyle={
           tests.length === 0
@@ -351,7 +407,8 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: colors.bg_home,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
   },
   headerText: {
     fontSize: 18,
@@ -362,13 +419,11 @@ const styles = StyleSheet.create({
   item: {
     backgroundColor: "#fff",
     padding: 12,
+    paddingVertical: 14,
+    // paddingHorizontal: 20,
     // borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
-    // shadowColor: "#000",
-    // shadowOpacity: 0.06,
-    // shadowRadius: 6,
-    // elevation: 3,
     borderColor: colors.border,
     borderWidth: 1,
   },
@@ -384,9 +439,10 @@ const styles = StyleSheet.create({
   },
 
   patientname: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     color: colors.black,
+    marginBottom: 3,
   },
 
   testId: {
@@ -396,7 +452,7 @@ const styles = StyleSheet.create({
   },
 
   dateTime: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#666",
     marginTop: 2,
   },
@@ -441,7 +497,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 24,
-    color: colors.white,
+    color: colors.black,
   },
 
   emptyListContent: {

@@ -14,9 +14,14 @@ import { images } from "../../assets";
 import PrimaryButton from "../shared/PrimaryButton";
 import commonStyles, { colors } from "../shared/commonStyles";
 import responsive from "@/src/utils/responsive";
+import { useUserStore } from "../stores/userStore";
 
 export default function WelcomeScreen() {
   // const {isAuthenticated, isLoading} = useAuth();
+  const clearUser = useUserStore((state) => state.clearUser);
+
+  clearUser();
+  
   const handleContinue = () => {
     try {
       // 2-2-2026: hiding this route as per the requirement now. Enable based on future request
@@ -32,7 +37,12 @@ export default function WelcomeScreen() {
     // <View style={{ flex: 1, backgroundColor: colors.white}}>
 
     <SafeAreaView style={[styles.container]}>
-      <StatusBar backgroundColor={colors.white} barStyle={"dark-content"} translucent={false} animated />
+      <StatusBar
+        backgroundColor={colors.white}
+        barStyle={"dark-content"}
+        translucent={false}
+        animated
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
@@ -42,7 +52,6 @@ export default function WelcomeScreen() {
           {/* Welcome Image */}
           <Image
             source={images.welcome1}
-
             style={styles.welcomeImage}
             resizeMode="contain"
           />
@@ -110,7 +119,7 @@ const styles = StyleSheet.create({
     // backgroundColor: 'red'
   },
   welcomeText: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "600",
     color: colors.black,
     textAlign: "center",
@@ -121,12 +130,12 @@ const styles = StyleSheet.create({
     height: 50,
     // height: hp(15),
     // resizeMode: "contain",
-    marginBottom: responsive.getResponsiveSpacing(18),
+    marginBottom: responsive.getResponsiveSpacing(22),
   },
   supportText: {
-    fontSize: 16,
+    fontSize: 13,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 17,
     paddingHorizontal: 20,
     marginBottom: 20,
     flexWrap: "wrap",

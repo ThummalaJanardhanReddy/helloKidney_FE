@@ -88,7 +88,7 @@ export default function ProfilePage() {
     >
       <View style={[styles.container]}>
         {/* Header */}
-        <Text style={styles.header}>Profile</Text>
+        <Text style={[styles.header, { paddingTop: insets.top + 12 }]}>Profile</Text>
 
         <View style={styles.card}>
           {ProfileItems.map((item, index) => (
@@ -171,9 +171,10 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    fontSize: 22,
-    fontWeight: "700",
-    padding: 20,
+    fontSize: 18,
+    fontWeight: "600",
+    paddingHorizontal: 20,
+    paddingBottom: 18,
     backgroundColor: colors.bg_home,
     color: colors.white,
   },

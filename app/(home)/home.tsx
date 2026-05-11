@@ -1,5 +1,5 @@
 import { images } from "@/assets";
-import { useFocusEffect, useRouter } from "expo-router";
+import { router, useFocusEffect, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Dimensions,
@@ -351,7 +351,7 @@ function HealthWorkerHome() {
         paddingTop: insets.top,
       }}
     >
-      <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"}/>
+      <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 24 }}
@@ -401,7 +401,9 @@ function HealthWorkerHome() {
                 <View>
                   <Text style={hw.statLabel}>Total Patient</Text>
                   <Text style={hw.statValue}>
-                    {String(totalPatients).padStart(2, "0")}
+                    {totalPatients > 0
+                      ? String(totalPatients).padStart(2, "0")
+                      : 0}
                   </Text>
                 </View>
               </View>
@@ -420,7 +422,7 @@ function HealthWorkerHome() {
                 <View>
                   <Text style={hw.statLabel}>Today's Tests</Text>
                   <Text style={hw.statValue}>
-                    {String(todaysTests).padStart(2, "0")}
+                    {todaysTests > 0 ? String(todaysTests).padStart(2, "0") : 0}
                   </Text>
                 </View>
               </View>
@@ -568,15 +570,22 @@ function HealthWorkerHome() {
 function PatientHome() {
   const [showGuide, setShowGuide] = useState(false);
   const insets = useSafeAreaInsets();
+  const startTest = () => {
+    // useUserStore.getState().setSelectedPatient(patient);
+    router.push({
+      pathname: "/components/TimerCameraUploader",
+    });
+  };
 
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.statusbar,
+        backgroundColor: colors.bg_primary,
         paddingTop: insets.top,
       }}
     >
+      <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
       <View style={pt.container}>
         <View style={pt.logoSection}>
           <Image
@@ -593,7 +602,7 @@ function PatientHome() {
             backgroundColor="#ffffff"
             textColor="red"
             borderColor="#3A4665"
-            onPress={() => {}}
+            onPress={startTest}
           />
         </View>
         <View style={pt.bottomBackground}>
@@ -857,7 +866,7 @@ const hw = StyleSheet.create({
     alignItems: "center",
     gap: 14,
     padding: 8,
-    paddingVertical:4,
+    paddingVertical: 4,
     paddingHorizontal: 16,
   },
   cardAvatar: {
@@ -873,7 +882,7 @@ const hw = StyleSheet.create({
   initialsText: { fontSize: rf(16), fontWeight: "700", color: "#3A6BA8" },
   cardName: {
     fontSize: rf(16),
-    fontWeight: "400",
+    fontWeight: "600",
     color: "#0D1B2E",
     marginBottom: 3,
   },

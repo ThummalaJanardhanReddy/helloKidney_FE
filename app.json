@@ -2,7 +2,7 @@
   "expo": {
     "name": "NephKare",
     "slug": "hellokidney",
-    "version": "2.1.5",
+    "version": "2.1.7",
     "orientation": "portrait",
     "icon": "./assets/images/icons/Nephkare_1024.png",
     "scheme": "hellokidney",
@@ -16,8 +16,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "17",
-      "version": "2.1.5"
+      "buildNumber": "20"
     },
     "android": {
       "config": {
@@ -35,8 +34,7 @@
       "permissions": [
         "CAMERA",
         "INTERNET"
-      ],
-      "version": "2.1.1"
+      ]
     },
     "web": {
       "output": "static",
@@ -47,16 +45,21 @@
       "expo-font",
       "expo-router",
       "expo-web-browser",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/Splash_ic.png",
+          "imageWidth": 200,
+          "imageHeight": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#EF3024"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "splash": {
-      "image": "./assets/images/Splash_ic.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#EF3024"
     },
     "extra": {
       "router": {},

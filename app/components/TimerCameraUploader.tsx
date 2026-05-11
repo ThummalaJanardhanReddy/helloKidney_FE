@@ -30,7 +30,7 @@ const STRIP_WIDTH = Math.max(160, Math.min(SCREEN_WIDTH * 0.48, 260));
 const STRIP_HEIGHT = STRIP_WIDTH * 2.8;
 
 export default function TimerCameraUploader() {
-  const [countdown, setCountdown] = useState(2); //60
+  const [countdown, setCountdown] = useState(60); //60
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showResultPopup, setShowResultPopup] = useState(false);
@@ -118,24 +118,33 @@ export default function TimerCameraUploader() {
           params: { result: JSON.stringify(response), refresh: "true" },
         });
       } else {
+        // router.replace({
+        //   pathname: "/(home)/patients/[id]",
+        //   params: {
+        //     id: patient?.patient_id || 0,
+        //     data: JSON.stringify(patient),
+        //   },
+        // });
+
         router.replace({
-          pathname: "/(home)/patients/[id]",
+          pathname: "/components/test-result",
           params: {
-            id: patient?.patient_id || 0,
-            data: JSON.stringify(patient),
+            result: JSON.stringify(response),
+            refresh: "true",
+            patient: JSON.stringify(patient),
           },
         });
       }
     } catch (error: any) {
       const detail = error?.response?.data?.detail;
-
+      console.log("test result error: ", error);
       let message =
-        "Something went wrong. Please wait for 30 seconds and try again.";
+        "Something went wrong. Please wait for 10 seconds and try again.";
 
       if (Array.isArray(detail)) {
         message = detail.map((d) => d.msg).join(", ");
       } else if (typeof detail === "string") {
-        message = detail;
+        message = detail?.detail;
       } else if (detail?.message) {
         message = detail.message;
       }
@@ -388,13 +397,12 @@ export default function TimerCameraUploader() {
               </View>
             )}
 
-          
             {!loading && resultStatus?.type === "error" && (
               <View style={[styles.statusBox, { backgroundColor: "#DC3545" }]}>
                 <Text style={styles.statusText}>
                   {resultStatus?.message
                     ? resultStatus.message
-                    : `❌ Something went wrong. Please wait for 30 seconds and try again.`}
+                    : `❌ Something went wrong. Please wait for 10 seconds and try again.`}
                 </Text>
               </View>
             )}

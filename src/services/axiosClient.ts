@@ -3,8 +3,8 @@ import axios from "axios";
 
 // ✅ Create Axios instance
 const axiosClient = axios.create({
-  baseURL: "https://uacrapi.hellokidney.ai", //"http://192.168.1.35:8082", //
-  timeout: 10000, // optional timeout (ms)
+  baseURL: "http://192.168.1.35:8082", // "https://uacrapi.hellokidney.ai", //
+  timeout: 50000, // optional timeout (ms)
   headers: {
     Accept: "application/json",
   },
@@ -48,20 +48,25 @@ axiosClient.interceptors.response.use(
     return response.data;
   },
   async (error) => {
-    // console.log("AXIOS ERROR FULL:", {
-    //   message: error.message,
-    //   code: error.code,
-    //   request: error.request,
-    //   response: error.response,
-    // });
-    if (!error.response) {
-      console.error("🌐 Network error — check backend IP " + error);
-    } else if (error.response.status === 401) {
-      console.warn("🔒 Unauthorized");
-      // await handleLogout()
-      throw error;
+    // if (!error.response) {
+    //   console.error("🌐 Network error — check backend IP " + error);
+    // } else if (error.response.status === 401) {
+    //   console.warn("🔒 Unauthorized");
+    //   // await handleLogout()
+    //   throw error;
+    // } else {
+    //   console.error("❌ API Error:", error.response.data);
+    // }
+
+    console.log("FULL ERROR:", error);
+
+    if (error.response) {
+      console.log("STATUS:", error.response.status);
+      console.log("DATA:", error.response.data);
+    } else if (error.request) {
+      console.log("NO RESPONSE RECEIVED");
     } else {
-      console.error("❌ API Error:", error.response.data);
+      console.log("ERROR MESSAGE:", error.message);
     }
 
     return Promise.reject(error);

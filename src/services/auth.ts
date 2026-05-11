@@ -29,8 +29,7 @@ export const login = async (email: string, password: string) => {
       userId: user.sub,
       userEmail: user.email || "",
       token: access_token,
-      userName: user.username
-    
+      userName: user.username,
     });
     // await setAccessToken(access_token);
     return response;
@@ -51,7 +50,7 @@ export const hw_login = async (email: string, password: string) => {
       userId: user.sub,
       userEmail: user.email || "",
       token: access_token,
-      userName: user.username
+      userName: user.username,
     });
     // await setAccessToken(access_token);
     return response;
@@ -71,9 +70,19 @@ export const logout = async () => {
   }
 };
 
-export const validateUserEmail = async (email: string) => {
+export const validateUserEmail = async (email: string, role: string) => {
+  const data = await axiosClient.get(`/users/validate-email`, {
+    params: {
+      email,
+      role,
+    },
+  });
+  return data;
+};
+
+export const validateHealthworkerEmail = async (email: string) => {
   const data = await axiosClient.get(
-    `/users/validate-email/${encodeURIComponent(email)}`,
+    `/healthworker/validate-email/${encodeURIComponent(email)}`,
   );
   return data;
 };
@@ -107,8 +116,8 @@ export const registerUser = async (formData: {
     return response;
   } catch (error) {
     return {
-      "message": (error as any)?.response?.data?.detail,
-      "type": "error",
+      message: (error as any)?.response?.data?.detail,
+      type: "error",
     };
   }
 };

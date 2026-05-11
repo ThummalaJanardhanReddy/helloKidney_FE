@@ -296,8 +296,8 @@ export default function VerifyDetailsScreen() {
             <View style={styles.bottomContainer}>
               {/* Terms */}
               <Text style={styles.termsText}>
-                By Signing up, you agree to HelloKidney{"\n"}
-                <View style={{ flexDirection: "row", gap: 5 }}>
+                By Signing up, you agree to HelloKidney{"\n"} Terms & Services and Privacy Policy.
+                {/* <View style={{ flexDirection: "row", gap: 5 }}>
                   <Text
                     style={styles.linkText}
                     // onPress={handleTermsAndConditions}
@@ -306,7 +306,7 @@ export default function VerifyDetailsScreen() {
                   </Text>
                   <Text style={{ color: colors.textSecondary }}>and</Text>
                   <Text style={styles.linkText}>Privacy Policy.</Text>
-                </View>
+                </View> */}
               </Text>
             </View>
           </KeyboardAwareScrollView>
@@ -409,10 +409,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    // backgroundColor: "#F5F4F9",
+    // backgroundColor: "#4119dd",
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: 10,
+    alignItems: 'center'
     // borderTopWidth: 1,
     // borderTopColor: "#E2E2E4",
   },

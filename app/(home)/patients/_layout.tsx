@@ -7,9 +7,9 @@ export default function PatientsLayout() {
       <Stack.Screen name="[id]" />
        <Stack.Screen
         name="add"
-        options={{
-          presentation: "modal", // slides up as a modal
-        }}
+        // options={{
+        //   presentation: "modal", // slides up as a modal
+        // }}
       />
     </Stack>
   );

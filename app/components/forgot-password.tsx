@@ -8,6 +8,7 @@ import {
   Keyboard,
   Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +25,7 @@ import {
 import BackButton from "../shared/BackButton";
 import { colors } from "../shared/commonStyles";
 import Toast from "../shared/Toast";
+import { useUserStore } from "../stores/userStore";
 
 // To-Do:
 // Author: Janardhan
@@ -49,6 +51,7 @@ export default function ForgotPassword() {
   const debounceRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const insets = useSafeAreaInsets();
+   const userType = useUserStore((s) => s.user?.userType);
 
   // 🔐 Password rules
   const passwordRules = {
@@ -73,7 +76,7 @@ export default function ForgotPassword() {
 
       setEmailLoading(true);
       try {
-        const response = await validateUserEmail(value);
+        const response = await validateUserEmail(value, userType || '');
         const isValid = (response as any).exists;
         setIsEmailValid(isValid);
       } catch {
@@ -121,6 +124,7 @@ export default function ForgotPassword() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.statusbar }}>
+      <StatusBar backgroundColor={colors.bg_primary} barStyle={"dark-content"} />
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}

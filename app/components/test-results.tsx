@@ -61,16 +61,16 @@ const TestResults = () => {
   }
 
   const { creatinineInfo, microalbuminInfo, uacrInfo, testInfo, patientInfo } =
-    parsedResult?.result || {};
+    parsedResult?.result || parsedResult?.output_metrics || {};
 
-  const patientdetails = JSON.parse(patientData || "{}");
+  const patientdetails = JSON.parse(patientData || parsedResult || "{}");
 
   const formattedReports = [parsedResult]?.map((item) => {
     const metrics = JSON.parse(item.output_metrics);
 
     return {
       id: item.id || patientdetails?.patient_id || "N/A",
-      patientId: item.patient_uniqueid || patientdetails?.patient_uniqueid || "N/A",
+      patientId: item.patient_uniqueid || patientdetails?.patient_uniqueid || patientdetails?.user_id || "N/A",
       patientName: patientdetails?.full_name,
       age: patientdetails?.age,
       gender: patientdetails?.gender,

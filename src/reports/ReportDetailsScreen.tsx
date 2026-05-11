@@ -75,7 +75,7 @@ Confidence: ${report.confidence}%
       <View style={styles.section}>
         <View style={styles.patientDetailsGrid}>
           <DetailRow label="Name" value={report?.patientName} />
-          <DetailRow label="Age" value={`${report?.age || "N/A"} years`} />
+          <DetailRow label="Age" value={`${report?.age ? report.age + ' years' : "N/A"}`} />
           <DetailRow label="Gender" value={report?.gender} />
           <DetailRow label="Patient ID" value={String(report?.patientId)?.padStart(4, "0")} />
           <DetailRow label="Test ID" value={report?.testId} />

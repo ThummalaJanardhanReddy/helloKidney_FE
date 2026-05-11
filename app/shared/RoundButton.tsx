@@ -68,7 +68,15 @@ const RoundButton: React.FC<RoundButtonProps> = ({
           }}
         >
           {typeof content === "string" ? (
-            <Text style={{ fontSize: 36, fontWeight: "bold", alignItems:'center', textAlign: 'center', color: textColor }}>
+            <Text
+              style={{
+                fontSize: 36,
+                fontWeight: "bold",
+                alignItems: "center",
+                textAlign: "center",
+                color: textColor,
+              }}
+            >
               {content}
             </Text>
           ) : (
