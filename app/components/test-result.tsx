@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
+import { StatusBar } from "expo-status-bar";
 
 const rgbStringToColor = (rgb: string) =>
   rgb.replace("RGB", "rgb").replace(/\s/g, "");
@@ -66,6 +67,7 @@ const TestResult = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor={colors.bg_home} animated />
       {/* Header */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={handleBackPress}>
@@ -199,7 +201,7 @@ const TestResult = () => {
         style={[styles.done, { backgroundColor: colors.success }]}
         onPress={handleBackPress}
       >
-        <Text style={{ color: "white", fontSize: 18 }}>Complete uACR test</Text>
+        <Text style={{ color: "white", fontSize: 18 }}>Done</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

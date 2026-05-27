@@ -479,6 +479,7 @@ export const checkVersionAndClearCache =
 
   export const checkForUpdates = async () => {
   try {
+     if (__DEV__) return;
     const update =
       await Updates.checkForUpdateAsync();
 

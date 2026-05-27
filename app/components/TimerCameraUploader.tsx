@@ -50,7 +50,7 @@ export default function TimerCameraUploader() {
   const [showPopup, setShowPopup] = useState(false);
   const [showAccuracyModal, setShowAccuracyModal] = useState(false);
 
-  const [cameraOpenedAt, setCameraOpenedAt] = useState(20); // 20 seconds until camera auto-closes for accuracy check
+  const [cameraOpenedAt, setCameraOpenedAt] = useState(60); // 60 seconds until camera auto-closes for accuracy check
 
   const cameraRef = useRef<CameraView | null>(null);
   const navigation = useNavigation();
@@ -201,6 +201,7 @@ export default function TimerCameraUploader() {
       setLoading(false);
       setQrLocked(false);
       setQrData(null);
+      setShowCamera(false);
     }
   };
 
@@ -663,7 +664,7 @@ export default function TimerCameraUploader() {
       {/* Exit Confirmation Modal */}
       <CommonModal
         visible={showPopup}
-        title="Exit Test"
+        title="Warning"
         message="Are you sure you want to exit the test?"
         confirmText="Stay"
         cancelText="Exit"

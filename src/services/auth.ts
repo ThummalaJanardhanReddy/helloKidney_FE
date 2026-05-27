@@ -92,6 +92,20 @@ export const validateHealthworkerEmail = async (email: string) => {
   );
   return data;
 };
+export const updateHWPassword = async (
+  email: string,
+  new_password: string,
+) => {
+  try {
+    const response = await axiosClient.put("/healthworker/update-password", {
+      email,
+      new_password,
+    });
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
 
 export const updateUserPassword = async (
   email: string,

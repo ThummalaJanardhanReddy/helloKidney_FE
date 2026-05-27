@@ -71,7 +71,11 @@ function PatientRow({ item, onPress }: { item: Patient; onPress: () => void }) {
       <View style={styles.rowInfo}>
         <Text style={styles.rowName}>{item.full_name?.replaceAll(",", "")}</Text>
         <Text style={styles.rowMeta}>
-          {String(item.patient_uniqueid ?? item.patient_id)?.padStart(4, "0") || '--'} | {item.age} years, {item.gender}
+          {/* {String(item.patient_uniqueid ?? item.patient_id)?.padStart(4, "0") || '--'} | */}
+           {item.age} years, {item.gender}
+        </Text>
+        <Text style={styles.rowMeta}>
+          {item.mobile_no}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color="#999" />

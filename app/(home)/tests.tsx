@@ -6,6 +6,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   RefreshControl,
   StatusBar,
@@ -57,6 +58,8 @@ type FetchTestsParams = {
 const SKELETON_CARD_COUNT = 6;
 const END_REACHED_THRESHOLD = 0.3;
 const LOADING_INDICATOR_COLOR = "#4A90E2";
+const { width } = Dimensions.get("window");
+const rf = (size: number) => Math.round(size * (width / 390));
 
 export default function TestList() {
   const router = useRouter();
@@ -163,7 +166,7 @@ export default function TestList() {
           data = await axiosClient.get<TestResponse[]>("/users/tests", {
             params: { patient_id: userId },
           });
-          console.log('fetched tests: ', data);
+          console.log("fetched tests: ", data);
         }
 
         // Update tests list
@@ -277,7 +280,9 @@ export default function TestList() {
 
         <View style={{ flex: 1 }}>
           {item.full_name && (
-            <Text style={styles.patientname}>{item.full_name?.replaceAll(",", "")}</Text>
+            <Text style={styles.patientname}>
+              {item.full_name?.replaceAll(",", "")}
+            </Text>
           )}
           {/* <Text style={styles.testId}>PID: {String(item.patient_uniqueid || item.patient_id).padStart(4, "0")}</Text> */}
           <Text style={styles.dateTime}>
@@ -321,8 +326,12 @@ export default function TestList() {
 
   const renderEmptyState = useCallback(
     () => (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No Tests Found</Text>
+      // <View style={styles.emptyContainer}>
+      //   <Text style={styles.emptyText}>No Tests Found</Text>
+      // </View>
+      <View style={styles.empty}>
+        <Text style={styles.emptyIcon}>🔎</Text>
+        <Text style={styles.emptyText}>No tests available</Text>
       </View>
     ),
     [],
@@ -365,7 +374,7 @@ export default function TestList() {
 
   // Main Render
   return (
-    <View style={[styles.container,]}>
+    <View style={[styles.container]}>
       <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -495,14 +504,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  emptyText: {
-    fontSize: 24,
-    color: colors.black,
-  },
+  // emptyText: {
+  //   fontSize: 24,
+  //   color: colors.black,
+  // },
 
   emptyListContent: {
     flexGrow: 1, // Makes the content take full height so empty state centers
     paddingVertical: 0,
     paddingBottom: 0,
   },
+  empty: { alignItems: "center", paddingTop: 80, gap: 10 },
+  emptyIcon: { fontSize: 40 },
+  emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "500" },
 });

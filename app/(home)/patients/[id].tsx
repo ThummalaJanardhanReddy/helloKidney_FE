@@ -17,7 +17,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View, 
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -180,7 +180,7 @@ export default function PatientProfileScreen() {
         }
       };
       loadReports();
-    }, [])
+    }, []),
   );
 
   // useEffect(() => {
@@ -291,7 +291,9 @@ export default function PatientProfileScreen() {
             </View>
             {/* )} */}
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.profileName}>{patient.full_name?.replaceAll(",", "")}</Text>
+              <Text style={styles.profileName}>
+                {patient.full_name?.replaceAll(",", "")}
+              </Text>
               <Text style={styles.profileMeta}>
                 {String(
                   patient.patient_uniqueid ?? patient.patient_id,
@@ -336,7 +338,10 @@ export default function PatientProfileScreen() {
             <ReportRow item={item} onPress={() => handleReportPress(item)} />
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No reports available</Text>
+            <View style={styles.empty}>
+              <Text style={styles.emptyIcon}>🔎</Text>
+              <Text style={styles.emptyText}>No reports available</Text>
+            </View>
           }
         />
       )}
@@ -497,12 +502,12 @@ const styles = StyleSheet.create({
   bold: { fontWeight: "800", color: "#0D1B2E" },
 
   chevron: { fontSize: rf(22), color: "#B0C0D8", lineHeight: rf(26) },
-  emptyText: {
-    textAlign: "center",
-    color: "#9BADC4",
-    fontSize: rf(14),
-    marginTop: 40,
-  },
+  // emptyText: {
+  //   textAlign: "center",
+  //   color: "#9BADC4",
+  //   fontSize: rf(14),
+  //   marginTop: 40,
+  // },
 
   ctaWrapper: {
     position: "absolute",
@@ -555,4 +560,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     letterSpacing: 0.3,
   },
+  empty: { alignItems: "center", paddingTop: 80, gap: 10 },
+  emptyIcon: { fontSize: 40 },
+  emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "500" },
 });

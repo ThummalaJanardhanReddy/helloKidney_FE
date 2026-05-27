@@ -41,7 +41,7 @@ const WarningModal: React.FC<WarningModalProps> = ({
             The card has been activated for more
             than{" "}
             <Text style={styles.redText}>
-              80 secs now.
+              2 mins now.
             </Text>
           </Text>
 

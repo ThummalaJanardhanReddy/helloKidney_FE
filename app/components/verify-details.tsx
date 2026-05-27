@@ -262,7 +262,7 @@ export default function VerifyDetailsScreen() {
               {/* Buttons */}
               <View style={styles.buttonContainer}>
                 <PrimaryButton
-                  title={isLoading ? "Verifying..." : "Log In"}
+                  title={isLoading ? "Verifying..." : "Sign In"}
                   onPress={handleContinue}
                   disabled={!isFormValid || isLoading}
                   style={styles.continueButton}
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: colors.black,
     marginBottom: rvs(3),
-    marginTop: rvs(16),
+    marginTop: rvs(12),
   },
   textInput: {
     backgroundColor: "#fff",
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     // paddingVertical: 1,
     marginBottom: 0,
     borderRadius: 8,
-    height: rvs(50),
+    height: rvs(40),
     borderWidth: 1,
     borderColor: "#c3c4c6",
   },
@@ -399,12 +399,14 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   bottomContainer: {
-   
-    // backgroundColor: "#4119dd",
+    position: 'absolute',
+    
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: rvs(10),
     alignItems: "center",
+    bottom: 0
+
     // borderTopWidth: 1,
     // borderTopColor: "#E2E2E4",
   },
@@ -461,6 +463,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 12,
     top: "50%",
-    transform: [{ translateY: -14 }],
+    transform: [{ translateY: -10 }],
   },
 });

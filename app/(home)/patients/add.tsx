@@ -422,7 +422,11 @@ export default function AddPatientScreen() {
 
       // Navigate back after short delay
       setTimeout(() => {
-        // router.back();
+        if (!patientData) {
+          router.back();
+          return;
+        }
+
         const parsed = JSON.parse(patientData as string);
         const updatedPatientData = {
           ...parsed,
@@ -438,7 +442,10 @@ export default function AddPatientScreen() {
         };
         router.push({
           pathname: "/patients/[id]",
-          params: { id: updatedPatientData.patient_id, data: JSON.stringify(updatedPatientData) },
+          params: {
+            id: updatedPatientData.patient_id,
+            data: JSON.stringify(updatedPatientData),
+          },
         });
       }, 1500);
     } catch (error: any) {

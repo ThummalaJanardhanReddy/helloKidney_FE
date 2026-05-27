@@ -1,4 +1,4 @@
-import { updateUserPassword, validateUserEmail } from "@/src/services/auth";
+import { updateHWPassword, updateUserPassword, validateUserEmail } from "@/src/services/auth";
 import { getAccessToken } from "@/src/services/tokenStorage";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -98,7 +98,7 @@ export default function ForgotPassword() {
     try {
       setSubmitting(true);
 
-      const result = await updateUserPassword(email, password);
+      const result = userType === "patient" ? await updateUserPassword(email, password) : await updateHWPassword(email, password);
 
       if ((result as any).type === "success") {
         setToast({
