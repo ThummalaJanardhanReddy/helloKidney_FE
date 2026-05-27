@@ -11,6 +11,8 @@ type JwtPayload = {
   email?: string;
   roles?: string[];
   username?: string;
+  country?: string;
+  country_code?: string;
 };
 
 export const decodeToken = (token: string): JwtPayload => {
@@ -30,6 +32,8 @@ export const login = async (email: string, password: string) => {
       userEmail: user.email || "",
       token: access_token,
       userName: user.username,
+      country: user.country,
+      countryCode: user.country_code
     });
     // await setAccessToken(access_token);
     return response;
@@ -51,6 +55,8 @@ export const hw_login = async (email: string, password: string) => {
       userEmail: user.email || "",
       token: access_token,
       userName: user.username,
+      country: user.country,
+      countryCode: user.country_code
     });
     // await setAccessToken(access_token);
     return response;

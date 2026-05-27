@@ -6,7 +6,6 @@ import {
   Dimensions,
   Keyboard,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,16 +14,23 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { savePatient } from "@/src/services/healthworkerService";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import {
+  KeyboardAvoidingView,
+  KeyboardAwareScrollView,
+} from "react-native-keyboard-controller";
 import Toast from "@/app/shared/Toast";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useUserStore } from "@/app/stores/userStore";
+import { CustomCountryPickerModal } from "@/app/components/CustomCountryPickerModal";
+import { COUNTRIES } from "@/src/utils/constants";
+import { Ionicons } from "@expo/vector-icons";
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 
 const { width } = Dimensions.get("window");
 const rf = (size: number) => Math.round(size * (width / 390));
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const GOOGLE_PLACES_API_KEY = "AIzaSyBJstUqo2LcNszVQIhopKWWOoXHyWeaQZI";
+const GOOGLE_PLACES_API_KEY = "AIzaSyBidEyl9D3HP18g3gu27XaRFIpBcEkDXQI";
 const PHONE_MAX_LENGTH = 15;
 const AGE_MAX_LENGTH = 3;
 const PINCODE_MAX_LENGTH = 10;
@@ -49,6 +55,7 @@ interface FormState {
   pincode: string;
   hwId: string | number;
   locality?: string;
+  countryIso?: string;
 }
 
 interface FormErrors {
@@ -71,11 +78,6 @@ const sanitizeInput = (value: string): string => value.trim();
 const sanitizeNumericInput = (value: string): string =>
   value.replace(/[^0-9]/g, "");
 
-const validatePhone = (phone: string): boolean => {
-  const cleanPhone = sanitizeNumericInput(phone);
-  return cleanPhone.length >= 7 && cleanPhone.length <= PHONE_MAX_LENGTH;
-};
-
 const validateAge = (age: string): boolean => {
   const ageNum = Number(age);
   return !isNaN(ageNum) && ageNum > 0 && ageNum <= 100;
@@ -83,7 +85,8 @@ const validateAge = (age: string): boolean => {
 
 const validatePincode = (pincode: string): boolean => {
   if (!pincode) return true; // Optional field
-  return /^\d{4,10}$/.test(pincode);
+  // return /^\d{4,10}$/.test(pincode);
+  return /^[A-Z0-9 -]{3,10}$/i.test(pincode.trim());
 };
 
 // ── Reusable Components ───────────────────────────────────────────────────────
@@ -175,6 +178,17 @@ export default function AddPatientScreen() {
     locality: "",
   });
 
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+
+  const [selectedCountry, setSelectedCountry] = useState(
+    COUNTRIES.find((c) => c.dial_code === user?.countryCode) || {
+      name: "United States",
+      dial_code: "+1",
+      code: "US",
+      flag: "🇺🇸",
+    },
+  );
+
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -184,42 +198,70 @@ export default function AddPatientScreen() {
   });
 
   const { data: patientData } = useLocalSearchParams();
-  console.log("🔍 Local search params:", patientData);
 
   useEffect(() => {
-    if (patientData) {
-      try {
-        const parsed = JSON.parse(patientData);
-        console.log("📊 Parsed patient data from search params:", parsed);
-        const mobile = parsed.mobile_no || "";
+    if (!patientData) return;
 
-        const [countryCode, phone] = mobile.includes("-")
-          ? mobile.split("-")
-          : ["+91", mobile];
+    try {
+      const parsed = JSON.parse(patientData as string);
 
-        setForm((prev) => ({
-          ...prev,
-          patientId: parsed.patient_id || prev.patientId,
-          firstName: parsed.full_name
-            ? parsed.full_name.split(" ")[0]
-            : prev.firstName,
-          lastName: parsed.full_name
-            ? parsed.full_name.split(" ").slice(1).join(" ")
-            : prev.lastName,
-          countryCode: countryCode || prev.countryCode,
-          phone: phone || prev.phone,
-          age: parsed.age ? parsed.age.toString() : prev.age,
-          gender: parsed.gender || prev.gender,
-          address: parsed.address || prev.address,
-          city: parsed.city || prev.city,
-          district: parsed.district || prev.district,
-          state: parsed.state || prev.state,
-          pincode: parsed.pincode || prev.pincode,
-          locality: parsed.locality || prev.locality,
-        }));
-      } catch (error) {
-        console.error("❌ Error parsing patient data:", error);
+      console.log("📊 Parsed patient data:", parsed);
+
+      const mobile = parsed.mobile_no?.trim() || "";
+
+      let countryCode = "+91";
+      let phone = mobile;
+
+      // Extract country code safely
+      const match = mobile.match(/^(\+\d+)[-\s]?(.*)$/);
+
+      if (match) {
+        countryCode = match[1];
+        phone = match[2];
       }
+
+      // Find matching country
+      const matchedCountry = COUNTRIES.find((c) => c.dial_code === countryCode);
+
+      if (matchedCountry) {
+        setSelectedCountry(matchedCountry);
+      }
+
+      setForm((prev) => ({
+        ...prev,
+
+        patientId: parsed.patient_id || prev.patientId,
+
+        firstName: parsed.full_name
+          ? parsed.full_name.split(",")[0]
+          : prev.firstName,
+
+        lastName: parsed.full_name
+          ? parsed.full_name.split(",")[1]
+          : prev.lastName,
+
+        countryCode,
+
+        phone,
+
+        age: parsed.age ? String(parsed.age) : prev.age,
+
+        gender: parsed.gender || prev.gender,
+
+        address: parsed.address || prev.address,
+
+        city: parsed.city || prev.city,
+
+        district: parsed.district || prev.district,
+
+        state: parsed.state || prev.state,
+
+        pincode: parsed.pincode || prev.pincode,
+
+        locality: parsed.locality || prev.locality,
+      }));
+    } catch (error) {
+      console.error("❌ Error parsing patient:", error);
     }
   }, [patientData]);
 
@@ -243,6 +285,51 @@ export default function AddPatientScreen() {
     [updateField],
   );
 
+  // ── Phone Validation ──
+  const handlePhoneChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, "");
+
+    setForm((prev) => ({
+      ...prev,
+      phone: cleaned,
+    }));
+
+    if (!cleaned) {
+      setErrors((prev) => ({
+        ...prev,
+        phone: "Phone number is required",
+      }));
+
+      return;
+    }
+
+    try {
+      const fullNumber = `${selectedCountry.dial_code}${cleaned}`;
+
+      // const phoneNumber = parsePhoneNumberFromString(fullNumber);
+      const phoneNumber = parsePhoneNumberFromString(
+        cleaned,
+        selectedCountry.code as any,
+      );
+
+      const isValid = phoneNumber?.isValid() || false;
+      // console.log("📞 Validating phone number:", {
+      //   phoneNumber,
+      //   isValid,
+      // });
+
+      setErrors((prev) => ({
+        ...prev,
+        phone: isValid ? "" : "Invalid phone number",
+      }));
+    } catch (error) {
+      setErrors((prev) => ({
+        ...prev,
+        phone: "Invalid phone number",
+      }));
+    }
+  };
+
   // ── Validation ──
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -260,8 +347,18 @@ export default function AddPatientScreen() {
       newErrors.lastName = "Last name must be at least 2 characters";
     }
 
-    if (!validatePhone(form.phone)) {
-      newErrors.phone = "Enter a valid phone number (7-10 digits)";
+    if (!form.phone) {
+      newErrors.phone = "Phone number is required";
+    } else {
+      const fullNumber = `${selectedCountry.dial_code}${form.phone}`;
+
+      const phoneNumber = parsePhoneNumberFromString(fullNumber);
+
+      const isPhoneValid = phoneNumber?.isValid() || false;
+
+      if (!isPhoneValid) {
+        newErrors.phone = "Invalid phone number";
+      }
     }
 
     if (!form.age || !validateAge(form.age)) {
@@ -297,6 +394,7 @@ export default function AddPatientScreen() {
     setIsSubmitting(true);
 
     try {
+      const fullPhoneNumber = `${selectedCountry.dial_code}${form.phone}`;
       // Sanitize all inputs before sending
       const sanitizedForm: FormState = {
         ...form,
@@ -324,7 +422,24 @@ export default function AddPatientScreen() {
 
       // Navigate back after short delay
       setTimeout(() => {
-        router.back();
+        // router.back();
+        const parsed = JSON.parse(patientData as string);
+        const updatedPatientData = {
+          ...parsed,
+          full_name: `${sanitizedForm.firstName},${sanitizedForm.lastName}`,
+          age: sanitizedForm.age,
+          phone_number: `${sanitizedForm.countryCode}${sanitizedForm.phone}`,
+          address: sanitizedForm.address,
+          city: sanitizedForm.city,
+          district: sanitizedForm.district,
+          state: sanitizedForm.state,
+          pincode: sanitizedForm.pincode,
+          locality: sanitizedForm.locality,
+        };
+        router.push({
+          pathname: "/patients/[id]",
+          params: { id: updatedPatientData.patient_id, data: JSON.stringify(updatedPatientData) },
+        });
       }, 1500);
     } catch (error: any) {
       console.error("❌ Failed to save patient:", error);
@@ -341,7 +456,7 @@ export default function AddPatientScreen() {
 
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
-    router.back();
+    router.replace("/(home)/patients");
   }, [router]);
 
   const handleGenderSelect = useCallback((gender: Gender) => {
@@ -439,214 +554,245 @@ export default function AddPatientScreen() {
       </View>
 
       {/* ── Form ── */}
-      <KeyboardAvoidingView
+      {/* <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
+      > */}
+      <KeyboardAwareScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent]}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + 5 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* ── Personal Details ── */}
-          <SectionTitle text="Personal Details" />
+        {/* ── Personal Details ── */}
+        <SectionTitle text="Personal Details" />
 
-          <FieldLabel text="First Name" required />
-          <InputField
-            placeholder="Enter first name"
-            value={form.firstName.trim()}
-            onChangeText={updateField("firstName")}
-            error={errors.firstName}
-            autoCapitalize="words"
-          />
+        <FieldLabel text="First Name" required />
+        <InputField
+          placeholder="Enter first name"
+          value={form.firstName}
+          onChangeText={updateField("firstName")}
+          error={errors.firstName}
+          autoCapitalize="words"
+        />
 
-          <FieldLabel text="Last Name" required />
-          <InputField
-            placeholder="Enter last name"
-            value={form.lastName}
-            onChangeText={updateField("lastName")}
-            error={errors.lastName}
-            autoCapitalize="words"
-          />
+        <FieldLabel text="Last Name" required />
+        <InputField
+          placeholder="Enter last name"
+          value={form.lastName}
+          onChangeText={updateField("lastName")}
+          error={errors.lastName}
+          autoCapitalize="words"
+        />
 
-          {/* Phone with country code */}
-          <FieldLabel text="Phone" required />
-          <View style={styles.phoneRow}>
-            <TouchableOpacity
-              style={styles.countryCodeBtn}
-              activeOpacity={0.7}
-              disabled={true} // Disable for now, can enable country picker later
-            >
-              <Text style={styles.flagEmoji}>🇮🇳</Text>
-              <Text style={styles.countryCodeText}>{form.countryCode}</Text>
-              <Text style={styles.dropdownArrow}>▾</Text>
-            </TouchableOpacity>
-            <View
-              style={[
-                styles.phoneInputWrapper,
-                errors.phone ? styles.inputError : null,
-              ]}
-            >
-              <TextInput
-                style={styles.phoneInput}
-                placeholder="0000000000"
-                placeholderTextColor="#AABBD0"
-                value={form.phone}
-                onChangeText={updateNumericField("phone")}
-                keyboardType="phone-pad"
-                maxLength={PHONE_MAX_LENGTH}
-                accessibilityLabel="Phone number"
-              />
-            </View>
-          </View>
-          {errors.phone ? (
-            <Text style={styles.errorText}>{errors.phone}</Text>
-          ) : null}
+        {/* Phone Input */}
+        <FieldLabel text="Phone" required />
 
-          <FieldLabel text="Age" required />
-          <InputField
-            placeholder="Enter age"
-            value={form.age}
-            onChangeText={updateNumericField("age")}
-            keyboardType="numeric"
-            maxLength={AGE_MAX_LENGTH}
-            error={errors.age}
-          />
+        <View style={styles.phoneRow}>
+          <TouchableOpacity
+            style={styles.countryCodeBtn}
+            activeOpacity={0.7}
+            onPress={() => setShowCountryPicker(true)}
+          >
+            <Text style={styles.flagEmoji}>{selectedCountry.flag}</Text>
 
-          {/* Gender */}
-          <FieldLabel text="Gender" required />
-          <View style={styles.genderRow}>
-            <GenderOption label="Male" />
-            <GenderOption label="Female" />
-            <GenderOption label="Other" />
-          </View>
+            <Text style={styles.countryCodeText}>
+              {selectedCountry.dial_code}
+            </Text>
 
-          {/* ── Address ── */}
-          <SectionTitle text="Address" />
+            {/* <Text style={styles.dropdownArrow}>▾</Text> */}
+            <Ionicons
+              name="chevron-down"
+              size={16}
+              color="#1A2B3C"
+              style={{ marginLeft: 4 }}
+            />
+          </TouchableOpacity>
 
-          <FieldLabel text="Search Address" required />
-          <View style={styles.addressSearchContainer}>
-            <GooglePlacesAutocomplete
-              ref={placesRef}
-              placeholder="Type to search address..."
-              fetchDetails={true}
-              debounce={AUTOCOMPLETE_DEBOUNCE}
-              minLength={AUTOCOMPLETE_MIN_LENGTH}
-              keyboardShouldPersistTaps="handled"
-              disableScroll={true}
-              enablePoweredByContainer={false}
-              onPress={handleAddressSelect}
-              onFail={(error) => {
-                console.error("❌ Places API Error:", error);
-                setToastState({
-                  message: "Failed to fetch address. Please try again.",
-                  type: "error",
-                });
-                setShowToast(true);
-              }}
-              query={{
-                key: GOOGLE_PLACES_API_KEY,
-                language: "en",
-                components: "country:in",
-              }}
-              styles={{
-                container: {
-                  flex: 0,
-                  zIndex: 1000,
-                },
-                textInputContainer: {
-                  backgroundColor: "transparent",
-                },
-                textInput: {
-                  backgroundColor: "#FFFFFF",
-                  borderWidth: 1,
-                  borderColor: errors.address ? ACCENT : BORDER,
-                  height: 50,
-                  borderRadius: 4,
-                  paddingHorizontal: 14,
-                  fontSize: rf(14),
-                  color: "#1A2B3C",
-                },
-                listView: {
-                  backgroundColor: "#FFFFFF",
-                  borderWidth: 1,
-                  borderColor: BORDER,
-                  borderRadius: 4,
-                  marginTop: 4,
-                  maxHeight: 300,
-                },
-                row: {
-                  backgroundColor: "#FFFFFF",
-                  padding: 13,
-                  minHeight: 44,
-                },
-                separator: {
-                  height: 1,
-                  backgroundColor: "#E0EAF5",
-                },
-                description: {
-                  fontSize: rf(14),
-                  color: "#1A2B3C",
-                },
-                predefinedPlacesDescription: {
-                  color: "#6B82A0",
-                },
-              }}
-              textInputProps={{
-                accessibilityLabel: "Search address",
-                returnKeyType: "search",
-              }}
+          <View
+            style={[
+              styles.phoneInputWrapper,
+              errors.phone ? styles.inputError : null,
+            ]}
+          >
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="Enter phone number"
+              placeholderTextColor="#AABBD0"
+              value={form.phone}
+              onChangeText={handlePhoneChange}
+              keyboardType="phone-pad"
+              maxLength={15}
+              accessibilityLabel="Phone number"
             />
           </View>
-          {errors.address ? (
-            <Text style={styles.errorText}>{errors.address}</Text>
-          ) : null}
+        </View>
 
-          <FieldLabel text="Full Address" />
-          <InputField
-            placeholder="Selected address will appear here"
-            value={form.address}
-            onChangeText={updateField("address")}
-            // editable={false}
-          />
+        {errors.phone ? (
+          <Text style={styles.errorText}>{errors.phone}</Text>
+        ) : null}
 
-          <FieldLabel text="Village/Area" />
-          <InputField
-            placeholder="Enter village or area"
-            value={form.city}
-            onChangeText={updateField("city")}
-          />
+        <CustomCountryPickerModal
+          visible={showCountryPicker}
+          onClose={() => setShowCountryPicker(false)}
+          selectedCountry={selectedCountry}
+          onSelect={(country) => {
+            setSelectedCountry(country);
 
-          <FieldLabel text="District" />
-          <InputField
-            placeholder="Enter district"
-            value={form.district}
-            onChangeText={updateField("district")}
-          />
+            setForm((prev) => ({
+              ...prev,
+              countryCode: country.dial_code,
+              countryIso: country.code,
+              phone: "",
+            }));
 
-          <FieldLabel text="State" />
-          <InputField
-            placeholder="Enter state"
-            value={form.state}
-            onChangeText={updateField("state")}
-          />
+            setErrors((prev) => ({
+              ...prev,
+              phone: undefined,
+            }));
 
-          <FieldLabel text="Pincode" />
-          <InputField
-            placeholder="Enter pincode"
-            value={form.pincode}
-            onChangeText={updateNumericField("pincode")}
-            keyboardType="numeric"
-            maxLength={PINCODE_MAX_LENGTH}
-            error={errors.pincode}
+            setShowCountryPicker(false);
+          }}
+        />
+
+        <FieldLabel text="Age" required />
+        <InputField
+          placeholder="Enter age"
+          value={form.age}
+          onChangeText={updateNumericField("age")}
+          keyboardType="numeric"
+          maxLength={AGE_MAX_LENGTH}
+          error={errors.age}
+        />
+
+        {/* Gender */}
+        <FieldLabel text="Gender" required />
+        <View style={styles.genderRow}>
+          <GenderOption label="Male" />
+          <GenderOption label="Female" />
+          <GenderOption label="Other" />
+        </View>
+
+        {/* ── Address ── */}
+        <SectionTitle text="Address" />
+
+        <FieldLabel text="Search Address" required />
+        <View style={styles.addressSearchContainer}>
+          <GooglePlacesAutocomplete
+            ref={placesRef}
+            placeholder="Type to search address..."
+            fetchDetails={true}
+            debounce={AUTOCOMPLETE_DEBOUNCE}
+            minLength={AUTOCOMPLETE_MIN_LENGTH}
+            keyboardShouldPersistTaps="handled"
+            disableScroll={true}
+            enablePoweredByContainer={false}
+            onPress={handleAddressSelect}
+            onFail={(error) => {
+              console.error("❌ Places API Error:", error);
+              setToastState({
+                message: "Failed to fetch address. Please try again.",
+                type: "error",
+              });
+              setShowToast(true);
+            }}
+            query={{
+              key: GOOGLE_PLACES_API_KEY,
+              language: "en",
+              components: "",
+            }}
+            styles={{
+              container: {
+                flex: 0,
+                zIndex: 9900,
+              },
+              textInputContainer: {
+                backgroundColor: "transparent",
+              },
+              textInput: {
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: errors.address ? ACCENT : BORDER,
+                height: 50,
+                borderRadius: 4,
+                paddingHorizontal: 14,
+                fontSize: rf(14),
+                color: "#1A2B3C",
+              },
+              listView: {
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: BORDER,
+                borderRadius: 4,
+                marginTop: 4,
+                maxHeight: 300,
+              },
+              row: {
+                backgroundColor: "#FFFFFF",
+                padding: 13,
+                minHeight: 44,
+              },
+              separator: {
+                height: 1,
+                backgroundColor: "#E0EAF5",
+              },
+              description: {
+                fontSize: rf(14),
+                color: "#1A2B3C",
+              },
+              predefinedPlacesDescription: {
+                color: "#6B82A0",
+              },
+            }}
+            textInputProps={{
+              accessibilityLabel: "Search address",
+              returnKeyType: "search",
+            }}
           />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+        {errors.address ? (
+          <Text style={styles.errorText}>{errors.address}</Text>
+        ) : null}
+
+        <FieldLabel text="Full Address" />
+        <InputField
+          placeholder="Selected address will appear here"
+          value={form.address}
+          onChangeText={updateField("address")}
+        />
+
+        <FieldLabel text="Village/Area" />
+        <InputField
+          placeholder="Enter village or area"
+          value={form.city}
+          onChangeText={updateField("city")}
+        />
+
+        <FieldLabel text="District" />
+        <InputField
+          placeholder="Enter district"
+          value={form.district}
+          onChangeText={updateField("district")}
+        />
+
+        <FieldLabel text="State" />
+        <InputField
+          placeholder="Enter state"
+          value={form.state}
+          onChangeText={updateField("state")}
+        />
+
+        <FieldLabel text="Pincode" />
+        <InputField
+          placeholder="Enter pincode"
+          value={form.pincode}
+          onChangeText={updateNumericField("pincode")}
+          keyboardType="numeric"
+          maxLength={PINCODE_MAX_LENGTH}
+          error={errors.pincode}
+        />
+      </KeyboardAwareScrollView>
+      {/* </KeyboardAvoidingView> */}
 
       {/* ── Save Button ── */}
       <View style={[styles.footer, { paddingBottom: 15 }]}>
@@ -783,13 +929,13 @@ const styles = StyleSheet.create({
   // Address search
   addressSearchContainer: {
     marginBottom: 2,
-    zIndex: 1000,
+    zIndex: 99900,
   },
 
   // Phone row
   phoneRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 5,
     alignItems: "center",
   },
   countryCodeBtn: {
@@ -885,7 +1031,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,
-    // minHeight: 48,
   },
   saveBtnDisabled: {
     backgroundColor: "#AABBD0",
@@ -897,5 +1042,47 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 0.3,
+  },
+
+  // Phone Input Styles
+  phoneWrapper: {
+    marginBottom: 2,
+  },
+
+  phoneContainer: {
+    width: "100%",
+    height: 50,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: "#FFFFFF",
+  },
+
+  textContainer: {
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 0,
+  },
+
+  phoneTextInput: {
+    height: 50,
+    fontSize: rf(14),
+    color: "#1A2B3C",
+  },
+
+  codeText: {
+    fontSize: rf(14),
+    fontWeight: "600",
+    color: "#1A2B3C",
+  },
+
+  flagButton: {
+    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
+  },
+
+  errorBorder: {
+    borderColor: ACCENT,
   },
 });

@@ -27,6 +27,7 @@ import { hw_login, login } from "../../src/services/auth";
 import commonStyles, { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
 import BackButton from "../shared/BackButton";
+import { rms, rs, rvs } from "@/src/utils/responsive";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -161,13 +162,13 @@ export default function VerifyDetailsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F2F6FF" }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg_primary }}>
       <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView
+        {/* <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={0}
-        >
+        > */}
           <KeyboardAwareScrollView
             style={styles.container}
             contentContainerStyle={styles.contentContainer}
@@ -182,13 +183,22 @@ export default function VerifyDetailsScreen() {
             />
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>Login to</Text>
+              <Text
+                style={[
+                  styles.title,
+                  { fontSize: rms(25), textAlign: 'left', fontWeight: "600", marginBottom: rvs(25), color: "#2B2C4380" },
+                ]}
+              >
+                Sign in as{" "}
+                {userType === "patient" ? "Patient" : "Healthcare Professional"}
+              </Text>
               <Image
                 source={images.logoFull1}
                 style={styles.logo}
                 resizeMode="contain"
               />
             </View>
+
             {/* FORM */}
             <View style={styles.formContainer}>
               <Text style={styles.label}>User Name</Text>
@@ -258,21 +268,14 @@ export default function VerifyDetailsScreen() {
                   style={styles.continueButton}
                 />
               </View>
-              {/* <Text
-                style={{ textAlign: "center", marginTop: 20 }}
-                onPress={() => {
-                  console.log("forgot password pressed!");
-                }}
-              >
-                Forgot Password?
-              </Text> */}
+              
               <TouchableOpacity
                 onPress={() => router.push("/components/forgot-password")}
               >
                 <Text
                   style={{
                     color: colors.black,
-                    marginTop: 20,
+                    marginTop: rvs(20),
                     textAlign: "center",
                   }}
                 >
@@ -296,21 +299,12 @@ export default function VerifyDetailsScreen() {
             <View style={styles.bottomContainer}>
               {/* Terms */}
               <Text style={styles.termsText}>
-                By Signing up, you agree to HelloKidney{"\n"} Terms & Services and Privacy Policy.
-                {/* <View style={{ flexDirection: "row", gap: 5 }}>
-                  <Text
-                    style={styles.linkText}
-                    // onPress={handleTermsAndConditions}
-                  >
-                    Terms & Services
-                  </Text>
-                  <Text style={{ color: colors.textSecondary }}>and</Text>
-                  <Text style={styles.linkText}>Privacy Policy.</Text>
-                </View> */}
+                By Signing up, you agree to HelloKidney{"\n"} Terms & Services
+                and Privacy Policy.
               </Text>
             </View>
           </KeyboardAwareScrollView>
-        </KeyboardAvoidingView>
+        {/* </KeyboardAvoidingView> */}
       </SafeAreaView>
     </View>
   );
@@ -333,26 +327,26 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "flex-start",
-    marginTop: 70,
-    marginBottom: 10,
+    marginTop: rvs(40),
+    marginBottom: rvs(10),
   },
   image: {
-    marginBottom: 20,
+    marginBottom: rvs(20),
     resizeMode: "contain",
   },
   logo: {
     width: "80%",
-    height: 60,
+    height: rvs(60),
   },
   title: {
-    fontSize: 22,
+    fontSize: rms(22),
     fontWeight: "700",
     color: "#2B2C43",
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: rms(13),
     color: colors.black,
     textAlign: "center",
   },
@@ -360,26 +354,26 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 0,
   },
   label: {
-    fontSize: 16,
+    fontSize: rms(16),
     fontWeight: "400",
     color: colors.black,
-    marginBottom: 3,
-    marginTop: 16,
+    marginBottom: rvs(3),
+    marginTop: rvs(16),
   },
   textInput: {
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
+    paddingHorizontal: rs(16),
     // paddingVertical: 1,
     marginBottom: 0,
     borderRadius: 8,
-    height: 50,
+    height: rvs(50),
     borderWidth: 1,
     borderColor: "#c3c4c6",
   },
   textInputContent: {
     borderRadius: 50,
     paddingHorizontal: 2,
-    height: 50,
+    height: rvs(50),
   },
   termsContainer: {
     paddingHorizontal: 20,
@@ -405,38 +399,28 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   bottomContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
+   
     // backgroundColor: "#4119dd",
     paddingHorizontal: 20,
     paddingBottom: 20,
-    paddingTop: 10,
-    alignItems: 'center'
+    paddingTop: rvs(10),
+    alignItems: "center",
     // borderTopWidth: 1,
     // borderTopColor: "#E2E2E4",
   },
-  formFooter: {
-    marginTop: 40,
-    paddingBottom: 40,
-  },
 
   termsText: {
-    fontSize: 14,
+    fontSize: rms(14),
     color: "#8b94a9", // colors.textSecondary,
     lineHeight: 20,
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: rvs(16),
   },
 
   buttonContainer: {
     flexDirection: "row",
-    // justifyContent: "space-between",
-    paddingTop: 20,
+    paddingTop: rvs(20),
     width: "100%",
-    // gap: 16,
-    // backgroundColor: '#2B2C43'
   },
 
   backButton: {
@@ -447,20 +431,19 @@ const styles = StyleSheet.create({
     // flex: 0.7,
     borderRadius: 8,
     width: "100%",
-    // backgroundColor: '#da2626ff'
   },
   signupContainer: {
-    marginTop: 20,
+    marginTop: rvs(20),
     alignItems: "center",
   },
   signupText: {
-    fontSize: 14,
+    fontSize: rms(14),
     color: colors.black,
     lineHeight: 20,
     textAlign: "center",
   },
   signupLinkText: {
-    fontSize: 14,
+    fontSize: rvs(14),
     fontWeight: "600",
     color: "#196ff8",
   },

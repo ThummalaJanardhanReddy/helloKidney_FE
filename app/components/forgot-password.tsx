@@ -8,7 +8,6 @@ import {
   Keyboard,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -22,6 +21,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import BackButton from "../shared/BackButton";
 import { colors } from "../shared/commonStyles";
 import Toast from "../shared/Toast";
@@ -124,7 +124,8 @@ export default function ForgotPassword() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.statusbar }}>
-      <StatusBar backgroundColor={colors.bg_primary} barStyle={"dark-content"} />
+      {/* <StatusBar backgroundColor={colors.bg_primary} barStyle={"dark-content"} /> */}
+      <StatusBar style="dark" backgroundColor={colors.bg_primary} animated/>
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}

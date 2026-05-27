@@ -1,27 +1,37 @@
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Image,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   useColorScheme,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { images } from "../../assets";
 import PrimaryButton from "../shared/PrimaryButton";
 import commonStyles, { colors } from "../shared/commonStyles";
-import responsive from "@/src/utils/responsive";
+import responsive, { rms, rs, rvs } from "@/src/utils/responsive";
 import { useUserStore } from "../stores/userStore";
 
 export default function WelcomeScreen() {
   // const {isAuthenticated, isLoading} = useAuth();
   const clearUser = useUserStore((state) => state.clearUser);
+  const insets = useSafeAreaInsets();
 
-  clearUser();
-  
+  useEffect(() => {
+    const reset = async () => {
+      clearUser();
+    };
+
+    reset();
+  }, []);
+
   const handleContinue = () => {
     try {
       // 2-2-2026: hiding this route as per the requirement now. Enable based on future request
@@ -36,15 +46,19 @@ export default function WelcomeScreen() {
   return (
     // <View style={{ flex: 1, backgroundColor: colors.white}}>
 
-    <SafeAreaView style={[styles.container]}>
-      <StatusBar
-        backgroundColor={colors.white}
+    <View style={[styles.container]}>
+      {/* <StatusBar
+        backgroundColor={colors.bg_primary}
         barStyle={"dark-content"}
         translucent={false}
         animated
-      />
+      /> */}
+      <StatusBar style="dark" backgroundColor={colors.bg_primary} animated />
       <ScrollView
-        style={styles.scrollView}
+        style={[
+          styles.scrollView,
+          { paddingTop: insets.top, paddingBottom: insets.bottom },
+        ]}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
@@ -82,7 +96,7 @@ export default function WelcomeScreen() {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
     // </View>
   );
 }
@@ -90,20 +104,15 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: colors.statusbar_black,
+    backgroundColor: colors.bg_primary,
   },
   scrollView: {
     flex: 1,
   },
   contentContainer: {
     flexGrow: 1,
-    // justifyContent: "space-between",
     ...commonStyles.container_layout,
-    // paddingHorizontal: getResponsiveSpacing(15),
-    // paddingBottom: getResponsiveSpacing(40),
-    // paddingTop: 10,
-    // minHeight: hp(100) - getResponsiveSpacing(100), // Account for safe area and padding
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.bg_primary,
   },
   header: {
     flexShrink: 1,
@@ -114,12 +123,12 @@ const styles = StyleSheet.create({
   },
   welcomeImage: {
     width: "100%",
-    height: "70%",
-    marginBottom: responsive.getResponsiveSpacing(10),
+    height: responsive.isSmallPhone() ? rvs(350) : "70%",
+    marginBottom: rvs(10),
     // backgroundColor: 'red'
   },
   welcomeText: {
-    fontSize: 22,
+    fontSize: rms(22),
     fontWeight: "600",
     color: colors.black,
     textAlign: "center",
@@ -127,17 +136,17 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: "100%",
-    height: 50,
+    height: responsive.scaleHeight(50),
     // height: hp(15),
     // resizeMode: "contain",
     marginBottom: responsive.getResponsiveSpacing(22),
   },
   supportText: {
-    fontSize: 13,
+    fontSize: responsive.getResponsiveFontSize(13),
     textAlign: "center",
     lineHeight: 17,
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: responsive.getResponsiveSpacing(20),
     flexWrap: "wrap",
     width: "100%",
   },

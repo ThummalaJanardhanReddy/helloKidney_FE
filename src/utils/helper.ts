@@ -1,10 +1,17 @@
-import * as FileSystem from "expo-file-system";
+// import * as FileSystem from "expo-file-system";
 
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { Asset } from "expo-asset";
-import { images } from "@/assets";
+// import { images } from "@/assets";
 import dayjs from "dayjs";
+import { images } from "@/assets";
+import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Updates from "expo-updates";
+import { Alert } from "react-native";
 
 export const getBase64Image = async (imageModule: any) => {
   const asset = Asset.fromModule(imageModule);
@@ -57,294 +64,354 @@ const formatDateTime = (timestamp: string | number) => {
 };
 
 export const generatePDF = async (report: any) => {
-  const logoBase64 = await getBase64Image(images.loginType.logo);
+  const logoBase64 = await getBase64Image(images.loginType.report_logo);
   const iconBase64 = await getBase64Image(images.todayTests);
-
-  const html1 = `
-  <html>
-    <head>
-      <style>
-        body {
-          font-family: poppings, sans-serif;
-          background-color: #F5F7FB;
-          padding: 10px;
-        }
-
-        .card {
-          background: #fff;
-          border-radius: 10px;
-          border: 1px solid #E0E0E0;
-          margin-bottom: 15px;
-          overflow: hidden;
-        }
-
-        .logoHeader {
-          background-color: #2C3E50;
-          color: #fff;
-          padding: 10px 15px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .logoText {
-          font-size: 22px;
-          font-weight: bold;
-        }
-
-        .logoKidney {
-          color: #E74C3C;
-        }
-
-        .section {
-          padding: 15px;
-        }
-
-        .detailRow {
-          display: flex;
-          margin-bottom: 8px;
-        }
-
-        .detailLabel {
-          width: 150px;
-          font-weight: bold;
-        }
-
-        .title {
-          background-color: #E8F0FE;
-          padding: 8px;
-          font-size: 18px;
-          font-weight: bold;
-        }
-
-        .row {
-          display: flex;
-          justify-content: space-between;
-          margin: 8px 0;
-        }
-
-        .label {
-          font-weight: bold;
-        }
-
-        .highlight {
-          color: #2E7BE0;
-          font-weight: bold;
-        }
-
-        .image {
-          margin-top: 15px;
-          width: 100%;
-          height: 200px;
-          object-fit: cover;
-          border-radius: 8px;
-        }
-
-      </style>
-    </head>
-
-    <body>
-
-      <div class="card">
-        <!-- Header -->
-        <div class="logoHeader">
-          <div>
-          <img src="${logoBase64}" style="width: 20px; height: 30px; margin-right: 10px;" />
-            <span class="logoText">hello</span>
-            <span class="logoText logoKidney">kidney</span>
-          </div>
-        
-          <img src="${iconBase64}" style="width: 35px; height: 35px;" />
-        </div>
-
-        <!-- Patient Details -->
-        <div class="section">
-          ${detailRow("Name", report?.patientName)}
-          ${detailRow("Age", report?.age ? report.age + " years" : "N/A")}
-          ${detailRow("Gender", report?.gender)}
-          ${detailRow("Patient ID", report?.patientId?.toString().padStart(4, "0"))}
-          ${detailRow("Test ID", report?.testId)}
-          ${detailRow(
-            "Report Date & Time",
-            report?.date ? formatDateTime(report.date) : "N/A",
-          )}
-          ${report?.testedBy ? detailRow("Test done by", report.testedBy) : ""}
-        </div>
-
-        <!-- Report Section -->
-        <div class="section">
-          <div class="title">Urine ACR test results</div>
-
-          ${valueRow("MicroAlbumin", report.albumin)}
-          ${valueRow("Creatinine", report.creatinine)}
-          <div style="border-top: 1px solid #E0E0E0; margin: 5px 0;"></div>
-          ${valueRow("UACR", report.uacr)}
-          ${valueRow("Reference", report.reference)}
-
-          ${report.image ? `<img src="${report.image}" class="image" />` : ""}
-        </div>
-
-      </div>
-
-    </body>
-  </html>
-  `;
 
   const html = `
 <html>
+
 <head>
-  <style>
-    @page {
-      size: A4;
-      margin: 40px;
+    <style>
+        // @page {
+        //   size: A4;
+        // }
+         html {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background: #ffffff;
     }
 
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 12px;
-      color: #000;
-    }
+        body {
+            font-family: poppins, arial, sans-serif;
+            font-size: 12px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
 
-    .header-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 5px;
-    }
+        }
 
-    .section-title {
-      font-weight: bold;
-      margin-top: 15px;
-      margin-bottom: 5px;
-    }
+        /* ---------- APP HEADER ---------- */
 
-    .table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #0E1833 !important;
+            padding: 30px 20px;
+            margin-bottom: 24px;
+        }
 
-    .table th,
-    .table td {
-      border: 1px solid #000;
-      padding: 6px;
-      text-align: left;
-    }
+        .brand-section {
+            display: flex;
+            align-items: flex-start;
+        }
 
-    .table th {
-      font-weight: bold;
-    }
+        .brand-logo {
+            height: 32px;
+            margin-right: 10px;
+        }
 
-    .group-title {
-      font-weight: bold;
-      margin-top: 10px;
-    }
+        .brand-name {
+            display: flex;
+            align-items: center;
+        }
 
-    .note {
-      margin-top: 10px;
-      line-height: 1.5;
-    }
+        .brand-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
 
-    .footer {
-      margin-top: 30px;
-      text-align: center;
-    }
+        .brand-kidney {
+            font-size: 24px;
+            font-weight: 700;
+            color: #E74C3C;
+        }
 
-    .signature {
-      margin-top: 40px;
-      text-align: right;
-    }
-  </style>
+        .report-icon {
+            width: 40px;
+            height: 40px;
+        }
+
+        /* ---------- PATIENT HEADER ---------- */
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .header-item {
+            width: 48%;
+            line-height: 1.5;
+        }
+
+        .body-section {
+            padding: 0px 20px;
+        }
+
+        /* ---------- SECTION ---------- */
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #2C3E50;
+            padding-bottom: 5px;
+            padding-top: 15px;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        /* ---------- TABLE ---------- */
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .table th {
+            background-color: #F4F6F8;
+            font-weight: bold;
+            text-align: left;
+            border: 1px solid #DADADA;
+            padding: 10px 8px;
+        }
+
+        .table td {
+            border: 1px solid #DADADA;
+            padding: 9px 8px;
+            vertical-align: middle;
+        }
+
+        .group-title {
+            background-color: #F9FAFB;
+            font-weight: bold;
+            color: #2C3E50;
+            padding: 10px !important;
+        }
+
+        .highlight-result {
+            font-weight: normal;
+            color: #000;
+        }
+
+        /* ---------- NOTES ---------- */
+
+        .note {
+            margin-top: 16px;
+            line-height: 1.8;
+            font-size: 12px;
+        }
+
+        .reference-text {
+            color: #808080;
+        }
+
+        /* ---------- FOOTER ---------- */
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .signature {
+            margin-top: 50px;
+            text-align: right;
+            font-weight: bold;
+        }
+    </style>
 </head>
 
 <body>
 
-  <!-- Header -->
-  <div class="header-row">
-    <div><b>Patient Name :</b> ${report?.patientName || "N/A"}</div>
-    <div><b>Registration Date :</b> ${formatDateTime(report?.date)}</div>
-  </div>
+    <!-- APP HEADER -->
+    <div class="top-header">
+        <div class="brand-section">
+            <img src="${logoBase64}" class="brand-logo" />
 
-  <div class="header-row">
-    <div><b>Age/Sex :</b> ${report?.age || "N/A"} Y / ${report?.gender || "N/A"}</div>
-    <div><b>UHID No :</b> ${report?.patientId || "N/A"}</div>
-  </div>
+        </div>
 
-  <div class="header-row">
-    <div><b>Department :</b> NEPHROLOGY</div>
-    <div><b>Visit No :</b> ${report?.testId || "N/A"}</div>
-  </div>
+        <img src="${iconBase64}" class="report-icon" />
+    </div>
 
-  <div class="header-row">
-    <div><b>Doctor :</b> ${report?.testedBy || "N/A"}</div>
-    <div><b>Report Date :</b> ${formatDateTime(report?.date)}</div>
-  </div>
+    <!-- PATIENT DETAILS -->
+    <div class="body-section" style="position: relative">
+        <div class="header-row">
+            <div class="header-item">
+                <b>Name: </b> ${report?.patientName || "N/A"}
+            </div>
 
-  <!-- Section -->
-  <div class="section-title">Biochemistry</div>
+            <div class="header-item" style="text-align:right;">
+                <b>Test ID: </b> ${report?.testId || "N/A"}
+            </div>
+        </div>
 
-  <!-- Table -->
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Test Description</th>
-        <th>Result</th>
-        <th>Units</th>
-        <th>Reference Range</th>
-      </tr>
-    </thead>
-    <tbody>
+        <div class="header-row">
+            <div class="header-item">
+                <b>Age: </b> ${report?.age || "N/A"} Years
+            </div>
 
-      <tr>
-        <td colspan="4" class="group-title">
-          URINE ALBUMIN/CREATININE/RATIO
-        </td>
-      </tr>
+            <div class="header-item" style="text-align:right;">
+                <b>Report Date and Time: </b> ${report?.date ? report.date : "N/A"}
+            </div>
+        </div>
 
-      <tr>
-        <td>URINE ALBUMIN</td>
-        <td>${report.albumin || "N/A"}</td>
-        <td>mg/L</td>
-        <td>&lt; 20 mg/L</td>
-      </tr>
+        <div class="header-row">
+            <div class="header-item">
+                <b>Gender: </b> ${report?.gender || "N/A"}
+            </div>
+            <div class="header-item" style="text-align:right;">
+                <b>Test done by: </b> ${report?.testedBy || "N/A"}
+            </div>
+        </div>
 
-      <tr>
-        <td>URINE CREATININE</td>
-        <td>${report.creatinine || "N/A"}</td>
-        <td>mg/dl</td>
-        <td>10 - 300 mg/dl</td>
-      </tr>
+        <!-- SECTION TITLE -->
 
-      <tr>
-        <td><b>URINE ALBUMIN/CREATININE RATIO</b></td>
-        <td><b>${report.uacr || "N/A"}</b></td>
-        <td>mg/g</td>
-        <td>Normal &lt; 30 mg/g</td>
-      </tr>
+        <div class="section-title">
+            Urine Test Result
+        </div>
 
-    </tbody>
-  </table>
+        <!-- TABLE -->
 
-  <!-- Interpretation -->
-  <div class="note">
-    <b>Slightly Abnormal :</b> 30 - 300 mg/g <br/>
-    <b>Abnormal :</b> &gt; 300 mg/g
-  </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Investigation</th>
+                    <th>Observed Values</th>
+                    <th>Units</th>
+                    <th>Reference Range</th>
+                </tr>
+            </thead>
 
-  <!-- Footer -->
-  <div class="footer">
-    *** End of Report ***
-  </div>
+            <tbody>
 
-  <div class="signature">
-    Lab Incharge
-  </div>
+                <tr>
+                    <td colspan="4" class="group-title">
+                        URINE ALBUMIN / CREATININE RATIO
+                    </td>
+                </tr>
 
+                <tr>
+                    <td>
+                        uACR
+                    </td>
+
+                    <td class="highlight-result">
+                        ${report?.uacr || "N/A"}
+                    </td>
+
+                    <td>mg/g</td>
+
+                    <td class="reference-text">
+                        Normal : A1 (&lt; 30 mg/g)
+                        <br />
+                        Slightly Abnormal : A2 (30 - 300 mg/g)
+                        <br />
+
+                        Abnormal : A3 (&gt; 300 mg/g)
+                    </td>
+                </tr>
+                <tr>
+                    <td>Microalbumin</td>
+                    <td>${report?.albumin || "N/A"}</td>
+                    <td>mg/L</td>
+                    <td class="reference-text">&lt; 20 mg/L</td>
+                </tr>
+
+                <tr>
+                    <td>Creatinine</td>
+                    <td>${report?.creatinine || "N/A"}</td>
+                    <td>mg/dL</td>
+                    <td class="reference-text">10 - 300 mg/dL</td>
+                </tr>
+
+            </tbody>
+        </table>
+
+        <!-- FOOTER -->
+
+        <div class="footer">
+            *** End of Report ***
+        </div>
+
+        <div style="margin-top: auto">
+            <h3 style="margin-bottom: 10px;">Note</h3>
+
+            <ul style="padding-left: 20px;">
+                <li>
+                    The urine routine is a screening test.
+                </li>
+
+                <li>
+                    Pre-test conditions to be observed while testing:
+                    first void, mid-stream urine, collected in a clean, dry, sterile container
+                    is recommended for routine urine analysis to avoid contamination with any
+                    discharge from the vagina and urethra.
+                </li>
+
+                <li>
+                    During interpretation, points to be considered:
+                    Negative nitrite test does not exclude the presence of bacteria or urinary
+                    tract infections.
+                </li>
+
+                <li>
+                    Trace proteinuria can be seen with many physiological conditions like
+                    prolonged recumbency, exercise, high protein diet, etc.
+                </li>
+
+                <li>
+                    False reactions for bile pigments, proteins, glucose, and nitrites can be
+                    caused by peroxidase-like activity by disinfectants, therapeutic dyes,
+                    ascorbic acid, and certain drugs, etc.
+                </li>
+
+                <li>
+                    Physiological variations may affect the test results.
+                </li>
+
+                <li>
+                    When trace results occur, it is recommended to retest using a fresh
+                    specimen from the same patient.
+                </li>
+
+                <li>
+                    Ketones may occur in urine during fasting, pregnancy, and frequent
+                    strenuous exercise.
+                </li>
+
+                <li>
+                    Blood is often, but not invariably, found in the urine of menstruating
+                    females.
+                </li>
+            </ul>
+        </div>
+
+        <!-- <div style="border: 5px solid #0E1833; "></div> -->
+    </div>
 </body>
+
 </html>
 `;
 
   const { uri } = await Print.printToFileAsync({ html });
-  await Sharing.shareAsync(uri);
+  const isAvailable = await Sharing.isAvailableAsync();
+
+  if (isAvailable) {
+    await Sharing.shareAsync(uri);
+  } else {
+    throw new Error("Sharing is not available on this platform");
+  }
+  // await Sharing.shareAsync(uri);
 };
 
 export const formatDate = (date: string): string => {
@@ -358,5 +425,79 @@ export const formatDate = (date: string): string => {
   } catch (error) {
     console.error("Date formatting error:", error);
     return "Invalid Date";
+  }
+};
+
+export const clearAppCache = async () => {
+  try {
+    // AsyncStorage
+    await AsyncStorage.clear();
+
+    // FileSystem cache
+    if (FileSystem.cacheDirectory) {
+      await FileSystem.deleteAsync(
+        FileSystem.cacheDirectory,
+        { idempotent: true }
+      );
+    }
+
+    // SecureStore keys
+    const keys = [
+      "token",
+      "user",
+      "session",
+    ];
+
+    for (const key of keys) {
+      await SecureStore.deleteItemAsync(key);
+    }
+
+    console.log("Cache cleared");
+  } catch (error) {
+    console.log("Cache clear error", error);
+  }
+};
+
+const VERSION_KEY = "APP_VERSION";
+export const checkVersionAndClearCache =
+  async () => {
+    const currentVersion =
+      Constants.expoConfig?.version;
+
+    const savedVersion =
+      await AsyncStorage.getItem(VERSION_KEY);
+
+    if (savedVersion !== currentVersion) {
+      await clearAppCache();
+
+      await AsyncStorage.setItem(
+        VERSION_KEY,
+        currentVersion || ""
+      );
+    }
+  };
+
+  export const checkForUpdates = async () => {
+  try {
+    const update =
+      await Updates.checkForUpdateAsync();
+
+    if (update.isAvailable) {
+      Alert.alert(
+        "Update Available",
+        "A new update is ready.",
+        [
+          {
+            text: "Update",
+            onPress: async () => {
+              await Updates.fetchUpdateAsync();
+              await Updates.reloadAsync();
+            },
+          },
+        ]
+      );
+    }
+  } catch (e) {
+    console.log(e);
   }
 };

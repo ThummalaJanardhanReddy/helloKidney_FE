@@ -12,6 +12,8 @@ export interface IUser {
   token: string;
   userType?: UserType;
   userName?: string;
+  country?: string;
+  countryCode?: string;
 }
 
 interface UserState {

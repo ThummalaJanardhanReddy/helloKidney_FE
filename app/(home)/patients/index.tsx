@@ -5,7 +5,6 @@ import {
   FlatList,
   Image,
   Platform,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getAllPatients } from "@/src/services/healthworkerService";
 import { useUserStore } from "@/app/stores/userStore";
@@ -69,7 +69,7 @@ function PatientRow({ item, onPress }: { item: Patient; onPress: () => void }) {
         <InitialsAvatar name={item.full_name} />
       {/* )} */}
       <View style={styles.rowInfo}>
-        <Text style={styles.rowName}>{item.full_name}</Text>
+        <Text style={styles.rowName}>{item.full_name?.replaceAll(",", "")}</Text>
         <Text style={styles.rowMeta}>
           {String(item.patient_uniqueid ?? item.patient_id)?.padStart(4, "0") || '--'} | {item.age} years, {item.gender}
         </Text>
@@ -131,7 +131,7 @@ export default function PatientsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"}/>
+      <StatusBar style="light" backgroundColor={colors.bg_home} animated/>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>Patient List</Text>
@@ -231,7 +231,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     gap: 14,
     borderColor: colors.BORDER1,
-    borderWidth: 0.5
+    borderWidth: 0,
+    borderBottomWidth: 0.8
   },
   avatar: {
     width: 32,

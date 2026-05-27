@@ -4,7 +4,7 @@ import {
   useCameraPermissions,
 } from "expo-camera";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 import * as ImageManipulator from "expo-image-manipulator";
 import { Dimensions } from "react-native";
 import axiosClient from "../../src/services/axiosClient";
@@ -22,15 +23,23 @@ import BackButton from "../shared/BackButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUserStore } from "../stores/userStore";
 import { IPatient } from "@/src/utils/constants";
+import PrimaryButton from "../shared/PrimaryButton";
+import CommonModal from "../shared/CommonModel";
+import WarningModal from "../shared/WarningModal";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const STRIP_WIDTH = Math.max(160, Math.min(SCREEN_WIDTH * 0.48, 260));
-
-const STRIP_HEIGHT = STRIP_WIDTH * 2.8;
+// Physical dimensions: 10cm height × 2cm width = 5:1 ratio
+const ASPECT_RATIO = 5; // height:width = 10:2
+const STRIP_WIDTH = SCREEN_WIDTH * 0.3; // ~2cm equivalent on screen
+const STRIP_HEIGHT = STRIP_WIDTH * ASPECT_RATIO; // 10cm equivalent
+const FINAL_STRIP_HEIGHT = Math.min(STRIP_HEIGHT, SCREEN_HEIGHT * 0.72);
+const FRAME_TOP_OFFSET = 40;
+const TOTAL_TIME = 60;
 
 export default function TimerCameraUploader() {
-  const [countdown, setCountdown] = useState(60); //60
+  const [started, setStarted] = useState(false);
+  const [countdown, setCountdown] = useState(TOTAL_TIME); //60
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showResultPopup, setShowResultPopup] = useState(false);
@@ -38,8 +47,12 @@ export default function TimerCameraUploader() {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [showAccuracyModal, setShowAccuracyModal] = useState(false);
 
-  const cameraRef = useRef(null);
+  const [cameraOpenedAt, setCameraOpenedAt] = useState(20); // 20 seconds until camera auto-closes for accuracy check
+
+  const cameraRef = useRef<CameraView | null>(null);
   const navigation = useNavigation();
 
   const [permission, requestPermission] = useCameraPermissions();
@@ -56,24 +69,68 @@ export default function TimerCameraUploader() {
   const insets = useSafeAreaInsets();
   const patient = useUserStore((state) => state.patient);
 
+  // Circle Config
+  const size = 180;
+  const strokeWidth = 18;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  const FRAME_TOP_OFFSET = 60;
+  // Progress
+  const progress = countdown / TOTAL_TIME;
+
   useEffect(() => {
     if (!permission?.granted) {
       requestPermission();
     }
   }, []);
 
+  const strokeDashoffset = useMemo(() => {
+    return circumference - circumference * progress;
+  }, [progress]);
+
+  const frameWidth = STRIP_WIDTH;
+
+  const frameHeight = FINAL_STRIP_HEIGHT;
+
+  const frameLeft = previewLayout ? (previewLayout.width - frameWidth) / 2 : 0;
+
+  const frameTop = previewLayout
+    ? (previewLayout.height - frameHeight) / 2 - FRAME_TOP_OFFSET
+    : 0;
+
   // -----------------------------------------
   // COUNTDOWN TIMER
   // -----------------------------------------
   useEffect(() => {
+    if (!started) return;
     if (countdown === 0) {
       setShowCamera(true);
+      setStarted(false);
     }
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     }
-  }, [countdown]);
+  }, [countdown, started]);
+
+  useEffect(() => {
+    console.log("Camera Opened At: ", cameraOpenedAt);
+    if (!showCamera) {
+      return;
+    }
+    if (cameraOpenedAt === 0) {
+      setShowAccuracyModal(true);
+      // setCameraOpenedAt(null);
+    }
+    if (cameraOpenedAt > 0) {
+      const timer = setTimeout(
+        () => setCameraOpenedAt(cameraOpenedAt - 1),
+        1000,
+      );
+      return () => clearTimeout(timer);
+    }
+  }, [showCamera, cameraOpenedAt]);
 
   // -----------------------------------------
   // UPLOAD API FUNCTION
@@ -112,29 +169,15 @@ export default function TimerCameraUploader() {
       console.log("process test response: ", response);
 
       setResultStatus({ message: "Successfully Completed", type: "success" });
-      if (userType === "patient") {
-        router.replace({
-          pathname: "/components/test-results",
-          params: { result: JSON.stringify(response), refresh: "true" },
-        });
-      } else {
-        // router.replace({
-        //   pathname: "/(home)/patients/[id]",
-        //   params: {
-        //     id: patient?.patient_id || 0,
-        //     data: JSON.stringify(patient),
-        //   },
-        // });
 
-        router.replace({
-          pathname: "/components/test-result",
-          params: {
-            result: JSON.stringify(response),
-            refresh: "true",
-            patient: JSON.stringify(patient),
-          },
-        });
-      }
+      router.replace({
+        pathname: "/components/test-result",
+        params: {
+          result: JSON.stringify(response),
+          refresh: "true",
+          patient: JSON.stringify(patient),
+        },
+      });
     } catch (error: any) {
       const detail = error?.response?.data?.detail;
       console.log("test result error: ", error);
@@ -144,7 +187,9 @@ export default function TimerCameraUploader() {
       if (Array.isArray(detail)) {
         message = detail.map((d) => d.msg).join(", ");
       } else if (typeof detail === "string") {
-        message = detail?.detail;
+        message = detail;
+      } else if (detail?.detail) {
+        message = detail.detail;
       } else if (detail?.message) {
         message = detail.message;
       }
@@ -163,16 +208,20 @@ export default function TimerCameraUploader() {
   // TAKE PHOTO
   // -----------------------------------------
   const handleTakePhoto = async () => {
-    if (!cameraRef.current) return;
+    try {
+      if (!cameraRef.current || !previewLayout) return;
 
-    const photo = await cameraRef.current.takePictureAsync({
-      quality: 1,
-      skipProcessing: true,
-    });
-    const croppedStrip = await cropToStripFrame(photo);
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 1,
+        skipProcessing: false,
+      });
 
-    setPreviewPhoto(croppedStrip.uri);
-    // uploadPhoto(photo.uri, user_mail); // replace with actual patientId and testId
+      const croppedImage = await cropToStripFrame(photo);
+
+      setPreviewPhoto(croppedImage.uri);
+    } catch (error) {
+      console.log("Capture Error:", error);
+    }
   };
 
   if (!permission?.granted) {
@@ -185,28 +234,73 @@ export default function TimerCameraUploader() {
     const previewWidth = previewLayout.width;
     const previewHeight = previewLayout.height;
 
-    // scale from preview → captured image
-    const scaleX = photo.width / previewWidth;
-    const scaleY = photo.height / previewHeight;
+    const imageWidth = photo.width;
+    const imageHeight = photo.height;
 
-    // frame position inside preview
+    const frameWidth = STRIP_WIDTH;
+
+    const frameHeight = FINAL_STRIP_HEIGHT;
+
+    const frameLeft = (previewWidth - frameWidth) / 2;
+
+    const frameTop = (previewHeight - frameHeight) / 2 - FRAME_TOP_OFFSET;
+
+    // Calculate scale factors - the camera may crop to fit 4:3
+    const previewAspect = previewWidth / previewHeight;
+    const imageAspect = imageWidth / imageHeight;
+
+    let scaleX,
+      scaleY,
+      offsetX = 0,
+      offsetY = 0;
+
+    if (imageAspect > previewAspect) {
+      // Image is wider - height matches, width is cropped
+      scaleY = imageHeight / previewHeight;
+      scaleX = scaleY;
+      offsetX = (imageWidth - previewWidth * scaleX) / 2;
+    } else {
+      // Image is taller - width matches, height is cropped
+      scaleX = imageWidth / previewWidth;
+      scaleY = scaleX;
+      offsetY = (imageHeight - previewHeight * scaleY) / 2;
+    }
+
+    // Frame position in preview coordinates
     const frameX = (previewWidth - STRIP_WIDTH) / 2;
-    const frameY = (previewHeight - STRIP_HEIGHT) / 2;
+    const frameY = (previewHeight - FINAL_STRIP_HEIGHT) / 2;
 
-    return ImageManipulator.manipulateAsync(
+    // Convert to image coordinates
+    const cropX = Math.round(frameLeft * scaleX + offsetX);
+
+    const cropY = Math.round(frameTop * scaleY + offsetY);
+
+    const cropWidth = Math.round(frameWidth * scaleX);
+
+    const cropHeight = Math.round(frameHeight * scaleY);
+
+    const safeCropX = Math.max(0, cropX);
+
+    const safeCropY = Math.max(0, cropY);
+
+    const safeCropWidth = Math.min(cropWidth, imageWidth - safeCropX);
+
+    const safeCropHeight = Math.min(cropHeight, imageHeight - safeCropY);
+
+    return await ImageManipulator.manipulateAsync(
       photo.uri,
       [
         {
           crop: {
-            originX: Math.round(frameX * scaleX),
-            originY: Math.round(frameY * scaleY),
-            width: Math.round(STRIP_WIDTH * scaleX),
-            height: Math.round(STRIP_HEIGHT * scaleY),
+            originX: safeCropX,
+            originY: safeCropY,
+            width: safeCropWidth,
+            height: safeCropHeight,
           },
         },
       ],
       {
-        compress: 0.95,
+        compress: 1,
         format: ImageManipulator.SaveFormat.JPEG,
       },
     );
@@ -223,6 +317,27 @@ export default function TimerCameraUploader() {
     }
   };
 
+  const handleBackPress = () => {
+    if (started || (showCamera && !previewPhoto)) setShowPopup(true);
+    else navigation.goBack();
+  };
+  const handleBackPressCamera = () => {
+    if (showCamera) {
+      setShowCamera(false);
+      setCountdown(TOTAL_TIME);
+      setStarted(false);
+    } else {
+      navigation.goBack();
+    }
+  };
+
+  const handleWarningRetry = () => {
+    setShowAccuracyModal(false);
+    setShowCamera(false);
+    setCountdown(TOTAL_TIME);
+    setStarted(false);
+  };
+
   return (
     <View
       style={{
@@ -233,38 +348,87 @@ export default function TimerCameraUploader() {
     >
       {/* TIMER */}
       {!showCamera && (
-        <View style={{ flex: 1, backgroundColor: colors.bg_primary }}>
+        <View style={{ flex: 1, backgroundColor: colors.bg_home }}>
           <BackButton
             title="Back"
-            onPress={() => navigation.goBack()}
-            arrowColor={colors.primary}
+            onPress={handleBackPress}
+            arrowColor={colors.white}
+            color={colors.white}
             style={{
               paddingTop: 30,
               paddingHorizontal: 20,
             }}
           />
-          <View style={styles.timerContainer}>
-            <TouchableOpacity style={styles.circleButton}>
-              <Text style={styles.timerText}>{countdown}</Text>
-            </TouchableOpacity>
 
-            <View style={styles.waitBox}>
-              <Text style={styles.waitText}>
-                Please wait for 60 seconds to ensure your test results are
-                accurate.
-              </Text>
+          <View style={styles.timerContainer}>
+            {/* PROGRESS CIRCLE */}
+            <View style={styles.circleWrapper}>
+              <Svg width={size} height={size}>
+                {/* Background Circle */}
+                <Circle
+                  stroke="#3A4665"
+                  fill="none"
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  strokeWidth={strokeWidth}
+                />
+
+                {/* Animated Progress */}
+                <Circle
+                  stroke="#4ADE80"
+                  fill="none"
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  rotation="90"
+                  origin={`${size / 2}, ${size / 2}`}
+                  scaleX={-1}
+                />
+              </Svg>
+
+              {/* CENTER BUTTON */}
+              <TouchableOpacity style={styles.circleButton}>
+                <Text style={styles.timerText}>{countdown}</Text>
+
+                {/* <Text style={styles.secondsText}>seconds</Text> */}
+              </TouchableOpacity>
             </View>
 
-            {/* <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                { backgroundColor: colors.primary, marginVertical: 40 },
-              ]}
-              onPress={() => navigation.goBack()}
+            {/* WAIT BOX */}
+            <Text
+              style={[styles.waitText, { marginTop: 20, color: colors.white }]}
             >
-              <Text style={styles.actionText}>Back to Home</Text>
-            </TouchableOpacity> */}
+              Please wait for{" "}
+              <Text style={{ color: colors.white, fontWeight: "600" }}>
+                60 seconds
+              </Text>
+            </Text>
           </View>
+          <View style={styles.waitBox}>
+            <Text style={styles.waitText}>
+              Scan the card immediatly after the timer ends.
+            </Text>
+          </View>
+          <PrimaryButton
+            onPress={() => setStarted(true)}
+            title="Start Timer"
+            style={[
+              {
+                bottom: 0,
+                width: "90%",
+                alignSelf: "center",
+                marginBottom: insets.bottom + 20,
+                borderRadius: 6,
+              },
+            ]}
+            textStyle={started ? { color: "#fff" } : { color: "#fff" }}
+            disabled={started}
+          />
         </View>
       )}
 
@@ -277,7 +441,7 @@ export default function TimerCameraUploader() {
           >
             <CameraView
               ref={cameraRef}
-              style={styles.camera}
+              style={StyleSheet.absoluteFill}
               barcodeScannerSettings={{
                 barcodeTypes: ["qr"],
               }}
@@ -286,6 +450,17 @@ export default function TimerCameraUploader() {
 
             {previewLayout && (
               <View style={StyleSheet.absoluteFill}>
+                <BackButton
+                  title="Back"
+                  onPress={handleBackPress}
+                  arrowColor={colors.white}
+                  color={colors.white}
+                  style={{
+                    paddingTop: 30,
+                    paddingHorizontal: 20,
+                    zIndex: 10,
+                  }}
+                />
                 {/* TOP MASK */}
                 <View
                   style={{
@@ -293,7 +468,7 @@ export default function TimerCameraUploader() {
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    height: frameTop,
                     backgroundColor: "rgba(0,0,0,0.55)",
                   }}
                 />
@@ -302,10 +477,10 @@ export default function TimerCameraUploader() {
                 <View
                   style={{
                     position: "absolute",
+                    top: frameTop + frameHeight,
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    height: (previewLayout.height - STRIP_HEIGHT) / 2,
                     backgroundColor: "rgba(0,0,0,0.55)",
                   }}
                 />
@@ -314,20 +489,21 @@ export default function TimerCameraUploader() {
                 <View
                   style={{
                     position: "absolute",
-                    top: (previewLayout.height - STRIP_HEIGHT) / 2,
-                    bottom: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    top: frameTop,
+                    // bottom: (previewLayout.height - FINAL_STRIP_HEIGHT) / 2,
                     left: 0,
-                    width: (previewLayout.width - STRIP_WIDTH) / 2,
+                    width: frameLeft,
+                    height: frameHeight,
                     backgroundColor: "rgba(0,0,0,0.55)",
                   }}
                 />
                 <View
                   style={{
                     position: "absolute",
-                    top: (previewLayout.height - STRIP_HEIGHT) / 2,
-                    bottom: (previewLayout.height - STRIP_HEIGHT) / 2,
+                    top: frameTop,
                     right: 0,
-                    width: (previewLayout.width - STRIP_WIDTH) / 2,
+                    width: frameLeft,
+                    height: frameHeight,
                     backgroundColor: "rgba(0,0,0,0.55)",
                   }}
                 />
@@ -336,42 +512,73 @@ export default function TimerCameraUploader() {
                 <View
                   style={{
                     position: "absolute",
-                    top: (previewLayout.height - STRIP_HEIGHT) / 2,
-                    left: (previewLayout.width - STRIP_WIDTH) / 2,
-                    width: STRIP_WIDTH,
-                    alignItems: "center",
+                    top: frameTop,
+                    left: frameLeft,
+                    width: frameWidth,
+                    height: frameHeight,
                   }}
                 >
-                  <View style={styles.stripFrame} />
-                  <Text style={styles.frameText}>
-                    Align full strip inside the frame
-                  </Text>
+                  <View
+                    style={[
+                      styles.stripFrame,
+                      {
+                        width: STRIP_WIDTH,
+                        height: FINAL_STRIP_HEIGHT,
+                      },
+                    ]}
+                  />
                 </View>
+                <Text
+                  style={[
+                    styles.frameText,
+                    {
+                      top:
+                        (previewLayout.height - FINAL_STRIP_HEIGHT) / 2 -
+                        FRAME_TOP_OFFSET +
+                        FINAL_STRIP_HEIGHT -
+                        50,
+                    },
+                  ]}
+                >
+                  Align full strip inside the frame
+                </Text>
+                {/* <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    {
+                      width: 'auto',
+                      backgroundColor: takePhotoDisabled ? "gray" : "red",
+                      opacity: takePhotoDisabled ? 0.3 : 1,
+                      top:
+                        (previewLayout.height - FINAL_STRIP_HEIGHT) / 2 +
+                        FINAL_STRIP_HEIGHT -
+                        30,
+                    },
+                  ]}
+                  disabled={takePhotoDisabled}
+                  onPress={handleTakePhoto}
+                >
+                  <Text style={styles.actionText}>Take Photo</Text>
+                </TouchableOpacity> */}
+                <PrimaryButton
+                  title="Take Photo"
+                  disabled={takePhotoDisabled}
+                  style={{
+                    position: "absolute",
+                    bottom: insets.bottom + 20,
+                    alignSelf: "center",
+                    width: "50%",
+                    borderRadius: 6,
+                    backgroundColor: takePhotoDisabled
+                      ? "gray"
+                      : colors.primary,
+                    opacity: takePhotoDisabled ? 0.6 : 1,
+                  }}
+                  textStyle={{ color: "#fff", fontWeight: "700" }}
+                  onPress={handleTakePhoto}
+                />
               </View>
             )}
-          </View>
-
-          <View style={styles.buttonsContainer}>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "#444" }]}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.actionText}>Back to Home</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {
-                  backgroundColor: takePhotoDisabled ? "gray" : "red",
-                  opacity: takePhotoDisabled ? 0.3 : 1,
-                },
-              ]}
-              disabled={takePhotoDisabled}
-              onPress={handleTakePhoto}
-            >
-              <Text style={styles.actionText}>Take Photo</Text>
-            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -425,7 +632,11 @@ export default function TimerCameraUploader() {
           <View style={styles.previewBox}>
             <Text style={styles.previewTitle}>Preview</Text>
 
-            <Image source={{ uri: previewPhoto }} style={styles.previewImage} />
+            <Image
+              source={{ uri: previewPhoto }}
+              style={styles.previewImage}
+              resizeMode="contain"
+            />
 
             <View style={styles.previewButtons}>
               <TouchableOpacity
@@ -448,6 +659,58 @@ export default function TimerCameraUploader() {
           </View>
         </View>
       </Modal>
+
+      {/* Exit Confirmation Modal */}
+      <CommonModal
+        visible={showPopup}
+        title="Exit Test"
+        message="Are you sure you want to exit the test?"
+        confirmText="Stay"
+        cancelText="Exit"
+        onConfirm={() => {
+          setShowPopup(false);
+        }}
+        onCancel={() => {
+          setShowPopup(false);
+          handleBackPressCamera();
+        }}
+        confirmButtonStyle={{
+          backgroundColor: colors.blue,
+          borderWidth: 1,
+          borderColor: colors.blue,
+        }}
+        confirmTextStyle={{ color: colors.white }}
+        cancelButtonStyle={{
+          backgroundColor: colors.gray,
+          borderWidth: 1,
+          borderColor: colors.gray,
+        }}
+        cancelTextStyle={{ color: colors.black }}
+      />
+
+      {/* <CommonModal
+        visible={showAccuracyModal}
+        title="Warning"
+        message="Results might not be accurate. Are you sure you want to continue?"
+        confirmText="Continue"
+        cancelText="Retest"
+        onConfirm={() => {
+          setShowAccuracyModal(false);
+          // navigation.goBack();
+        }}
+        onCancel={() => {
+          setShowAccuracyModal(false);
+          navigation.goBack();
+        }}
+      /> */}
+
+      <WarningModal
+        visible={showAccuracyModal}
+        onRetry={handleWarningRetry}
+        onContinue={() => {
+          setShowAccuracyModal(false);
+        }}
+      />
     </View>
   );
 }
@@ -461,7 +724,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    backgroundColor: "#f2f6ff",
+    backgroundColor: colors.bg_home,
   },
 
   cameraScreen: {
@@ -479,34 +742,52 @@ const styles = StyleSheet.create({
   waitBox: {
     borderColor: "#b6b7b7",
     borderWidth: 1,
+    width: "90%",
     padding: 25,
-    marginTop: 22,
+    // marginTop: 22,
+    marginBottom: 30,
+    alignItems: "center",
+    alignSelf: "center",
     borderRadius: 10,
     backgroundColor: "#f6f7f7",
-  },
-
-  circleButton: {
-    width: 180,
-    height: 180,
-    borderRadius: 180,
-    borderWidth: 22,
-    borderColor: "#3A4665",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  timerText: {
-    fontSize: 48,
-    fontWeight: "900",
-    color: "#1A82F7",
   },
 
   waitText: {
     fontSize: 18,
     textAlign: "center",
+    color: colors.black,
   },
+
+  circleWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  circleButton: {
+    position: "absolute",
+    width: 145,
+    height: 145,
+    borderRadius: 145,
+    // backgroundColor: "#3A4665",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  timerText: {
+    fontSize: 42,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+
+  secondsText: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#CBD5E1",
+  },
+
   previewBox: {
     width: "90%",
+    maxHeight: "85%",
     backgroundColor: "#fff",
     borderRadius: 14,
     padding: 20,
@@ -521,7 +802,7 @@ const styles = StyleSheet.create({
 
   previewImage: {
     width: "100%",
-    height: "80%",
+    height: 500,
     borderRadius: 10,
     marginBottom: 15,
   },
@@ -551,7 +832,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-evenly",
     alignItems: "center",
-    backgroundColor: "#ffffff20",
+    backgroundColor: "transparent",
     paddingBottom: 30,
   },
 
@@ -615,7 +896,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
   },
-  /* ================= OVERLAY ================= */
+
   overlay: {
     position: "absolute",
     top: 0,
@@ -626,7 +907,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* Dark blur masks */
   topMask: {
     flex: 1,
     width: "100%",
@@ -650,25 +930,21 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.55)",
   },
 
-  /* ================= STRIP FRAME ================= */
   stripWrapper: {
     width: STRIP_WIDTH,
     alignItems: "center",
   },
+
   stripFrame: {
-    width: STRIP_WIDTH,
-    height: STRIP_HEIGHT,
-    borderWidth: 2,
+    // width: STRIP_WIDTH,
+    // height: STRIP_HEIGHT,
+    borderWidth: 3,
     borderColor: "#00E5FF",
-    borderRadius: 12,
-    // backgroundColor: "transparent",
-    justifyContent: "center",
-    alignItems: "center",
+    borderRadius: 18,
+    backgroundColor: "transparent",
   },
 
   frameText: {
-    // position: "absolute",
-    // bottom: -28,
     marginTop: 8,
     color: "#00E5FF",
     fontSize: 13,

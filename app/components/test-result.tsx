@@ -22,7 +22,13 @@ const TestResult = () => {
 
   const parsedResult = JSON.parse(result);
 
-  const { creatinineInfo, microalbuminInfo, uacrInfo } = parsedResult?.result;
+  const parsed =
+    typeof parsedResult?.result === "string"
+      ? JSON.parse(parsedResult.result)
+      : parsedResult?.result || {};
+
+  const { creatinineInfo, microalbuminInfo, uacrInfo, retestRecommendation } =
+    parsed;
 
   const handleBackPress = () => {
     if (refresh === "true") {
@@ -41,12 +47,21 @@ const TestResult = () => {
 
         return;
       } else {
-        router.replace({pathname:'/(home)/tests', params: { refresh: refresh || undefined }});
+        router.replace({
+          pathname: "/(home)/tests",
+          params: { refresh: refresh || undefined },
+        });
       }
     }
 
     router.back();
     // router.replace({pathname:'/(home)/tests', params: { refresh: refresh || undefined }});
+  };
+
+  const handleRetakeTest = () => {
+    router.replace({
+      pathname: "/components/TimerCameraUploader",
+    });
   };
 
   return (
@@ -56,7 +71,7 @@ const TestResult = () => {
         <TouchableOpacity onPress={handleBackPress}>
           <Ionicons name="arrow-back" size={26} color="#ffffffff" />
         </TouchableOpacity>
-        <Text style={styles.header}>Urine ACR Test Results</Text>
+        <Text style={styles.header}>uACR Results</Text>
         {/* <View style={{ width: 26 }} /> */}
       </View>
 
@@ -68,69 +83,123 @@ const TestResult = () => {
           backgroundColor: "#F2f6ff",
         }}
       >
-        <Text style={[styles.sectionTitle, { fontSize: 18 }]}>Parameters</Text>
+        {/* <Text style={[styles.sectionTitle, { fontSize: 18 }]}>Parameters</Text> */}
         {/* Creatinine + Microalbumin */}
         <View style={styles.row}>
           {/* Creatinine */}
-          <View
-            style={[
-              styles.metricCard,
-              {
-                backgroundColor: rgbStringToColor(creatinineInfo.rgb_value),
-              },
-            ]}
-          >
-            <Text style={[styles.metricTitle, { fontWeight: 400 }]}>
-              Creatinine
-            </Text>
-            <Text style={styles.metricTitle}>{creatinineInfo.pod_color}</Text>
-            <View style={styles.metricBottom}>
-              <Text style={styles.metricValue}>{creatinineInfo.value}</Text>
-              {/* <Text style={styles.metricUnit}>Leu/µL</Text> */}
+          <View style={{ gap: 6, width: "48%" }}>
+            <Text style={[styles.metricTitle]}>Creatinine</Text>
+            <View
+              style={[
+                styles.metricCard,
+                {
+                  backgroundColor: rgbStringToColor(creatinineInfo?.rgb_value),
+                },
+              ]}
+            >
+              {/* <Text style={styles.metricTitle}>{creatinineInfo?.pod_color}</Text> */}
+              <View style={styles.metricBottom}>
+                <Text style={styles.metricValue}>
+                  {creatinineInfo?.value
+                    ? creatinineInfo?.value
+                    : "Result not available"}
+                </Text>
+              </View>
             </View>
           </View>
 
           {/* Microalbumin */}
-          <View
-            style={[
-              styles.metricCard,
-              {
-                backgroundColor: rgbStringToColor(microalbuminInfo.rgb_value),
-              },
-            ]}
-          >
-            <Text style={[styles.metricTitle, { fontWeight: 400 }]}>
-              Microalbumin
-            </Text>
-            <Text style={styles.metricTitle}>{microalbuminInfo.pod_color}</Text>
-            <View style={styles.metricBottom}>
-              <Text style={styles.metricValue}>{microalbuminInfo.value}</Text>
-              {/* <Text style={styles.metricUnit}>Mg/dL</Text> */}
+          <View style={{ gap: 6, width: "48%" }}>
+            <Text style={[styles.metricTitle]}>Microalbumin</Text>
+            <View
+              style={[
+                styles.metricCard,
+                {
+                  backgroundColor: rgbStringToColor(
+                    microalbuminInfo?.rgb_value,
+                  ),
+                },
+              ]}
+            >
+              {/* <Text style={styles.metricTitle}>
+                {microalbuminInfo?.pod_color}
+              </Text> */}
+              <View style={styles.metricBottom}>
+                <Text style={styles.metricValue}>
+                  {microalbuminInfo?.value
+                    ? microalbuminInfo?.value
+                    : "Result not available"}
+                </Text>
+                {/* <Text style={styles.metricUnit}>Mg/dL</Text> */}
+              </View>
             </View>
           </View>
         </View>
 
         {/* UACR */}
-        <View style={styles.uacrCard}>
-          <Text style={[styles.sectionTitle, { color: "#fd6e05" }]}>
-            UACR VALUE
-          </Text>
-          <Text style={styles.uacrValue}>{uacrInfo.value}</Text>
-          {/* <Text style={styles.uacrUnit}>mg/g</Text> */}
+        <View style={{ marginTop: 20 }}>
+          <Text style={[styles.sectionTitle]}>uACR</Text>
+          <View style={styles.uacrCard}>
+            {uacrInfo?.stage ? (
+              <Text style={[styles.metricTitle, { color: "#449126" }]}>
+                Stage {uacrInfo.stage}
+              </Text>
+            ) : (
+              <Text style={[styles.metricTitle, { color: "#fd6e05" }]}>
+                Stage unavailable
+              </Text>
+            )}
+            {uacrInfo?.value !== undefined ? (
+              <Text style={styles.uacrValue}>{uacrInfo.value}</Text>
+            ) : (
+              <Text style={styles.uacrValue}>Result not available</Text>
+            )}
+            {uacrInfo?.reference_range !== undefined && (
+              <Text style={styles.referenceRange}>
+                Reference: {uacrInfo.reference_range}
+              </Text>
+            )}
+          </View>
         </View>
 
-        {/* <View style={{ alignItems: "center" }}>
-          <TouchableOpacity style={styles.downloadBtn}>
-            <Ionicons name="download" size={20} color="#fff" />
-            <Text style={styles.downloadText}>Download Report</Text>
-          </TouchableOpacity>
-        </View> */}
+        {/* Recommendation */}
+        {retestRecommendation?.retest_required && (
+          <>
+            <View style={styles.warningCard}>
+              <View style={styles.warningHeader}>
+                <Text style={styles.warningIcon}>⚠</Text>
 
-        {/* <View style={{ height: 30 }} /> */}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.warningTitle}>
+                    {retestRecommendation.guidance}
+                  </Text>
+
+                  {retestRecommendation?.reason?.map(
+                    (item: string, index: number) => (
+                      <Text key={index} style={styles.warningReason}>
+                        • {item}
+                      </Text>
+                    ),
+                  )}
+
+                  <TouchableOpacity
+                    style={[styles.retake, ]}
+                    onPress={handleRetakeTest}
+                  >
+                    <Text style={styles.retakeText}>Retake test</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
 
-      <TouchableOpacity style={styles.done} onPress={handleBackPress}>
-        <Text style={{ color: "white", fontSize: 18 }}>Done</Text>
+      <TouchableOpacity
+        style={[styles.done, { backgroundColor: colors.success }]}
+        onPress={handleBackPress}
+      >
+        <Text style={{ color: "white", fontSize: 18 }}>Complete uACR test</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -197,8 +266,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 10,
+    fontWeight: "600",
+    marginBottom: 6,
     // marginTop: 10,
     color: "black",
   },
@@ -279,8 +348,8 @@ const styles = StyleSheet.create({
   },
 
   metricCard: {
-    width: "48%",
-    height: 140,
+    // width: "48%",
+    // height: 140,
     borderRadius: 8,
     padding: 16,
     justifyContent: "space-evenly",
@@ -289,16 +358,17 @@ const styles = StyleSheet.create({
 
   metricTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: colors.white,
-    textTransform: "uppercase",
+    fontWeight: "500",
+    color: colors.black,
+    textTransform: "capitalize",
   },
 
   metricBottom: {
     // alignItems: "flex-start",
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    paddingVertical: 6,
+    // gap: 4,
     flexWrap: "wrap",
   },
 
@@ -319,14 +389,15 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingVertical: 10,
     alignItems: "flex-start",
-    marginTop: 15,
+    // marginTop: 15,
     borderColor: "#d3d0d0",
     borderWidth: 1,
     flexWrap: "wrap",
+    gap: 6,
   },
 
   uacrValue: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "800",
     color: "black",
   },
@@ -338,7 +409,7 @@ const styles = StyleSheet.create({
   },
 
   done: {
-    backgroundColor: "red",
+    // backgroundColor: "red",
     paddingVertical: 10,
     position: "fixed",
     bottom: 0,
@@ -346,8 +417,65 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 8,
     marginTop: 20,
-    width: 150,
+    // width: 150,
+    paddingHorizontal: 25,
     margin: "auto",
     color: "white",
+  },
+  retake: {
+    backgroundColor: "red",
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+    marginTop: 20,
+    marginLeft: 0,
+    width: 120,
+    margin: "auto",
+    color: "white",
+  },
+
+  retakeText: {
+    color: "white",
+    fontSize: 14,
+  },
+  referenceRange: {
+    fontSize: 13,
+    color: "#555",
+    marginTop: 6,
+  },
+  warningCard: {
+    backgroundColor: "#FDF1EB",
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: "#D89A52",
+  },
+
+  warningHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+
+  warningIcon: {
+    fontSize: 28,
+    color: "#D89A52",
+    marginRight: 12,
+    marginTop: -2,
+  },
+
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2E2E2E",
+    lineHeight: 24,
+    marginBottom: 10,
+  },
+
+  warningReason: {
+    fontSize: 14,
+    color: "#C58A4A",
+    lineHeight: 22,
+    marginBottom: 4,
   },
 });

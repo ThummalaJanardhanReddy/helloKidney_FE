@@ -7,7 +7,7 @@ import { Feather } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
@@ -17,7 +17,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View, 
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -92,7 +92,9 @@ const formatDate = (date: string): string => {
 // ── Report row ────────────────────────────────────────────────────────────────
 function ReportRow({ item, onPress }: { item: Report; onPress: () => void }) {
   // const created_timestamp = formatDate(item?.created_timestamp);
-  const date = item.created_timestamp ? formatDate(item.created_timestamp) : formatDate(item.created_on);
+  const date = item.created_timestamp
+    ? formatDate(item.created_timestamp)
+    : formatDate(item.created_on);
 
   return (
     <TouchableOpacity
@@ -106,8 +108,7 @@ function ReportRow({ item, onPress }: { item: Report; onPress: () => void }) {
           Test Id: <Text style={styles.bold}>{item.test_id}</Text>
         </Text>
         <Text style={styles.reportDate}>
-          Test Date:{" "}
-          <Text style={styles.bold}>{date}</Text>
+          Test Date: <Text style={styles.bold}>{date}</Text>
         </Text>
       </View>
       <Text style={styles.chevron}>›</Text>
@@ -165,24 +166,41 @@ export default function PatientProfileScreen() {
     ]).start();
   }, []);
 
-  useEffect(() => {
-    const loadReports = async () => {
-      try {
-        setLoadingReports(true);
+  useFocusEffect(
+    useCallback(() => {
+      const loadReports = async () => {
+        try {
+          setLoadingReports(true);
+          const data = await fetchReports();
+          setReports(data);
+        } catch (err) {
+          console.error("Error fetching reports:", err);
+        } finally {
+          setLoadingReports(false);
+        }
+      };
+      loadReports();
+    }, [])
+  );
 
-        const data = await fetchReports(); // ✅ wait for API
-        setReports(data); // ✅ set actual array
+  // useEffect(() => {
+  //   const loadReports = async () => {
+  //     try {
+  //       setLoadingReports(true);
 
-        console.log("Fetched reports:", data);
-      } catch (err) {
-        console.error("Error fetching reports:", err);
-      } finally {
-        setLoadingReports(false);
-      }
-    };
+  //       const data = await fetchReports(); // ✅ wait for API
+  //       setReports(data); // ✅ set actual array
 
-    loadReports();
-  }, []);
+  //       console.log("Fetched reports:", data);
+  //     } catch (err) {
+  //       console.error("Error fetching reports:", err);
+  //     } finally {
+  //       setLoadingReports(false);
+  //     }
+  //   };
+
+  //   loadReports();
+  // }, []);
 
   const fetchReports = async () => {
     try {
@@ -205,6 +223,15 @@ export default function PatientProfileScreen() {
         patientData: JSON.stringify(patient),
       },
     });
+
+    // router.replace({
+    //   pathname: "/components/test-result",
+    //   params: {
+    //     result: JSON.stringify({ result: report.output_metrics }),
+    //     refresh: "true",
+    //     patient: JSON.stringify(patient),
+    //   },
+    // });
   };
 
   const handleStartNewTest = () => {
@@ -255,8 +282,8 @@ export default function PatientProfileScreen() {
             <View style={[styles.profileAvatar, styles.initialsAvatar]}>
               <Text style={styles.initialsText}>
                 {patient.full_name
-                  .split(" ")
-                  .map((w: string) => w[0])
+                  .split(",")
+                  .map((w: string) => w.trim()[0])
                   .slice(0, 2)
                   .join("")
                   .toUpperCase()}
@@ -264,7 +291,7 @@ export default function PatientProfileScreen() {
             </View>
             {/* )} */}
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.profileName}>{patient.full_name}</Text>
+              <Text style={styles.profileName}>{patient.full_name?.replaceAll(",", "")}</Text>
               <Text style={styles.profileMeta}>
                 {String(
                   patient.patient_uniqueid ?? patient.patient_id,

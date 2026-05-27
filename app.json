@@ -2,7 +2,7 @@
   "expo": {
     "name": "NephKare",
     "slug": "hellokidney",
-    "version": "2.1.7",
+    "version": "2.1.12",
     "orientation": "portrait",
     "icon": "./assets/images/icons/Nephkare_1024.png",
     "scheme": "hellokidney",
@@ -10,13 +10,22 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://expo.dev/accounts/janardhanreddy/projects/hellokidney"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ai.hellokidney",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "20"
+      "buildNumber": "27"
     },
     "android": {
       "config": {
@@ -30,7 +39,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "ai.hellokidney",
-      "versionCode": 73,
+      "versionCode": 75,
       "permissions": [
         "CAMERA",
         "INTERNET"

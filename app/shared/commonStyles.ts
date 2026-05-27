@@ -22,6 +22,7 @@ export const colors = {
   black: "#0E1833",
   white: "#ffffff",
   blue: "#1292E5",
+  gray: "#CACECB",
   statusbar_black: "#1c1c1e83",
   statusbar: "#0E1833",
   HEADER_BG: "#0D1B2E",

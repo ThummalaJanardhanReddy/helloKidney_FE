@@ -277,7 +277,7 @@ export default function TestList() {
 
         <View style={{ flex: 1 }}>
           {item.full_name && (
-            <Text style={styles.patientname}>{item.full_name}</Text>
+            <Text style={styles.patientname}>{item.full_name?.replaceAll(",", "")}</Text>
           )}
           {/* <Text style={styles.testId}>PID: {String(item.patient_uniqueid || item.patient_id).padStart(4, "0")}</Text> */}
           <Text style={styles.dateTime}>
@@ -365,7 +365,7 @@ export default function TestList() {
 
   // Main Render
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container,]}>
       <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderColor: colors.border,
-    borderWidth: 1,
+    borderBottomWidth: 0.8,
   },
 
   iconBox: {

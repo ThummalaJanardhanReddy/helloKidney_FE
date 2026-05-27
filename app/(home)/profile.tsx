@@ -16,6 +16,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";  
 import { logout } from "../../src/services/auth";
 import { colors } from "../shared/commonStyles";
 
@@ -82,10 +83,10 @@ export default function ProfilePage() {
     <View
       style={{
         flex: 1,
-        paddingTop: insets.top,
-        backgroundColor: colors.statusbar,
+        backgroundColor: colors.bg_home,
       }}
     >
+      <StatusBar style="light" backgroundColor={colors.bg_home} animated/>
       <View style={[styles.container]}>
         {/* Header */}
         <Text style={[styles.header, { paddingTop: insets.top + 12 }]}>Profile</Text>
@@ -112,7 +113,7 @@ export default function ProfilePage() {
           >
             <View style={styles.itemLeft}>
               <Ionicons name="log-out-outline" size={22} color="red" />
-              <Text style={[styles.itemText, { color: "red" }]}>Logout</Text>
+              <Text style={[styles.itemText, { color: "red" }]}>Sign Out</Text>
             </View>
           </TouchableOpacity>
         </View>

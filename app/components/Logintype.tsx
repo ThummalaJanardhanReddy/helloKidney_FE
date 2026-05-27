@@ -9,11 +9,12 @@ import {
   Dimensions,
   Image,
   Animated,
-  StatusBar,
   Platform,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
 
@@ -116,38 +117,13 @@ export default function LoginTypeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F2F6FF" />
-
-      {/* Background gradient blobs */}
-      {/* <View style={styles.blob1} />
-      <View style={styles.blob2} /> */}
-
-      {/* Logo section */}
-      {/* <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: logoAnim,
-            transform: [
-              {
-                translateY: logoAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-30, 0],
-                }),
-              },
-              { scale: logoAnim },
-            ],
-          },
-        ]}
-      > */}
+      {/* <StatusBar barStyle="dark-content" backgroundColor="#F2F6FF" /> */}
+      <StatusBar style="dark" backgroundColor={colors.bg_primary} animated />
       <Image
         source={images.loginType.logo}
         style={styles.logo}
         resizeMode="contain"
       />
-      {/* Soft glow ring behind logo */}
-      {/* <View style={styles.logoGlow} /> */}
-      {/* </Animated.View> */}
 
       {/* Bottom content panel */}
       <View style={styles.contentPanel}>
@@ -165,42 +141,26 @@ export default function LoginTypeScreen({ navigation }) {
             ],
           }}
         >
-          <Text style={styles.title}>Choose your{"\n"}Login Type</Text>
+          <Text style={styles.title}>Who's signing in?</Text>
         </Animated.View>
 
         {/* Cards row */}
         <View style={styles.cardsRow}>
-          {/* Health Worker Card */}
-          <Animated.View
+          <TouchableOpacity
+            activeOpacity={1}
+            onPressIn={() => handlePressIn(card1Scale, 1)}
+            onPressOut={() => handlePressOut(card1Scale)}
+            onPress={handleHealthWorkerPress}
             style={[
-              styles.cardWrapper,
-              {
-                opacity: card1Anim,
-                transform: [
-                  {
-                    translateY: card1Anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [40, 0],
-                    }),
-                  },
-                  { scale: card1Scale },
-                ],
+              styles.card,
+              { justifyContent: "space-between" },
+              pressed?.id === 1 && {
+                borderColor: colors.ACCENT, // 🔥 your highlight color
+                borderWidth: 2,
               },
             ]}
           >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPressIn={() => handlePressIn(card1Scale, 1)}
-              onPressOut={() => handlePressOut(card1Scale)}
-              onPress={handleHealthWorkerPress}
-              style={[
-                styles.card,
-                pressed?.id === 1 && {
-                  borderColor: colors.ACCENT, // 🔥 your highlight color
-                  borderWidth: 2,
-                },
-              ]}
-            >
+            <View style={{ flexDirection: "row", alignItems: "center", width: "95%", }}>
               <View style={styles.cardImageContainer}>
                 <Image
                   source={images.loginType.socialWorker}
@@ -210,42 +170,36 @@ export default function LoginTypeScreen({ navigation }) {
               </View>
               <View style={styles.cardLabelRow}>
                 {/* <View style={styles.cardDot} /> */}
-                <Text style={styles.cardLabel}>Health Worker</Text>
+                <Text style={styles.cardLabel}>
+                  I'm a Healthcare Professional
+                </Text>
+                <Text style={styles.cardLabelSub}>
+                  Doctor, Nurse, or Technician
+                </Text>
               </View>
-            </TouchableOpacity>
-          </Animated.View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
 
-          {/* Patient Card */}
-          <Animated.View
+          <TouchableOpacity
+            activeOpacity={1}
+            onPressIn={() => handlePressIn(card2Scale, 2)}
+            onPressOut={() => handlePressOut(card2Scale)}
+            onPress={handlePatientPress}
             style={[
-              styles.cardWrapper,
-              {
-                opacity: card2Anim,
-                transform: [
-                  {
-                    translateY: card2Anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [40, 0],
-                    }),
-                  },
-                  { scale: card2Scale },
-                ],
+              styles.card,
+              { justifyContent: "space-between" },
+              pressed?.id === 2 && {
+                borderColor: colors.ACCENT, // 🔥 your highlight color
+                borderWidth: 2,
               },
             ]}
           >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPressIn={() => handlePressIn(card2Scale, 2)}
-              onPressOut={() => handlePressOut(card2Scale)}
-              onPress={handlePatientPress}
-              style={[
-                styles.card,
-                pressed?.id === 2 && {
-                  borderColor: colors.ACCENT, // 🔥 your highlight color
-                  borderWidth: 2,
-                },
-              ]}
-            >
+            <View style={{ flexDirection: "row", alignItems: "center", width: "95%" }}>
               <View style={styles.cardImageContainer}>
                 <Image
                   source={images.loginType.patient}
@@ -254,16 +208,17 @@ export default function LoginTypeScreen({ navigation }) {
                 />
               </View>
               <View style={styles.cardLabelRow}>
-                <Text style={styles.cardLabel}>Patient Login</Text>
+                <Text style={styles.cardLabel}>I'm a Patient</Text>
+                <Text style={styles.cardLabelSub}>or Family caregiver</Text>
               </View>
-            </TouchableOpacity>
-          </Animated.View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
         </View>
-
-        {/* Footer hint */}
-        <Text style={styles.footerHint}>
-          Select the option that applies to you
-        </Text>
       </View>
     </View>
   );
@@ -299,7 +254,7 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingHorizontal: 24,
     paddingTop: 50,
-    paddingBottom: Platform.OS === "ios" ? 44 : 28,
+    paddingBottom: 28,
     backgroundColor: "transparent",
   },
 
@@ -325,32 +280,25 @@ const styles = StyleSheet.create({
 
   // Cards
   cardsRow: {
-    flexDirection: "row",
+    flexDirection: "column",
+    width: "100%",
     justifyContent: "space-between",
     gap: 14,
-    marginBottom: 20,
-  },
-
-  cardWrapper: {
-    flex: 1,
+    // marginBottom: 20,
+    // backgroundColor: "red",
   },
 
   card: {
+    flexDirection: "row",
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     alignItems: "center",
-    shadowColor: "#7090C0",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 6,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "rgba(220,230,245,0.8)",
-    minHeight: CARD_WIDTH * 1.15,
-    justifyContent: "space-evenly",
+    minHeight: 80,
+    // justifyContent: "space-evenly",
   },
 
   cardAccent: {
@@ -359,22 +307,24 @@ const styles = StyleSheet.create({
   },
 
   cardImageContainer: {
-    width: CARD_WIDTH * 0.6,
-    height: CARD_WIDTH * 0.6,
+    width: CARD_WIDTH * 0.4,
+    height: CARD_WIDTH * 0.4,
     justifyContent: "center",
-    alignItems: "center",
+    // alignItems: "center",
     // marginBottom: 8,
   },
 
   cardImage: {
-    width: "100%",
-    height: "100%",
+    width: "80%",
+    height: "80%",
   },
 
   cardLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    // flexDirection: "row",
+    alignItems: "flex-start",
     gap: 6,
+    width: "75%",
+    // backgroundColor: "red",
   },
 
   cardDot: {
@@ -389,16 +339,15 @@ const styles = StyleSheet.create({
   },
 
   cardLabel: {
-    fontSize: rf(13.5),
+    fontSize: rf(16),
     fontWeight: "700",
     color: "#1A2B3C",
     letterSpacing: 0.2,
   },
-
-  footerHint: {
-    fontSize: rf(12),
-    color: "#9DAFC4",
-    textAlign: "center",
-    letterSpacing: 0.3,
+  cardLabelSub: {
+    fontSize: rf(11),
+    fontWeight: "500",
+    color: colors.textSecondary,
+    letterSpacing: 0.1,
   },
 });

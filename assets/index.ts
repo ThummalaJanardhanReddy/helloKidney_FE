@@ -22,6 +22,7 @@ export const images = {
 
   loginType: {
     logo: require("./images/logo_bg.png"),
+    report_logo: require("./images/hellokidney_logo_white.png"),
     patient: require("./images/patient.png"),
     socialWorker: require("./images/social-worker.png"),
   },

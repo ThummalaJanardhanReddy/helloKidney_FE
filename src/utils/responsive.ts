@@ -1,8 +1,18 @@
 import { Dimensions, PixelRatio } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  moderateScale,
+  scale,
+  verticalScale,
+} from "react-native-size-matters";
 
 // Get initial dimensions
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+
+export const rs = scale;
+export const rvs = verticalScale;
+export const rms = moderateScale;
 
 // Export screen dimensions as named exports
 export { SCREEN_HEIGHT, SCREEN_WIDTH };

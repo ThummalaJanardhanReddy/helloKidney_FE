@@ -12,12 +12,13 @@ import {
   TouchableOpacity,
   View,
   Animated,
-  StatusBar,
+  StatusBar
 } from "react-native";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+// import { StatusBar } from "expo-status-bar";
 import RoundButton from "../shared/RoundButton";
 import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
@@ -347,13 +348,17 @@ function HealthWorkerHome() {
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.bg_primary,
-        paddingTop: insets.top,
+        backgroundColor: "red",
       }}
     >
+      {/* <StatusBar backgroundColor={colors.bg_home} animated /> */}
       <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
       <ScrollView
-        style={{ flex: 1 }}
+        style={{
+          flex: 1,
+          paddingTop: insets.top,
+          backgroundColor: colors.bg_primary,
+        }}
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
@@ -496,7 +501,9 @@ function HealthWorkerHome() {
                         </View>
 
                         <View style={{ flex: 1 }}>
-                          <Text style={hw.cardName}>{patient.full_name}</Text>
+                          <Text style={hw.cardName}>
+                            {patient.full_name?.replaceAll(",", "")}
+                          </Text>
                           <Text style={hw.cardMeta}>
                             {patient?.patient_uniqueid
                               ? String(patient.patient_uniqueid).padStart(
@@ -547,18 +554,6 @@ function HealthWorkerHome() {
           <UserGuideCard onPress={handleUserGuidePress} />
         </View>
       </ScrollView>
-      {/* <View style={pt.bottomBackground}>
-        <Text style={pt.bottomTitle}>{`Screen Early-Act Early`}</Text>
-        <View style={{ alignItems: "center", flexDirection: "row" }}>
-          <Text style={[pt.subtitle, { marginRight: 10 }]}>
-            Detects Kidney Disease in 60 seconds.
-          </Text>
-        </View>
-      </View> */}
-      {/* Patient uses the same UserGuideCard but positioned absolutely */}
-      {/* <View style={pt.infoCardWrapper}>
-        <UserGuideCard onPress={() => setShowGuide(true)} />
-      </View>*/}
       <UserGuideModal visible={showGuide} onClose={() => setShowGuide(false)} />
     </View>
   );
@@ -585,7 +580,8 @@ function PatientHome() {
         paddingTop: insets.top,
       }}
     >
-      <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
+      {/* <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} /> */}
+      <StatusBar style="dark" backgroundColor={colors.bg_home} animated />
       <View style={pt.container}>
         <View style={pt.logoSection}>
           <Image
@@ -631,7 +627,7 @@ export default function Home() {
   const hasHydrated = useUserStore((s) => s.hasHydrated);
 
   if (!hasHydrated) return null;
-  return userType === "healthworker" ? <HealthWorkerHome /> : <PatientHome />;
+  return userType === "healthworker" ? <View style={{flex:1, backgroundColor: 'red'}}><HealthWorkerHome /></View> : <PatientHome />;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
