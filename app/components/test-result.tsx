@@ -14,7 +14,7 @@ import { useUserStore } from "../stores/userStore";
 import { StatusBar } from "expo-status-bar";
 
 const rgbStringToColor = (rgb: string) =>
-  rgb.replace("RGB", "rgb").replace(/\s/g, "");
+  rgb?.replace("RGB", "rgb").replace(/\s/g, "");
 
 const TestResult = () => {
   const router = useRouter();
@@ -67,7 +67,7 @@ const TestResult = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor={colors.bg_home} animated />
+      <StatusBar backgroundColor={colors.bg_home} style="light" animated />
       {/* Header */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={handleBackPress}>
@@ -143,7 +143,7 @@ const TestResult = () => {
           <Text style={[styles.sectionTitle]}>uACR</Text>
           <View style={styles.uacrCard}>
             {uacrInfo?.stage ? (
-              <Text style={[styles.metricTitle, { color: "#449126" }]}>
+              <Text style={[styles.metricTitle, { color: colors.black }]}>
                 Stage {uacrInfo.stage}
               </Text>
             ) : (
@@ -159,6 +159,35 @@ const TestResult = () => {
             {uacrInfo?.reference_range !== undefined && (
               <Text style={styles.referenceRange}>
                 Reference: {uacrInfo.reference_range}
+              </Text>
+            )}
+
+            <View
+              style={{
+                marginVertical: 2,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.BORDER1,
+                height: 1,
+                width: "100%",
+              }}
+            />
+            {uacrInfo?.si?.stage ? (
+              <Text style={[styles.metricTitle, { color: colors.black }]}>
+                Stage {uacrInfo.si.stage}
+              </Text>
+            ) : (
+              <Text style={[styles.metricTitle, { color: "#fd6e05" }]}>
+                Stage unavailable
+              </Text>
+            )}
+            {uacrInfo?.si?.value !== undefined ? (
+              <Text style={styles.uacrValue}>{uacrInfo.si.value}</Text>
+            ) : (
+              <Text style={styles.uacrValue}>Result not available</Text>
+            )}
+            {uacrInfo?.si?.reference_range !== undefined && (
+              <Text style={styles.referenceRange}>
+                Reference: {uacrInfo.si.reference_range}
               </Text>
             )}
           </View>
@@ -185,7 +214,7 @@ const TestResult = () => {
                   )}
 
                   <TouchableOpacity
-                    style={[styles.retake, ]}
+                    style={[styles.retake]}
                     onPress={handleRetakeTest}
                   >
                     <Text style={styles.retakeText}>Retake test</Text>

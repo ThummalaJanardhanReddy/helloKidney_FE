@@ -201,15 +201,15 @@ Confidence: ${report.confidence}%
 
             <NoteItem text="Trace proteinuria can be seen with many physiological conditions like prolonged recumbency, exercise, high protein diet, etc." />
 
-            <NoteItem text="False reactions for bile pigments, proteins, glucose, and nitrites can be caused by disinfectants, therapeutic dyes, ascorbic acid, and certain drugs." />
+            {/* <NoteItem text="False reactions for bile pigments, proteins, glucose, and nitrites can be caused by disinfectants, therapeutic dyes, ascorbic acid, and certain drugs." /> */}
 
             <NoteItem text="Physiological variations may affect the test results." />
 
-            <NoteItem text="When trace results occur, it is recommended to retest using a fresh specimen from the same patient." />
+            {/* <NoteItem text="When trace results occur, it is recommended to retest using a fresh specimen from the same patient." /> */}
 
-            <NoteItem text="Ketones may occur in urine during fasting, pregnancy, and strenuous exercise." />
+            {/* <NoteItem text="Ketones may occur in urine during fasting, pregnancy, and strenuous exercise." /> */}
 
-            <NoteItem text="Blood is often, but not invariably, found in the urine of menstruating females." />
+            {/* <NoteItem text="Blood is often, but not invariably, found in the urine of menstruating females." /> */}
           </View>
 
           {/* FOOTER */}

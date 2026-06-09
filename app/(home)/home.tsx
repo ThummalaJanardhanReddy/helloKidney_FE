@@ -566,9 +566,11 @@ function PatientHome() {
   const [showGuide, setShowGuide] = useState(false);
   const insets = useSafeAreaInsets();
   const startTest = () => {
-    // useUserStore.getState().setSelectedPatient(patient);
-    router.push({
-      pathname: "/components/TimerCameraUploader",
+    // router.push({
+    //   pathname: "/components/TimerCameraUploader",
+    // });
+     router.push({
+      pathname: "/components/camera/TimerCameraUploader",
     });
   };
 

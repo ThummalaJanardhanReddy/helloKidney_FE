@@ -31,6 +31,7 @@ export const colors = {
   CARD_BG: "#dcc2df",
   DARKBLUE: "#1292E5",
   BORDER1: "#CACECB",
+  green: "#4ADE80",
 };
 
 // Typography constants

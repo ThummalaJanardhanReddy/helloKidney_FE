@@ -17,15 +17,16 @@ import {
 import Svg, { Circle } from "react-native-svg";
 import * as ImageManipulator from "expo-image-manipulator";
 import { Dimensions } from "react-native";
-import axiosClient from "../../src/services/axiosClient";
-import { colors } from "../shared/commonStyles";
-import BackButton from "../shared/BackButton";
+import axiosClient from "../services/axiosClient";
+import { colors } from "../../app/shared/commonStyles";
+import BackButton from "../../app/shared/BackButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useUserStore } from "../stores/userStore";
+import { useUserStore } from "../../app/stores/userStore";
 import { IPatient } from "@/src/utils/constants";
-import PrimaryButton from "../shared/PrimaryButton";
-import CommonModal from "../shared/CommonModel";
-import WarningModal from "../shared/WarningModal";
+import PrimaryButton from "../../app/shared/PrimaryButton";
+import CommonModal from "../../app/shared/CommonModel";
+import WarningModal from "../../app/shared/WarningModal";
+import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -36,8 +37,9 @@ const STRIP_HEIGHT = STRIP_WIDTH * ASPECT_RATIO; // 10cm equivalent
 const FINAL_STRIP_HEIGHT = Math.min(STRIP_HEIGHT, SCREEN_HEIGHT * 0.72);
 const FRAME_TOP_OFFSET = 40;
 const TOTAL_TIME = 60;
+const STRIP_WAITING_TIME = 60;
 
-export default function TimerCameraUploader() {
+export default function TimerCameraUploader1() {
   const [started, setStarted] = useState(false);
   const [countdown, setCountdown] = useState(TOTAL_TIME); //60
   const [showCamera, setShowCamera] = useState(false);
@@ -50,7 +52,7 @@ export default function TimerCameraUploader() {
   const [showPopup, setShowPopup] = useState(false);
   const [showAccuracyModal, setShowAccuracyModal] = useState(false);
 
-  const [cameraOpenedAt, setCameraOpenedAt] = useState(60); // 60 seconds until camera auto-closes for accuracy check
+  const [cameraOpenedAt, setCameraOpenedAt] = useState(STRIP_WAITING_TIME); // 60 seconds until camera auto-closes for accuracy check
 
   const cameraRef = useRef<CameraView | null>(null);
   const navigation = useNavigation();
@@ -115,7 +117,6 @@ export default function TimerCameraUploader() {
   }, [countdown, started]);
 
   useEffect(() => {
-    console.log("Camera Opened At: ", cameraOpenedAt);
     if (!showCamera) {
       return;
     }
@@ -143,7 +144,6 @@ export default function TimerCameraUploader() {
 
     try {
       const formData = new FormData();
-      console.log("photo uri: ", photoUri);
       const normalizedUri = photoUri.startsWith("file://")
         ? photoUri
         : `file://${photoUri}`;
@@ -179,29 +179,50 @@ export default function TimerCameraUploader() {
         },
       });
     } catch (error: any) {
-      const detail = error?.response?.data?.detail;
-      console.log("test result error: ", error);
+
       let message =
         "Something went wrong. Please wait for 10 seconds and try again.";
 
-      if (Array.isArray(detail)) {
-        message = detail.map((d) => d.msg).join(", ");
-      } else if (typeof detail === "string") {
-        message = detail;
-      } else if (detail?.detail) {
-        message = detail.detail;
-      } else if (detail?.message) {
-        message = detail.message;
+      const detail = error?.response?.data?.detail;
+
+      try {
+        if (Array.isArray(detail)) {
+          message = detail.map((d) => d.msg).join(", ");
+        } else if (typeof detail === "string") {
+          // Try parsing JSON string
+          try {
+            const parsed = JSON.parse(detail);
+
+            if (parsed?.detail) {
+              message = parsed.detail;
+            } else if (parsed?.message) {
+              message = parsed.message;
+            } else {
+              message = detail;
+            }
+          } catch {
+            message = detail;
+          }
+        } else if (detail?.detail) {
+          message = detail.detail;
+        } else if (detail?.message) {
+          message = detail.message;
+        }
+      } catch (e) {
+        console.error("Error parsing API error response:", e);
       }
+
       setResultStatus({
-        message: message,
+        message,
         type: "error",
       });
     } finally {
       setLoading(false);
       setQrLocked(false);
       setQrData(null);
-      setShowCamera(false);
+      setShowCamera(true);
+      setTakePhotoDisabled(true);
+      setPreviewPhoto(null);
     }
   };
 
@@ -214,7 +235,8 @@ export default function TimerCameraUploader() {
 
       const photo = await cameraRef.current.takePictureAsync({
         quality: 1,
-        skipProcessing: false,
+        skipProcessing: true,
+        base64: false,
       });
 
       const croppedImage = await cropToStripFrame(photo);
@@ -301,8 +323,8 @@ export default function TimerCameraUploader() {
         },
       ],
       {
-        compress: 1,
-        format: ImageManipulator.SaveFormat.JPEG,
+        compress: 0,
+        format: ImageManipulator.SaveFormat.WEBP,
       },
     );
   };
@@ -311,7 +333,6 @@ export default function TimerCameraUploader() {
     if (qrLocked) return;
 
     if (type === "qr") {
-      console.log("QR VALUE:", data);
       setQrLocked(true); // lock scanning
       setQrData(data);
       setTakePhotoDisabled(false);
@@ -337,6 +358,14 @@ export default function TimerCameraUploader() {
     setShowCamera(false);
     setCountdown(TOTAL_TIME);
     setStarted(false);
+  };
+
+  const handleResultPopup = () => {
+    setShowResultPopup(false);
+    setResultStatus(null);
+    setCountdown(TOTAL_TIME);
+    setStarted(false);
+    setShowCamera(true);
   };
 
   return (
@@ -491,7 +520,6 @@ export default function TimerCameraUploader() {
                   style={{
                     position: "absolute",
                     top: frameTop,
-                    // bottom: (previewLayout.height - FINAL_STRIP_HEIGHT) / 2,
                     left: 0,
                     width: frameLeft,
                     height: frameHeight,
@@ -543,24 +571,7 @@ export default function TimerCameraUploader() {
                 >
                   Align full strip inside the frame
                 </Text>
-                {/* <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    {
-                      width: 'auto',
-                      backgroundColor: takePhotoDisabled ? "gray" : "red",
-                      opacity: takePhotoDisabled ? 0.3 : 1,
-                      top:
-                        (previewLayout.height - FINAL_STRIP_HEIGHT) / 2 +
-                        FINAL_STRIP_HEIGHT -
-                        30,
-                    },
-                  ]}
-                  disabled={takePhotoDisabled}
-                  onPress={handleTakePhoto}
-                >
-                  <Text style={styles.actionText}>Take Photo</Text>
-                </TouchableOpacity> */}
+
                 <PrimaryButton
                   title="Take Photo"
                   disabled={takePhotoDisabled}
@@ -585,7 +596,7 @@ export default function TimerCameraUploader() {
       )}
 
       {/* RESULT POPUP */}
-      <Modal visible={showResultPopup} animationType="fade">
+      <Modal visible={showResultPopup} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             {loading && (
@@ -606,11 +617,15 @@ export default function TimerCameraUploader() {
             )}
 
             {!loading && resultStatus?.type === "error" && (
-              <View style={[styles.statusBox, { backgroundColor: "#DC3545" }]}>
-                <Text style={styles.statusText}>
-                  {resultStatus?.message
-                    ? resultStatus.message
-                    : `❌ Something went wrong. Please wait for 10 seconds and try again.`}
+              <View style={styles.errorContainer}>
+              
+                <Ionicons name="warning-outline" size={60} color="#DC3545" />
+
+                <Text style={styles.errorTitle}>Test Failed</Text>
+
+                <Text style={styles.errorMessage}>
+                  {resultStatus?.message ||
+                    "Something went wrong. Please wait for 10 seconds and try again."}
                 </Text>
               </View>
             )}
@@ -618,9 +633,9 @@ export default function TimerCameraUploader() {
             {!loading && (
               <TouchableOpacity
                 style={styles.closeBtn}
-                onPress={() => setShowResultPopup(false)}
+                onPress={handleResultPopup}
               >
-                <Text style={styles.closeBtnText}>Close</Text>
+                <Text style={styles.closeBtnText}>Retake</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -688,22 +703,6 @@ export default function TimerCameraUploader() {
         }}
         cancelTextStyle={{ color: colors.black }}
       />
-
-      {/* <CommonModal
-        visible={showAccuracyModal}
-        title="Warning"
-        message="Results might not be accurate. Are you sure you want to continue?"
-        confirmText="Continue"
-        cancelText="Retest"
-        onConfirm={() => {
-          setShowAccuracyModal(false);
-          // navigation.goBack();
-        }}
-        onCancel={() => {
-          setShowAccuracyModal(false);
-          navigation.goBack();
-        }}
-      /> */}
 
       <WarningModal
         visible={showAccuracyModal}
@@ -851,7 +850,7 @@ const styles = StyleSheet.create({
   // ----------------- MODAL -----------------
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -886,7 +885,7 @@ const styles = StyleSheet.create({
   },
 
   closeBtn: {
-    backgroundColor: "#333",
+    backgroundColor: colors.blue,
     paddingVertical: 10,
     paddingHorizontal: 30,
     borderRadius: 8,
@@ -951,5 +950,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     textAlign: "center",
+  },
+  errorContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    marginVertical: 5,
+  },
+
+  errorImage: {
+    width: 100,
+    height: 100,
+    marginBottom: 16,
+  },
+
+  errorTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#DC3545",
+    marginBottom: 8,
+  },
+
+  errorMessage: {
+    fontSize: 16,
+    color: colors.black,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+
+  retakeBtn: {
+    backgroundColor: "#0D6EFD",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 24,
+  },
+
+  retakeBtnText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
