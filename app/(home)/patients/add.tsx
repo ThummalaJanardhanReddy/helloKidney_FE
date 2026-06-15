@@ -343,8 +343,8 @@ export default function AddPatientScreen() {
 
     if (!sanitizeInput(form.lastName)) {
       newErrors.lastName = "Last name is required";
-    } else if (form.lastName.length < 2) {
-      newErrors.lastName = "Last name must be at least 2 characters";
+    } else if (form.lastName.length < 1) {
+      newErrors.lastName = "Last name must be at least 1 character";
     }
 
     if (!form.phone) {

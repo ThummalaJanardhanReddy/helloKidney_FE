@@ -301,15 +301,15 @@ export const generatePDF = async (report: any) => {
                 </tr>
 
                 <tr>
-                    <td>
+                    <td rowspan="2">
                         uACR
                     </td>
 
                     <td class="highlight-result">
-                        ${report?.uacr || "N/A"}
+                        ${report?.uacr?.split(" ")[0] || "N/A"}
                     </td>
 
-                    <td>mg/g</td>
+                    <td>${report?.uacr?.split(" ")[1] || "N/A"}</td>
 
                     <td class="reference-text">
                         Normal : A1 (&lt; 30 mg/g)
@@ -320,17 +320,37 @@ export const generatePDF = async (report: any) => {
                         Abnormal : A3 (&gt; 300 mg/g)
                     </td>
                 </tr>
+
+                <tr>
+                   
+
+                    <td class="highlight-result">
+                        ${report?.si?.value?.split(" ")[0] || "N/A"}
+                    </td>
+
+                    <td>${report?.si?.value?.split(" ")[1] || "N/A"}</td>
+
+                    <td class="reference-text">
+                        Normal : A1 (&lt; 3 mg/mmol)
+                        <br />
+                        Slightly Abnormal : A2 (3 - 30 mg/mmol)
+                        <br />
+
+                        Abnormal : A3 (&gt; 30 mg/mmol)
+                    </td>
+                </tr>
+
                 <tr>
                     <td>Microalbumin</td>
-                    <td>${report?.albumin || "N/A"}</td>
-                    <td>mg/L</td>
+                    <td>${report?.albumin?.split(" ")[0] || "N/A"}</td>
+                    <td>${report?.albumin?.split(" ")[1] || "N/A"}</td>
                     <td class="reference-text">&lt; 20 mg/L</td>
                 </tr>
 
                 <tr>
                     <td>Creatinine</td>
-                    <td>${report?.creatinine || "N/A"}</td>
-                    <td>mg/dL</td>
+                    <td>${report?.creatinine?.split(" ")[0] || "N/A"}</td>
+                    <td>${report?.creatinine?.split(" ")[1] || "N/A"}</td>
                     <td class="reference-text">10 - 300 mg/dL</td>
                 </tr>
 
@@ -359,7 +379,6 @@ export const generatePDF = async (report: any) => {
                 </li>
 
                 <li>
-                    During interpretation, points to be considered:
                     Negative nitrite test does not exclude the presence of bacteria or urinary
                     tract infections.
                 </li>
@@ -370,28 +389,7 @@ export const generatePDF = async (report: any) => {
                 </li>
 
                 <li>
-                    False reactions for bile pigments, proteins, glucose, and nitrites can be
-                    caused by peroxidase-like activity by disinfectants, therapeutic dyes,
-                    ascorbic acid, and certain drugs, etc.
-                </li>
-
-                <li>
                     Physiological variations may affect the test results.
-                </li>
-
-                <li>
-                    When trace results occur, it is recommended to retest using a fresh
-                    specimen from the same patient.
-                </li>
-
-                <li>
-                    Ketones may occur in urine during fasting, pregnancy, and frequent
-                    strenuous exercise.
-                </li>
-
-                <li>
-                    Blood is often, but not invariably, found in the urine of menstruating
-                    females.
                 </li>
             </ul>
         </div>

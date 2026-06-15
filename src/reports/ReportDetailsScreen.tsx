@@ -144,12 +144,12 @@ Confidence: ${report.confidence}%
             </View>
 
             {/* UACR */}
-            <View style={styles.tableRow}>
+            <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
               <Text style={[styles.cell, { flex: 2 }]}>uACR</Text>
 
-              <Text style={styles.cell}>{report?.uacr || "N/A"}</Text>
+              <Text style={styles.cell}>{report?.uacr?.split(" ")[0] || "N/A"}</Text>
 
-              <Text style={styles.cell}>mg/g</Text>
+              <Text style={styles.cell}>{report?.uacr?.split(" ")[1] || "N/A"}</Text>
 
               <View style={[styles.cell, { flex: 2 }]}>
                 <Text style={styles.referenceText}>
@@ -166,13 +166,35 @@ Confidence: ${report.confidence}%
               </View>
             </View>
 
+            <View style={styles.tableRow}>
+              <Text style={[styles.cell, { flex: 2 }]}></Text>
+
+              <Text style={[styles.cell, {borderTopWidth: 1, borderTopColor: "#DADADA"}]}>{report?.si?.value?.split(" ")[0] || "N/A"}</Text>
+
+              <Text style={[styles.cell, {borderTopWidth: 1, borderTopColor: "#DADADA"}]}>{report?.si?.value?.split(" ")[1] || "N/A"}</Text>
+
+              <View style={[styles.cell, { flex: 2, borderTopWidth: 1, borderTopColor: "#DADADA" }]}>
+                <Text style={styles.referenceText}>
+                  Normal : A1 (&lt; 3 mg/mmol)
+                </Text>
+
+                <Text style={styles.referenceText}>
+                  Slightly Abnormal : A2 (3 - 30 mg/mmol)
+                </Text>
+
+                <Text style={styles.referenceText}>
+                  Abnormal : A3 (&gt; 30 mg/mmol)
+                </Text>
+              </View>
+            </View>
+
             {/* MICROALBUMIN */}
             <View style={styles.tableRow}>
               <Text style={[styles.cell, { flex: 2 }]}>Microalbumin</Text>
 
-              <Text style={styles.cell}>{report?.albumin || "N/A"}</Text>
+              <Text style={styles.cell}>{report?.albumin?.split(" ")[0] || "N/A"}</Text>
 
-              <Text style={styles.cell}>mg/L</Text>
+              <Text style={styles.cell}>{report?.albumin?.split(" ")[1] || "N/A"}</Text>
 
               <Text style={[styles.cell, { flex: 2 }]}>&lt; 20 mg/L</Text>
             </View>
@@ -181,9 +203,9 @@ Confidence: ${report.confidence}%
             <View style={styles.tableRow}>
               <Text style={[styles.cell, { flex: 2 }]}>Creatinine</Text>
 
-              <Text style={styles.cell}>{report?.creatinine || "N/A"}</Text>
+              <Text style={styles.cell}>{report?.creatinine?.split(" ")[0] || "N/A"}</Text>
 
-              <Text style={styles.cell}>mg/dL</Text>
+              <Text style={styles.cell}>{report?.creatinine?.split(" ")[1] || "N/A"}</Text>
 
               <Text style={[styles.cell, { flex: 2 }]}>10 - 300 mg/dL</Text>
             </View>

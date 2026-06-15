@@ -822,12 +822,12 @@ function CameraOverlay({
         <Ionicons name="time-outline" size={13} color="#94A3B8" />
         <Text style={styles.hudText}>{cameraTimeout}s</Text>
       </View>
-      {qrLocked && (
+      {/* {qrLocked && (
         <View style={styles.hudRight} pointerEvents="none">
           <Ionicons name="checkmark-circle" size={13} color="#4ADE80" />
           <Text style={[styles.hudText, { color: "#4ADE80" }]}>QR Locked</Text>
         </View>
-      )}
+      )} */}
 
       {/* Back button */}
       <BackButton
