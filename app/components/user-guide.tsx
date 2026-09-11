@@ -21,7 +21,7 @@ const steps = [
     id: 1,
     topText: `Collect your urine sample \nin the container`,
     bottomText:
-      "Collect urine in the container from the midpoint \nof urination until it reaches the top",
+      "sssCollect urine in the container from the midpoint \nof urination until it reaches the top",
     image: images.userGuide.step1,
     buttonText: "Next",
   },

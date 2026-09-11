@@ -14,8 +14,11 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
   Image,
   Modal,
+  PanResponder,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,13 +27,14 @@ import {
 import Svg, { Circle } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
 
 import axiosClient from "../../../src/services/axiosClient";
 import { colors } from "../../shared/commonStyles";
-import BackButton from "../../shared/BackButton";
 import PrimaryButton from "../../shared/PrimaryButton";
 import CommonModal from "../../shared/CommonModel";
 import { useUserStore } from "../../stores/userStore";
+import { steps } from "../../shared/userGuideSteps";
 
 import {
   STRIP_WIDTH,
@@ -46,6 +50,8 @@ import {
   FrameState,
 } from "./constants";
 import { CameraOverlay } from "./CameraOverlay";
+
+const { width: screenWidth } = Dimensions.get("window");
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -64,6 +70,32 @@ export default function TimerCameraUploader() {
   const [started,    setStarted]    = useState(false);
   const [countdown,  setCountdown]  = useState(TOTAL_WAIT);
   const [showCamera, setShowCamera] = useState(false);
+
+  // ── Step guide swiper (wait screen)
+  const [currentStep, setCurrentStep] = useState(0);
+  const currentStepRef = useRef(0);
+  const stepSlide = useRef(new Animated.Value(0)).current;
+
+  const goToStep = useCallback((index: number) => {
+    Animated.timing(stepSlide, {
+      toValue: -index * screenWidth,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+    currentStepRef.current = index;
+    setCurrentStep(index);
+  }, [stepSlide]);
+
+  const stepPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 20,
+      onPanResponderRelease: (_, g) => {
+        const cur = currentStepRef.current;
+        if (g.dx < -40 && cur < steps.length - 1) goToStep(cur + 1);
+        else if (g.dx > 40 && cur > 0) goToStep(cur - 1);
+      },
+    })
+  ).current;
 
   // ── Camera / capture
   const [qrData,        setQrData]        = useState<string | null>(null);
@@ -314,6 +346,7 @@ export default function TimerCameraUploader() {
   if (!permission?.granted) {
     return (
       <View style={styles.center}>
+        <StatusBar style="light" animated />
         <Text style={{ color: "#fff", marginBottom: 12 }}>Camera access required</Text>
         <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
           <Text style={{ color: "#020817", fontWeight: "700" }}>Grant Permission</Text>
@@ -326,56 +359,103 @@ export default function TimerCameraUploader() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.statusbar, paddingTop: insets.top }}>
+      <StatusBar style="light" animated />
 
       {/* ════════════════════════════════════════════
           WAIT / TIMER SCREEN
       ════════════════════════════════════════════ */}
       {!showCamera && (
         <View style={{ flex: 1, backgroundColor: colors.bg_home }}>
-          <BackButton
-            title="Back"
-            onPress={handleBackPress}
-            arrowColor={colors.white}
-            color={colors.white}
-            style={{ paddingTop: 30, paddingHorizontal: 20 }}
-          />
+          {/* ── Header ── */}
+          <View style={styles.guideHeader}>
+            <TouchableOpacity onPress={handleBackPress} hitSlop={12}>
+              <Ionicons name="arrow-back" size={22} color={colors.white} />
+            </TouchableOpacity>
+            <Text style={styles.guideHeaderTitle}>uACR Test</Text>
+            <View style={{ width: 22 }} />
+          </View>
 
-          <View style={styles.timerContainer}>
-            <View style={styles.circleWrapper}>
-              <Svg width={C_SIZE} height={C_SIZE}>
-                <Circle
-                  stroke="#3A4665" fill="none"
-                  cx={C_SIZE / 2} cy={C_SIZE / 2} r={C_RADIUS} strokeWidth={C_STROKE}
-                />
-                <Circle
-                  stroke="#4ADE80" fill="none"
-                  cx={C_SIZE / 2} cy={C_SIZE / 2} r={C_RADIUS} strokeWidth={C_STROKE}
-                  strokeDasharray={C_CIRC} strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  transform={`rotate(90, ${C_SIZE / 2}, ${C_SIZE / 2}) scale(-1, 1) translate(-${C_SIZE}, 0)`}
-                />
-              </Svg>
-              <TouchableOpacity style={styles.circleButton}>
-                <Text style={styles.timerText}>{countdown}</Text>
-              </TouchableOpacity>
+          {/* ── Step guide swiper ── */}
+          <View style={styles.swiperSection}>
+            <View style={{ flex: 1 }} {...stepPanResponder.panHandlers}>
+              <Animated.View
+                style={{
+                  flexDirection: "row",
+                  width: screenWidth * steps.length,
+                  transform: [{ translateX: stepSlide }],
+                }}
+              >
+                {steps.map((step, index) => (
+                  <View key={step.id} style={styles.slideCard}>
+                    <Text style={styles.slideStep}>Step {index + 1}</Text>
+                    <Text style={styles.slideHeading}>{step.topText}</Text>
+                    <Image source={step.image} style={styles.slideImage} resizeMode="contain" />
+                    <Text style={styles.slideDescription}>{step.bottomText}</Text>
+                  </View>
+                ))}
+              </Animated.View>
             </View>
-            <Text style={[styles.waitText, { marginTop: 20, color: colors.white }]}>
-              Please wait for{" "}
-              <Text style={{ color: colors.white, fontWeight: "600" }}>60 seconds</Text>
-            </Text>
+            <View style={styles.dotsRow}>
+              {steps.map((_, idx) => (
+                <TouchableOpacity key={idx} onPress={() => goToStep(idx)} hitSlop={8}>
+                  <View style={[styles.dot, currentStep === idx && styles.dotActive]} />
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
-          <View style={styles.waitBox}>
-            <Text style={styles.waitText}>Scan the card immediately after the timer ends.</Text>
-          </View>
+          {/* ── Timer / start section ── */}
+          <View style={[styles.whiteSection, { paddingBottom: insets.bottom + 10 }]}>
+            <View style={styles.timerBlock}>
+              <View style={styles.circleWrapper}>
+                <Svg width={C_SIZE} height={C_SIZE}>
+                  <Circle
+                    stroke="#E7EAF2" fill="none"
+                    cx={C_SIZE / 2} cy={C_SIZE / 2} r={C_RADIUS} strokeWidth={C_STROKE}
+                  />
+                  <Circle
+                    stroke="#4ADE80" fill="none"
+                    cx={C_SIZE / 2} cy={C_SIZE / 2} r={C_RADIUS} strokeWidth={C_STROKE}
+                    strokeDasharray={C_CIRC} strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    transform={`rotate(90, ${C_SIZE / 2}, ${C_SIZE / 2}) scale(-1, 1) translate(-${C_SIZE}, 0)`}
+                  />
+                </Svg>
+                <View style={styles.circleButton}>
+                  <Text style={styles.timerText}>{countdown}</Text>
+                </View>
+              </View>
+              <Text style={styles.waitText}>
+                Please wait for <Text style={{ fontWeight: "700" }}>{TOTAL_WAIT} seconds</Text>
+              </Text>
+            </View>
 
-          <PrimaryButton
-            onPress={() => setStarted(true)}
-            title="Start Timer"
-            style={[{ bottom: 0, width: "90%", alignSelf: "center", marginBottom: insets.bottom + 20, borderRadius: 6 }]}
-            textStyle={{ color: "#fff" }}
-            disabled={started}
-          />
+            <View style={styles.startBlock}>
+              <Text style={styles.scanNote}>
+                Scan the card immediately after{"\n"}the timer ends.
+              </Text>
+
+              <PrimaryButton
+                onPress={() => setStarted(true)}
+                title="Start timer"
+                style={{
+                  width: "100%",
+                  alignSelf: "center",
+                  marginTop: 10,
+                  backgroundColor: colors.primary,
+                  borderRadius: 6,
+                  paddingVertical: 12,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 6,
+                  elevation: 3,
+                }}
+                textStyle={{ color: "#fff", fontWeight: "700", letterSpacing: 0.3 }}
+                disabled={started}
+              />
+            </View>
+          </View>
         </View>
       )}
 
@@ -563,23 +643,52 @@ const styles = StyleSheet.create({
     backgroundColor: "#008000", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10,
   },
 
-  // ── Timer screen
-  timerContainer: {
-    flex: 1, justifyContent: "center", alignItems: "center",
-    paddingHorizontal: 20, backgroundColor: colors.bg_home,
+  // ── Wait screen: header
+  guideHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10,
   },
-  circleWrapper:  { justifyContent: "center", alignItems: "center" },
+  guideHeaderTitle: { fontSize: 18, fontWeight: "600", color: "#FFFFFF" },
+
+  // ── Wait screen: step guide swiper
+  swiperSection: { flex: 1.05, backgroundColor: colors.bg_home },
+  slideCard: { width: screenWidth, alignItems: "center", paddingHorizontal: 24 },
+  slideStep: { color: colors.primary, fontSize: 13, fontWeight: "600", marginVertical: 8 },
+  slideHeading: {
+    fontSize: 15, fontWeight: "300", textAlign: "center",
+    color: "#FFFFFF", marginBottom: 8,
+  },
+  slideImage: { width: "100%", height: 170 },
+  slideDescription: {
+    fontSize: 14, textAlign: "center", color: "#878C99", lineHeight: 18,
+  },
+  dotsRow: {
+    flexDirection: "row", justifyContent: "center", alignItems: "center",
+    gap: 6, paddingBottom: 18,
+  },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#D9DBE1" },
+  dotActive: { backgroundColor: colors.primary },
+
+  // ── Wait screen: timer / start section
+  whiteSection: {
+    flex: 1, backgroundColor: colors.white,
+    alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20,
+  },
+  timerBlock: { flex: 1, alignItems: "center", justifyContent: "center" },
+  circleWrapper: { justifyContent: "center", alignItems: "center" },
   circleButton: {
     position: "absolute", width: 145, height: 145, borderRadius: 72.5,
     justifyContent: "center", alignItems: "center",
   },
-  timerText:  { fontSize: 42, fontWeight: "700", color: "#FFFFFF" },
-  waitBox: {
-    borderColor: "#b6b7b7", borderWidth: 1, width: "90%", padding: 25,
-    marginBottom: 30, alignItems: "center", alignSelf: "center",
-    borderRadius: 10, backgroundColor: "#f6f7f7",
+  timerText: { fontSize: 42, fontWeight: "700", color: colors.black },
+  waitText: {
+    fontSize: 14, textAlign: "center", color: "#8A8C95", marginTop: 12,
   },
-  waitText: { fontSize: 18, textAlign: "center", color: colors.black },
+  startBlock: { width: "100%", alignItems: "center" },
+  scanNote: {
+    fontSize: 15, fontWeight: "700", textAlign: "center",
+    color: colors.black,
+  },
 
   // ── Camera screen
   cameraScreen:    { flex: 1, backgroundColor: "#000" },

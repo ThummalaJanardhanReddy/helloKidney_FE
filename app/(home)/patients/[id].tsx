@@ -262,7 +262,7 @@ export default function PatientProfileScreen() {
       <View style={[styles.headerBg, { paddingTop: insets.top + 2 }]}>
         {/* Back */}
 
-        <BackButton title="Back" onPress={() => router.back()} color="white" />
+        <BackButton title="Back" onPress={() => router.back()} color="#000000" />
 
         {/* Profile card */}
         <Animated.View
@@ -293,12 +293,13 @@ export default function PatientProfileScreen() {
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={styles.profileName}>
                 {patient.full_name?.replaceAll(",", "")}
+                <Text style={styles.profileMetaInline}>
+                  , {patient.age} yrs, {patient.gender}
+                </Text>
               </Text>
               <Text style={styles.profileMeta}>
-                {String(
-                  patient.patient_uniqueid ?? patient.patient_id,
-                ).padStart(4, "0")}{" "}
-                | {patient.age} yrs, {patient.gender}
+                {String(patient.patient_id).padStart(4, "0")} |{" "}
+                {patient.mobile_no}
               </Text>
             </View>
             <View style={{ gap: 6, alignItems: "flex-end" }}>
@@ -361,7 +362,7 @@ export default function PatientProfileScreen() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const HEADER_BG = colors.HEADER_BG;
+const HEADER_BG = colors.white;
 const CARD_BG = colors.CARD_BG;
 const ACCENT = colors.ACCENT;
 
@@ -372,6 +373,13 @@ const styles = StyleSheet.create({
     backgroundColor: HEADER_BG,
     paddingHorizontal: 16,
     paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   backBtn: {
@@ -419,6 +427,7 @@ const styles = StyleSheet.create({
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
+  profileMetaInline: { fontSize: rf(14), fontWeight: "500", color: "#0D1B2E" },
   profileMeta: { fontSize: rf(13), color: "#2D3E50", fontWeight: "500" },
 
   cardDivider: {

@@ -69,13 +69,14 @@ function PatientRow({ item, onPress }: { item: Patient; onPress: () => void }) {
         <InitialsAvatar name={item.full_name} />
       {/* )} */}
       <View style={styles.rowInfo}>
-        <Text style={styles.rowName}>{item.full_name?.replaceAll(",", "")}</Text>
-        <Text style={styles.rowMeta}>
-          {/* {String(item.patient_uniqueid ?? item.patient_id)?.padStart(4, "0") || '--'} | */}
-           {item.age} years, {item.gender}
+        <Text style={styles.rowName}>
+          {item.full_name?.replaceAll(",", "")}
+          <Text style={styles.rowMetaInline}>
+            , {item.age} years, {item.gender}
+          </Text>
         </Text>
         <Text style={styles.rowMeta}>
-          {item.mobile_no}
+          {String(item.patient_id).padStart(4, "0")} | {item.mobile_no}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color="#999" />
@@ -135,7 +136,7 @@ export default function PatientsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" backgroundColor={colors.bg_home} animated/>
+      <StatusBar style="dark" backgroundColor={colors.white} animated/>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>Patient List</Text>
@@ -187,20 +188,20 @@ export default function PatientsScreen() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const HEADER_BG = "#0D1B2E";
+const HEADER_BG = colors.white;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
 
   header: {
-    backgroundColor: colors.bg_home,
+    backgroundColor: colors.white,
     paddingHorizontal: 20,
     paddingBottom: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  headerTitle: commonStyles.headerText,
+  headerTitle: { fontSize: 18, fontWeight: "600", color: "#000000" },
   addBtn: {
     fontSize: rf(14),
     fontWeight: "700",
@@ -211,10 +212,19 @@ const styles = StyleSheet.create({
     backgroundColor: HEADER_BG,
     paddingHorizontal: 16,
     paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchBar: {
     backgroundColor: "#FFFFFF",
     borderRadius: 30,
+    borderWidth: 1,
+    borderColor: colors.BORDER1,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -256,6 +266,7 @@ const styles = StyleSheet.create({
   initialsText: { fontSize: rf(12), fontWeight: "700", color: "#3A6BA8" },
   rowInfo: { flex: 1, gap: 3 },
   rowName: { fontSize: rf(14), fontWeight: "700", color: colors.black, marginBottom: 3 },
+  rowMetaInline: { fontSize: rf(12), fontWeight: "400", color: colors.black },
   rowMeta: { fontSize: rf(12), color: colors.black },
   chevron: { fontSize: rf(22), color: "#B0C0D8", lineHeight: rf(26) },
   separator: { height: 1, backgroundColor: "#EEF3FA", marginLeft: 90 },

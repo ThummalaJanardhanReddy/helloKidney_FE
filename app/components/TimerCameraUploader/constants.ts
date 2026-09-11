@@ -21,7 +21,7 @@ export const STABLE_TICKS_PENALTY = 1;   // ticks deducted on blur/reflection
 
 // ─── Timer circle ─────────────────────────────────────────────────────────────
 
-export const C_SIZE   = 180;
+export const C_SIZE   = 150;
 export const C_STROKE = 12;
 export const C_RADIUS = (C_SIZE - C_STROKE) / 2;
 export const C_CIRC   = 2 * Math.PI * C_RADIUS;

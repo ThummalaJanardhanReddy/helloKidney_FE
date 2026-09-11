@@ -83,10 +83,10 @@ export default function ProfilePage() {
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.bg_home,
+        backgroundColor: colors.white,
       }}
     >
-      <StatusBar style="light" backgroundColor={colors.bg_home} animated/>
+      <StatusBar style="dark" backgroundColor={colors.white} animated/>
       <View style={[styles.container]}>
         {/* Header */}
         <Text style={[styles.header, { paddingTop: insets.top + 12 }]}>Profile</Text>
@@ -176,8 +176,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     paddingHorizontal: 20,
     paddingBottom: 18,
-    backgroundColor: colors.bg_home,
-    color: colors.white,
+    backgroundColor: colors.white,
+    color: "#000000",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   card: {

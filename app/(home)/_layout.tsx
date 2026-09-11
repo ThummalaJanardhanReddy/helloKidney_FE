@@ -26,12 +26,14 @@ export default function MainLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: "#8E8E93",
         tabBarIconStyle: {
           justifyContent: "center",
           alignItems: "center",
           marginTop: 0,
         },
         tabBarLabelStyle: {
+          fontWeight: "600",
           // marginTop: 2,
         },
         tabBarItemStyle: {
@@ -39,7 +41,7 @@ export default function MainLayout() {
           alignItems: "center",
         },
         tabBarStyle: {
-          backgroundColor: colors.bg_home,
+          backgroundColor: colors.white,
           borderTopWidth: 0,
           height: 58 + insets.bottom,
           paddingBottom: insets.bottom,

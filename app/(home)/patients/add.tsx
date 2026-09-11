@@ -833,7 +833,7 @@ export default function AddPatientScreen() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const HEADER_BG = colors.HEADER_BG;
+const HEADER_BG = colors.white;
 const ACCENT = colors.ACCENT;
 const BORDER = colors.BORDER;
 
@@ -851,11 +851,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTitle: {
     fontSize: rf(20),
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#000000",
     letterSpacing: -0.3,
   },
   closeBtn: {

@@ -13,6 +13,7 @@ import {
 import { generatePDF } from "../utils/helper";
 import PrimaryButton from "@/app/shared/PrimaryButton";
 import Toast from "@/app/shared/Toast";
+import { colors } from "@/app/shared/commonStyles";
 
 // Format date and time
 const formatDateTime = (timestamp: string | number) => {
@@ -239,11 +240,14 @@ Confidence: ${report.confidence}%
             <Text style={styles.footerText}>*** End of Report ***</Text>
           </View>
         </View>
-        <PrimaryButton
-          title="Share Report"
-          onPress={handlegeneratePDF}
-          style={[styles.shareBtn, { width: "100%" }]}
-        />
+        <View style={styles.shareBtnWrap}>
+          <PrimaryButton
+            title="Share Report"
+            onPress={handlegeneratePDF}
+            style={styles.shareBtn}
+            textStyle={styles.shareBtnText}
+          />
+        </View>
         {toast && (
           <Toast
             message={toast.message}
@@ -306,14 +310,25 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 8,
   },
-  shareBtn: {
+  shareBtnWrap: {
+    paddingHorizontal: 20,
     marginTop: 20,
-    textAlign: "center",
-    color: "#fff",
-    backgroundColor: "#2E7BE0",
-    padding: 12,
+  },
+  shareBtn: {
+    width: "100%",
+    backgroundColor: colors.primary,
     borderRadius: 6,
-    fontWeight: "600",
+    paddingVertical: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  shareBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 
   // Logo Header

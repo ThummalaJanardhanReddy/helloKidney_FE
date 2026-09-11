@@ -47,6 +47,8 @@ type HealthworkerTestResponse = {
   created_on: string;
   hw_id: number;
   full_name: string;
+  age?: number;
+  gender?: string;
 };
 
 type FetchTestsParams = {
@@ -282,11 +284,16 @@ export default function TestList() {
           {item.full_name && (
             <Text style={styles.patientname}>
               {item.full_name?.replaceAll(",", "")}
+              {(item.age || item.gender) && (
+                <Text style={styles.patientMetaInline}>
+                  , {item.age} years, {item.gender}
+                </Text>
+              )}
             </Text>
           )}
           {/* <Text style={styles.testId}>PID: {String(item.patient_uniqueid || item.patient_id).padStart(4, "0")}</Text> */}
           <Text style={styles.dateTime}>
-            Test ID: {item.test_id} |{" "}
+            Id: {item.test_id} |{" "}
             {formatDate(item.created_timestamp || item.created_on)}
           </Text>
           {/* <Text style={styles.dateTime}>
@@ -312,7 +319,7 @@ export default function TestList() {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.patientname}>Test ID: {item.test_id}</Text>
+          <Text style={styles.patientname}>Id: {item.test_id}</Text>
           <Text style={styles.dateTime}>
             {formatDate(item.created_timestamp || item.created_on)}
           </Text>
@@ -375,7 +382,7 @@ export default function TestList() {
   // Main Render
   return (
     <View style={[styles.container]}>
-      <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
+      <StatusBar backgroundColor={colors.white} barStyle={"dark-content"} />
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerText}>Test List</Text>
@@ -415,13 +422,20 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: colors.bg_home,
+    backgroundColor: colors.white,
     paddingHorizontal: 20,
     paddingBottom: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerText: {
     fontSize: 18,
-    color: "#fff",
+    color: "#000000",
     fontWeight: "600",
   },
 
@@ -452,6 +466,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.black,
     marginBottom: 3,
+  },
+
+  patientMetaInline: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: colors.black,
   },
 
   testId: {

@@ -22,6 +22,7 @@ import {
 import RoundButton from "../shared/RoundButton";
 import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
+import { steps } from "../shared/userGuideSteps";
 import {
   getAllPatients,
   getPatientsCount,
@@ -50,49 +51,6 @@ interface IPatient {
   user_name: null;
   test_count?: 0;
 }
-
-// ── User guide steps ──────────────────────────────────────────────────────────
-const steps = [
-  {
-    id: 1,
-    topText: "Collect your urine sample in\n the provided container",
-    bottomText:
-      "Collect urine in the container from the\n Midpoint of urination until it reaches the top",
-    image: images.userGuide?.step1,
-    buttonText: "Urine Collected",
-  },
-  {
-    id: 2,
-    topText:
-      "Dip the test card in the urine sample\n for 2 seconds, then remove",
-    bottomText:
-      "tap or shake the card gently\n in order to remove excess droplets",
-    image: images.userGuide?.step2,
-    buttonText: "Card dipped and shaken",
-  },
-  {
-    id: 3,
-    topText: "Now, place the test card on the control\n pad & start the timer",
-    bottomText: "Align the test card on the\n control pad centre",
-    image: images.userGuide?.step3,
-    buttonText: "Start the timer",
-  },
-  {
-    id: 4,
-    topText: "Take the clear photo and upload it",
-    bottomText:
-      "If an invalid image error appears after upload,\ntake another photo and try uploading again",
-    image: images.userGuide?.step4,
-    buttonText: "Click the photo and upload",
-  },
-  {
-    id: 5,
-    topText: "Results will appear after a few seconds",
-    bottomText: "View the Results",
-    image: images.userGuide?.step5,
-    buttonText: "Test completed",
-  },
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SHARED: User Guide Modal
@@ -352,7 +310,7 @@ function HealthWorkerHome() {
       }}
     >
       {/* <StatusBar backgroundColor={colors.bg_home} animated /> */}
-      <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} />
+      <StatusBar backgroundColor={colors.white} barStyle={"dark-content"} />
       <ScrollView
         style={{
           flex: 1,
@@ -503,17 +461,14 @@ function HealthWorkerHome() {
                         <View style={{ flex: 1 }}>
                           <Text style={hw.cardName}>
                             {patient.full_name?.replaceAll(",", "")}
+                            <Text style={hw.cardMetaInline}>
+                              , {patient.age ?? "--"} years,{" "}
+                              {patient.gender ?? "--"}
+                            </Text>
                           </Text>
                           <Text style={hw.cardMeta}>
-                            {patient?.patient_uniqueid
-                              ? String(patient.patient_uniqueid).padStart(
-                                  4,
-                                  "0",
-                                )
-                              : "NA"}{" "}
-                            | {""}
-                            {patient.age ?? "--"} years,{" "}
-                            {patient.gender ?? "--"}
+                            {String(patient.patient_id).padStart(4, "0")} |{" "}
+                            {patient.mobile_no}
                           </Text>
                         </View>
                       </View>
@@ -739,12 +694,19 @@ const shared = StyleSheet.create({
 // ─────────────────────────────────────────────────────────────────────────────
 const hw = StyleSheet.create({
   header: {
-    backgroundColor: colors.bg_home,
+    backgroundColor: colors.white,
     paddingHorizontal: 20,
     paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   headerAvatar: {
@@ -759,7 +721,7 @@ const hw = StyleSheet.create({
     height: 40,
     borderRadius: 32,
     borderWidth: 2.5,
-    borderColor: "rgba(255,255,255,0.6)",
+    borderColor: "rgba(0,0,0,0.15)",
   },
   // initialsAvatar: {
   //   backgroundColor: "rgba(255,255,255,0.35)",
@@ -773,10 +735,10 @@ const hw = StyleSheet.create({
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
-  welcomeText: { fontSize: rf(13), color: colors.white, fontWeight: "500" },
+  welcomeText: { fontSize: rf(13), color: "#000000", fontWeight: "500" },
   nameText: {
     fontSize: rf(17),
-    color: "#FFFFFF",
+    color: "#000000",
     fontWeight: "800",
     letterSpacing: -0.2,
   },
@@ -884,6 +846,7 @@ const hw = StyleSheet.create({
     color: "#0D1B2E",
     marginBottom: 3,
   },
+  cardMetaInline: { fontSize: rf(12), fontWeight: "400", color: colors.black },
   cardMeta: { fontSize: rf(11), color: colors.black },
 
   startTestBtn: {
