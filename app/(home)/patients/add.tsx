@@ -720,11 +720,13 @@ export default function AddPatientScreen() {
                 backgroundColor: "#FFFFFF",
                 borderWidth: 1,
                 borderColor: errors.address ? ACCENT : BORDER,
-                height: 50,
+                height: 40,
                 borderRadius: 4,
                 paddingHorizontal: 14,
+                paddingVertical: 0,
                 fontSize: rf(14),
                 color: "#1A2B3C",
+                textAlignVertical: "center",
               },
               listView: {
                 backgroundColor: "#FFFFFF",
@@ -921,9 +923,11 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     borderRadius: 4,
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 14 : 11,
+    paddingVertical: 0,
+    height: 40,
     fontSize: rf(14),
     color: "#1A2B3C",
+    textAlignVertical: "center",
   },
   inputError: {
     borderColor: ACCENT,
@@ -960,7 +964,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     borderRadius: 4,
     paddingHorizontal: 12,
-    paddingVertical: Platform.OS === "ios" ? 8 : 8,
+    height: 40,
     gap: 6,
   },
   flagEmoji: {
@@ -981,12 +985,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
     borderRadius: 4,
+    height: 40,
+    justifyContent: "center",
   },
   phoneInput: {
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 14 : 11,
+    paddingVertical: 0,
     fontSize: rf(14),
     color: "#1A2B3C",
+    textAlignVertical: "center",
   },
 
   // Gender

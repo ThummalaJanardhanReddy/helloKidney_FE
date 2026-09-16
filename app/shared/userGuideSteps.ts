@@ -1,7 +1,7 @@
 import { images } from "@/assets";
 
 export const steps = [
-  {
+  { 
     id: 1,
     topText: "Collect your urine sample in\n the provided container",
     bottomText:

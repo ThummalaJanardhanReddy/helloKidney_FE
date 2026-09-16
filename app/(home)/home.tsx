@@ -306,7 +306,7 @@ function HealthWorkerHome() {
     <View
       style={{
         flex: 1,
-        backgroundColor: "red",
+        backgroundColor: colors.white,
       }}
     >
       {/* <StatusBar backgroundColor={colors.bg_home} animated /> */}
@@ -315,7 +315,7 @@ function HealthWorkerHome() {
         style={{
           flex: 1,
           paddingTop: insets.top,
-          backgroundColor: colors.bg_primary,
+          backgroundColor: colors.white,
         }}
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}

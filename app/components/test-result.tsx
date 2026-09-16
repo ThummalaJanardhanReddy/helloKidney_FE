@@ -67,11 +67,11 @@ const TestResult = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor={colors.bg_home} style="light" animated />
+      <StatusBar backgroundColor={colors.white} style="dark" animated />
       {/* Header */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={handleBackPress}>
-          <Ionicons name="arrow-back" size={26} color="#ffffffff" />
+          <Ionicons name="arrow-back" size={26} color="#000000" />
         </TouchableOpacity>
         <Text style={styles.header}>uACR Results</Text>
         {/* <View style={{ width: 26 }} /> */}
@@ -226,12 +226,14 @@ const TestResult = () => {
         )}
       </ScrollView>
 
-      <TouchableOpacity
-        style={[styles.done, { backgroundColor: colors.success }]}
-        onPress={handleBackPress}
-      >
-        <Text style={{ color: "white", fontSize: 18 }}>Done</Text>
-      </TouchableOpacity>
+      <View style={styles.doneWrap}>
+        <TouchableOpacity
+          style={[styles.done, { backgroundColor: colors.success }]}
+          onPress={handleBackPress}
+        >
+          <Text style={{ color: "white", fontSize: 18 }}>Done</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -253,13 +255,13 @@ const styles = StyleSheet.create({
     height: 60,
     gap: 20,
     // marginBottom: 20,
-    backgroundColor: colors.bg_home,
+    backgroundColor: colors.white,
     paddingHorizontal: 20,
   },
   header: {
     fontSize: 18,
     fontWeight: "600",
-    color: colors.white,
+    color: "#000000",
   },
   card: {
     backgroundColor: "#fff",
@@ -439,19 +441,15 @@ const styles = StyleSheet.create({
     color: "#555",
   },
 
+  doneWrap: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
   done: {
-    // backgroundColor: "red",
-    paddingVertical: 10,
-    position: "fixed",
-    bottom: 0,
-    // marginHorizontal:25,
+    width: "100%",
+    paddingVertical: 14,
     alignItems: "center",
     borderRadius: 8,
-    marginTop: 20,
-    // width: 150,
-    paddingHorizontal: 25,
-    margin: "auto",
-    color: "white",
   },
   retake: {
     backgroundColor: "red",

@@ -39,9 +39,10 @@ import { steps } from "../../shared/userGuideSteps";
 import {
   STRIP_WIDTH,
   STRIP_HEIGHT,
-  FRAME_TOP_OFFSET,
+  getStripBoxPosition,
   TOTAL_WAIT,
   CAMERA_TIMEOUT,
+  ANALYSIS_INTERVAL,
   C_SIZE,
   C_STROKE,
   C_RADIUS,
@@ -50,6 +51,7 @@ import {
   FrameState,
 } from "./constants";
 import { CameraOverlay } from "./CameraOverlay";
+import { runQualityGate, decodeBase64Jpeg, validateSharpness, validateExposure, validateContrast, validateCardBounds } from "./imageQuality";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -102,6 +104,14 @@ export default function TimerCameraUploader() {
   const [qrLocked,      setQrLocked]      = useState(false);
   const [frameState,    setFrameState]    = useState<FrameState>("IDLE");
   const [actionLoading, setActionLoading] = useState(false);
+
+  // ── Post-capture quality gate (mirrors Ionic's showQualityGate/qualityGateFailed)
+  const [qualityGateFailed, setQualityGateFailed] = useState(false);
+  const [qualityFailMessage, setQualityFailMessage] = useState("");
+
+  // ── Live status banner (mirrors Ionic's validationState.currentMessage/currentIcon)
+  const [liveMessage, setLiveMessage] = useState("Place the card within the dotted outline");
+  const [liveTone, setLiveTone] = useState<"idle" | "success" | "error">("idle");
 
   // ── Preview
   const [previewUri,     setPreviewUri]     = useState<string | null>(null);
@@ -168,7 +178,102 @@ export default function TimerCameraUploader() {
     setQrLocked(true);
     setQrData(data);
     setFrameState("STRIP_ALIGN");
+    setLiveMessage("QR code detected — checking image quality…");
+    setLiveTone("idle");
   }, [qrLocked]);
+
+  // ─── Live quality feedback (approximates Ionic's captureSample() loop) ─────
+  // expo-camera has no lightweight live-frame API, so this polls
+  // takePictureAsync on an interval once QR is locked and runs the same
+  // sharpness/exposure/contrast checks used post-capture, driving the
+  // BLUR/REFLECTION/STABLE frame states + labels. Each sample is a real
+  // full-resolution capture+decode, so this trades a periodic camera
+  // stutter for genuine live feedback (see ANALYSIS_INTERVAL).
+
+  const liveAnalysisRunningRef = useRef(false);
+  const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const runLiveAnalysis = useCallback(async () => {
+    if (
+      liveAnalysisRunningRef.current ||
+      capturingRef.current ||
+      !cameraRef.current ||
+      !qrLocked ||
+      previewUriRef.current ||
+      qualityGateFailed
+    ) {
+      return;
+    }
+
+    liveAnalysisRunningRef.current = true;
+    try {
+      const snap = await cameraRef.current.takePictureAsync({
+        quality: 0.3, skipProcessing: true, base64: true, exif: false,
+      });
+      if (!snap?.base64) return;
+
+      const image = decodeBase64Jpeg(snap.base64);
+
+      // Card-presence check FIRST — sharpness/exposure/contrast all still
+      // read as "fine" when pointed at an empty wall or table, so without
+      // this the loop kept reporting "Card detected. Hold steady" even with
+      // no card anywhere in frame.
+      const bounds = validateCardBounds(image);
+      if (!bounds.pass) {
+        setFrameState("IDLE");
+        setLiveMessage(
+          bounds.score === 0 ? "Point camera at the test card" : bounds.message,
+        );
+        setLiveTone("error");
+        return;
+      }
+
+      const sharpness = validateSharpness(image);
+      if (!sharpness.pass) {
+        setFrameState("BLUR");
+        setLiveMessage(sharpness.message);
+        setLiveTone("error");
+        return;
+      }
+
+      const exposure = validateExposure(image);
+      if (!exposure.pass) {
+        setFrameState("REFLECTION");
+        setLiveMessage(exposure.message);
+        setLiveTone("error");
+        return;
+      }
+
+      const contrast = validateContrast(image);
+      if (!contrast.pass) {
+        setFrameState("REFLECTION");
+        setLiveMessage(contrast.message);
+        setLiveTone("error");
+        return;
+      }
+
+      setFrameState("STABLE");
+      setLiveMessage("Card detected. Hold steady");
+      setLiveTone("success");
+    } catch (e) {
+      console.warn("[LiveAnalysis] sample failed:", e);
+    } finally {
+      liveAnalysisRunningRef.current = false;
+    }
+  }, [qrLocked, qualityGateFailed]);
+
+  useEffect(() => {
+    if (showCamera && !previewUri && qrLocked && !qualityGateFailed) {
+      runLiveAnalysis();
+      liveIntervalRef.current = setInterval(runLiveAnalysis, ANALYSIS_INTERVAL);
+    }
+    return () => {
+      if (liveIntervalRef.current) {
+        clearInterval(liveIntervalRef.current);
+        liveIntervalRef.current = null;
+      }
+    };
+  }, [showCamera, previewUri, qrLocked, qualityGateFailed, runLiveAnalysis]);
 
   // ─── Crop to strip frame ──────────────────────────────────────────────────
 
@@ -191,8 +296,7 @@ export default function TimerCameraUploader() {
       offsetY = (iH - pH * scaleY) / 2;
     }
 
-    const fLeft = (pW - STRIP_WIDTH)  / 2;
-    const fTop  = (pH - STRIP_HEIGHT) / 2 - FRAME_TOP_OFFSET;
+    const { left: fLeft, top: fTop } = getStripBoxPosition(pW, pH);
 
     const cropX = Math.max(0, Math.round(fLeft * scaleX + offsetX));
     const cropY = Math.max(0, Math.round(fTop  * scaleY + offsetY));
@@ -202,7 +306,7 @@ export default function TimerCameraUploader() {
     return ImageManipulator.manipulateAsync(
       photo.uri,
       [{ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } }],
-      { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
+      { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG, base64: true },
     );
   }, []);
 
@@ -215,17 +319,57 @@ export default function TimerCameraUploader() {
       return;
     }
 
+    // Stop the live-analysis polling loop and let any in-flight sample
+    // finish before the real capture — the camera can't service two
+    // concurrent takePictureAsync() calls.
+    if (liveIntervalRef.current) {
+      clearInterval(liveIntervalRef.current);
+      liveIntervalRef.current = null;
+    }
+    while (liveAnalysisRunningRef.current) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
     capturingRef.current = true;
     setActionLoading(true);
     setFrameState("CAPTURING");
+    setQualityGateFailed(false);
+    setQualityFailMessage("");
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.9, skipProcessing: false, base64: false, exif: false,
+        quality: 0.9, skipProcessing: false, base64: true, exif: false,
       });
+
+      // Crop to the strip box BEFORE running quality checks — this is also
+      // the final image used for preview/upload if the gate passes, so it's
+      // only ever cropped once.
       const cropped = await cropToStripFrame(photo, layoutRef.current!);
 
+      // ── Post-capture quality gate — sharpness → exposure → bounds →
+      // contrast, same order/behavior as the Ionic page's
+      // runQualityChecks(). `bounds` reads the full frame (needs the whole
+      // shot to judge card position/size); sharpness/exposure/contrast read
+      // only the cropped card region so background clutter outside the box
+      // can't fail the card's own lighting/focus.
+      const gateResult = await runQualityGate(photo.base64!, cropped.base64!);
+
+      // TEMP DEBUG: shows the full pass/fail + score breakdown as an Alert
+      // since device console logs aren't visible right now. Uncomment to
+      // re-enable.
+      // Alert.alert("Quality Gate", gateResult.summary);
+
+      if (!gateResult.pass) {
+        setQualityGateFailed(true);
+        setQualityFailMessage(gateResult.failMessage || "Quality check failed.");
+        setFrameState("STRIP_ALIGN");
+        return;
+      }
+
+      // Quality gate passed — cancel the deadline warning, same point the
+      // Ionic page cancels it (after validation, not right at shutter press).
       clearDeadline();
+
       setPreviewUri(cropped.uri);
       setFrameState("STRIP_ALIGN");
     } catch (e) {
@@ -238,6 +382,22 @@ export default function TimerCameraUploader() {
     }
   }, [qrLocked, clearDeadline, cropToStripFrame]);
 
+  // ─── Retake from a failed quality gate ──────────────────────────────────────
+  // Mirrors Ionic's retakeFromQualityGate(): dismiss the failure banner,
+  // re-arm QR scanning and the deadline timer, no full camera restart needed
+  // since expo-camera's CameraView stays mounted throughout.
+
+  const handleRetakeFromQualityGate = useCallback(() => {
+    setQualityGateFailed(false);
+    setQualityFailMessage("");
+    setQrLocked(false);
+    setQrData(null);
+    setFrameState("IDLE");
+    setLiveMessage("Place the card within the dotted outline");
+    setLiveTone("idle");
+    startDeadline();
+  }, [startDeadline]);
+
   // ─── Retake ───────────────────────────────────────────────────────────────
 
   const handleRetake = useCallback(() => {
@@ -245,6 +405,8 @@ export default function TimerCameraUploader() {
     setQrLocked(false);
     setQrData(null);
     setFrameState("IDLE");
+    setLiveMessage("Place the card within the dotted outline");
+    setLiveTone("idle");
     startDeadline();
   }, [startDeadline]);
 
@@ -481,29 +643,24 @@ export default function TimerCameraUploader() {
               onBarcodeScanned={qrLocked ? undefined : onBarcodeScanned}
             />
 
-            {/* Camera overlay (frame + capture button) – hidden during preview */}
+            {/* Camera overlay — dotted box + status banner stay visible through a
+                failed quality gate too (matches Ionic's overlay-canvas, which
+                only hides on the preview screen), only the button swaps to Retake. */}
             {!previewUri && previewLayout && (
               <CameraOverlay
                 layout={previewLayout}
                 frameState={frameState}
                 visual={visual}
-                qrLocked={qrLocked}
-                autoCount={0}
+                message={qualityGateFailed ? qualityFailMessage : liveMessage}
+                messageTone={qualityGateFailed ? "error" : liveTone}
+                captureLabel={qualityGateFailed ? "Retake" : "Take Photo"}
+                captureDisabled={qualityGateFailed ? false : !qrLocked || frameState === "CAPTURING"}
                 cameraTimeout={0}
                 insets={insets}
                 onBack={handleBackPress}
-                onCapture={handleTakePhoto}
+                onCapture={qualityGateFailed ? handleRetakeFromQualityGate : handleTakePhoto}
               />
             )}
-
-            {/* Status banner */}
-            {/* {!previewUri && (
-              <View style={[styles.statusBanner, qrLocked && styles.statusBannerSuccess]}>
-                <Text style={styles.statusBannerText} numberOfLines={1}>
-                  {qrLocked ? "QR Detected — Tap Take Picture" : "Position card and scan QR code"}
-                </Text>
-              </View>
-            )} */}
 
             {/* Capturing overlay */}
             {actionLoading && (
@@ -564,7 +721,7 @@ export default function TimerCameraUploader() {
       )}
 
       {/* ════════════════════════════════════════════
-          TIMING WARNING MODAL  (shown after 120 s)
+          TIMING WARNING MODAL  (shown after CAMERA_TIMEOUT seconds)
       ════════════════════════════════════════════ */}
       <Modal visible={showTimingWarning} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
@@ -573,7 +730,7 @@ export default function TimerCameraUploader() {
             <Text style={styles.warningIcon}>⏱</Text>
             <Text style={styles.warningMessage}>
               The card has been activated for more than{" "}
-              <Text style={{ color: "#e53935" }}>120 secs now.</Text>
+              <Text style={{ color: "#e53935" }}>{CAMERA_TIMEOUT} secs now.</Text>
             </Text>
             <Text style={styles.warningBullet}>• Delay in scanning could cause inaccurate results</Text>
             <Text style={styles.warningBullet}>• We recommend taking the test again with a new card.</Text>

@@ -163,12 +163,13 @@ export default function TestList() {
               params: { hw_id: userId },
             },
           );
+          console.log("Fetched healthworker tests (/healthworker/tests):", data);
           setHealthworkerTests(data);
         } else {
           data = await axiosClient.get<TestResponse[]>("/users/tests", {
             params: { patient_id: userId },
           });
-          console.log("fetched tests: ", data);
+          console.log("Fetched tests (/users/tests):", data);
         }
 
         // Update tests list
@@ -193,6 +194,10 @@ export default function TestList() {
       const response = await axiosClient.get<IPatient>(
         `/healthworker/get-patient/${patientId}`,
       );
+      console.log(
+        `Fetched patient (/healthworker/get-patient/${patientId}):`,
+        response,
+      );
       return response;
     } catch (error) {
       console.error("Failed to fetch patient details:", error);
@@ -205,6 +210,7 @@ export default function TestList() {
       const response = await axiosClient.get(`/users/get-patient`, {
         params: { patient_id: patientId },
       });
+      console.log("Fetched patient (/users/get-patient):", response);
       return response;
     } catch (error) {
       console.log("Failed to fetch patient details: ", error);
