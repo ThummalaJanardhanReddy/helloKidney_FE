@@ -338,7 +338,7 @@ export default function TimerCameraUploader() {
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.9, skipProcessing: false, base64: true, exif: false,
+        quality: 0.7, skipProcessing: false, base64: true, exif: false,
       });
 
       // Crop to the strip box BEFORE running quality checks — this is also
