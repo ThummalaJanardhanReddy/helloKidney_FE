@@ -25,6 +25,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
@@ -43,6 +44,8 @@ import {
   TOTAL_WAIT,
   CAMERA_TIMEOUT,
   ANALYSIS_INTERVAL,
+  STABLE_TICKS_NEEDED,
+  STABLE_TICKS_PENALTY,
   C_SIZE,
   C_STROKE,
   C_RADIUS,
@@ -132,6 +135,13 @@ export default function TimerCameraUploader() {
   const deadlineRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningDismissedRef = useRef(false);
 
+  // ── Auto-capture: counts consecutive clean live-analysis ticks (all 5
+  // active checks — QR already locked to get here, then bounds/sharpness/
+  // exposure/contrast — passing in a row) and fires the shutter itself once
+  // STABLE_TICKS_NEEDED is reached, instead of waiting for a manual tap.
+  const stableTicksRef  = useRef(0);
+  const handleTakePhotoRef = useRef<(() => Promise<void>) | null>(null);
+
   const [previewLayout, setPreviewLayout] = useState<{ width: number; height: number } | null>(null);
 
   const visual           = FRAME_VISUAL[frameState];
@@ -175,6 +185,8 @@ export default function TimerCameraUploader() {
 
   const onBarcodeScanned = useCallback(({ data, type }: BarcodeScanningResult) => {
     if (qrLocked || type !== "qr") return;
+    stableTicksRef.current = 0;
+    liveFailureCountRef.current = 0;
     setQrLocked(true);
     setQrData(data);
     setFrameState("STRIP_ALIGN");
@@ -192,6 +204,14 @@ export default function TimerCameraUploader() {
 
   const liveAnalysisRunningRef = useRef(false);
   const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Consecutive ticks where a sample couldn't even be captured/decoded
+  // (as opposed to captured-but-failed-a-check). Used purely so the user
+  // is never stuck staring at the initial "checking image quality…" banner
+  // forever if this device just can't produce a usable live sample — after
+  // a few failures we say so and point at the manual button, which runs a
+  // completely separate, already-working capture path.
+  const liveFailureCountRef = useRef(0);
+  const LIVE_FAILURE_FALLBACK_THRESHOLD = 4;
 
   const runLiveAnalysis = useCallback(async () => {
     if (
@@ -208,11 +228,20 @@ export default function TimerCameraUploader() {
     liveAnalysisRunningRef.current = true;
     try {
       const snap = await cameraRef.current.takePictureAsync({
-        quality: 0.3, skipProcessing: true, base64: true, exif: false,
+        quality: 0.3, base64: true, exif: false,
       });
-      if (!snap?.base64) return;
+      if (!snap?.base64) {
+        console.warn("[LiveAnalysis] sample returned no base64 data");
+        liveFailureCountRef.current += 1;
+        if (liveFailureCountRef.current >= LIVE_FAILURE_FALLBACK_THRESHOLD) {
+          setLiveMessage("Line up the card, then tap Take Photo");
+          setLiveTone("idle");
+        }
+        return;
+      }
 
       const image = decodeBase64Jpeg(snap.base64);
+      liveFailureCountRef.current = 0;
 
       // Card-presence check FIRST — sharpness/exposure/contrast all still
       // read as "fine" when pointed at an empty wall or table, so without
@@ -220,6 +249,7 @@ export default function TimerCameraUploader() {
       // no card anywhere in frame.
       const bounds = validateCardBounds(image);
       if (!bounds.pass) {
+        stableTicksRef.current = Math.max(0, stableTicksRef.current - STABLE_TICKS_PENALTY);
         setFrameState("IDLE");
         setLiveMessage(
           bounds.score === 0 ? "Point camera at the test card" : bounds.message,
@@ -230,6 +260,7 @@ export default function TimerCameraUploader() {
 
       const sharpness = validateSharpness(image);
       if (!sharpness.pass) {
+        stableTicksRef.current = Math.max(0, stableTicksRef.current - STABLE_TICKS_PENALTY);
         setFrameState("BLUR");
         setLiveMessage(sharpness.message);
         setLiveTone("error");
@@ -238,6 +269,7 @@ export default function TimerCameraUploader() {
 
       const exposure = validateExposure(image);
       if (!exposure.pass) {
+        stableTicksRef.current = Math.max(0, stableTicksRef.current - STABLE_TICKS_PENALTY);
         setFrameState("REFLECTION");
         setLiveMessage(exposure.message);
         setLiveTone("error");
@@ -246,17 +278,35 @@ export default function TimerCameraUploader() {
 
       const contrast = validateContrast(image);
       if (!contrast.pass) {
+        stableTicksRef.current = Math.max(0, stableTicksRef.current - STABLE_TICKS_PENALTY);
         setFrameState("REFLECTION");
         setLiveMessage(contrast.message);
         setLiveTone("error");
         return;
       }
 
+      // All 5 active checks (QR + bounds + sharpness + exposure + contrast)
+      // passed this tick. Once that's held for STABLE_TICKS_NEEDED ticks in a
+      // row (~STABLE_TICKS_NEEDED * ANALYSIS_INTERVAL ms of a genuinely clean
+      // frame, not just one lucky sample), fire the shutter automatically —
+      // the manual "Take Photo" button stays as a fallback, but the user no
+      // longer has to tap it themselves.
+      stableTicksRef.current += 1;
       setFrameState("STABLE");
       setLiveMessage("Card detected. Hold steady");
       setLiveTone("success");
+
+      if (stableTicksRef.current >= STABLE_TICKS_NEEDED) {
+        stableTicksRef.current = 0;
+        handleTakePhotoRef.current?.();
+      }
     } catch (e) {
       console.warn("[LiveAnalysis] sample failed:", e);
+      liveFailureCountRef.current += 1;
+      if (liveFailureCountRef.current >= LIVE_FAILURE_FALLBACK_THRESHOLD) {
+        setLiveMessage("Line up the card, then tap Take Photo");
+        setLiveTone("idle");
+      }
     } finally {
       liveAnalysisRunningRef.current = false;
     }
@@ -343,16 +393,30 @@ export default function TimerCameraUploader() {
 
       // Crop to the strip box BEFORE running quality checks — this is also
       // the final image used for preview/upload if the gate passes, so it's
-      // only ever cropped once.
-      const cropped = await cropToStripFrame(photo, layoutRef.current!);
+      // only ever cropped once. Run alongside a cheap native downsize of the
+      // full frame for the bounds check: validateCardBounds() only ever
+      // looks at it at 500px max-dim anyway, but decodeBase64Jpeg() decodes
+      // whatever resolution it's handed in pure JS — feeding it the full
+      // camera-resolution shot (often 8-12MP) made that decode the single
+      // slowest step between "Capturing Image" and the preview showing.
+      // Resizing natively first (fast, hardware-accelerated) avoids that.
+      const [cropped, boundsSource] = await Promise.all([
+        cropToStripFrame(photo, layoutRef.current!),
+        ImageManipulator.manipulateAsync(
+          photo.uri,
+          [{ resize: { width: 600 } }],
+          { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+        ),
+      ]);
 
       // ── Post-capture quality gate — sharpness → exposure → bounds →
       // contrast, same order/behavior as the Ionic page's
-      // runQualityChecks(). `bounds` reads the full frame (needs the whole
-      // shot to judge card position/size); sharpness/exposure/contrast read
-      // only the cropped card region so background clutter outside the box
-      // can't fail the card's own lighting/focus.
-      const gateResult = await runQualityGate(photo.base64!, cropped.base64!);
+      // runQualityChecks(). `bounds` reads the (downsized) full frame,
+      // needed to judge card position/size within the whole shot;
+      // sharpness/exposure/contrast read only the cropped card region so
+      // background clutter outside the box can't fail the card's own
+      // lighting/focus.
+      const gateResult = await runQualityGate(boundsSource.base64!, cropped.base64!);
 
       // TEMP DEBUG: shows the full pass/fail + score breakdown as an Alert
       // since device console logs aren't visible right now. Uncomment to
@@ -382,12 +446,24 @@ export default function TimerCameraUploader() {
     }
   }, [qrLocked, clearDeadline, cropToStripFrame]);
 
+  // Keep a ref to the latest handleTakePhoto so runLiveAnalysis (defined
+  // above, before handleTakePhoto exists) can auto-fire it without having to
+  // sit in that callback's own dependency array — which would mean either
+  // reordering these two closely-coupled but large functions or hitting a
+  // "used before declaration" error, since handleTakePhoto depends on
+  // cropToStripFrame, defined between the two.
+  useEffect(() => {
+    handleTakePhotoRef.current = handleTakePhoto;
+  }, [handleTakePhoto]);
+
   // ─── Retake from a failed quality gate ──────────────────────────────────────
   // Mirrors Ionic's retakeFromQualityGate(): dismiss the failure banner,
   // re-arm QR scanning and the deadline timer, no full camera restart needed
   // since expo-camera's CameraView stays mounted throughout.
 
   const handleRetakeFromQualityGate = useCallback(() => {
+    stableTicksRef.current = 0;
+    liveFailureCountRef.current = 0;
     setQualityGateFailed(false);
     setQualityFailMessage("");
     setQrLocked(false);
@@ -401,6 +477,8 @@ export default function TimerCameraUploader() {
   // ─── Retake ───────────────────────────────────────────────────────────────
 
   const handleRetake = useCallback(() => {
+    stableTicksRef.current = 0;
+    liveFailureCountRef.current = 0;
     setPreviewUri(null);
     setQrLocked(false);
     setQrData(null);
@@ -711,9 +789,15 @@ export default function TimerCameraUploader() {
           {/* Full-screen loader while uploading */}
           {previewLoading && (
             <View style={styles.previewLoader}>
-              <ActivityIndicator size="large" color="#fff" />
-              <Text style={styles.previewLoaderText}>
-                Please wait{"\n"}Analyzing your urine strip…
+              <ExpoImage
+                source={require("../../../assets/images/searching.gif")}
+                style={styles.previewLoaderGif}
+                contentFit="contain"
+                autoplay
+              />
+              <Text style={styles.previewLoaderTitle}>Please wait</Text>
+              <Text style={styles.previewLoaderSubtitle}>
+                Analyzing your urine strip…
               </Text>
             </View>
           )}
@@ -730,7 +814,7 @@ export default function TimerCameraUploader() {
             <Text style={styles.warningIcon}>⏱</Text>
             <Text style={styles.warningMessage}>
               The card has been activated for more than{" "}
-              <Text style={{ color: "#e53935" }}>{CAMERA_TIMEOUT} secs now.</Text>
+              <Text style={{ color: "#e53935" }}>80 secs now.</Text>
             </Text>
             <Text style={styles.warningBullet}>• Delay in scanning could cause inaccurate results</Text>
             <Text style={styles.warningBullet}>• We recommend taking the test again with a new card.</Text>
@@ -901,11 +985,17 @@ const styles = StyleSheet.create({
 
   previewLoader: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    justifyContent: "center", alignItems: "center", gap: 16, zIndex: 20,
+    backgroundColor: "#ffffff",
+    justifyContent: "center", alignItems: "center", gap: 10, zIndex: 20,
   },
-  previewLoaderText: {
-    color: "#fff", fontSize: 15, fontWeight: "500", textAlign: "center", lineHeight: 22,
+  previewLoaderGif: {
+    width: 160, height: 160,
+  },
+  previewLoaderTitle: {
+    color: "#111", fontSize: 20, fontWeight: "700", textAlign: "center", marginTop: 8,
+  },
+  previewLoaderSubtitle: {
+    color: "#555", fontSize: 15, fontWeight: "400", textAlign: "center",
   },
 
   // ── Modals

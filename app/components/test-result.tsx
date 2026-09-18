@@ -421,12 +421,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 24,
     paddingVertical: 10,
-    alignItems: "flex-start",
+    alignItems: "stretch",
     // marginTop: 15,
     borderColor: "#d3d0d0",
     borderWidth: 1,
-    flexWrap: "wrap",
     gap: 6,
+    overflow: "hidden",
   },
 
   uacrValue: {
@@ -471,6 +471,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#555",
     marginTop: 6,
+    flexShrink: 1,
   },
   warningCard: {
     backgroundColor: "#FDF1EB",

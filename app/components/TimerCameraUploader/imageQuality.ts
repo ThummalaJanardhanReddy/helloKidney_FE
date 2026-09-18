@@ -240,8 +240,6 @@ export function validateContrast(image: DecodedImage): QualityResult {
 
 // ─── Orchestration ──────────────────────────────────────────────────────────
 
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
 export interface QualityGateResult {
   pass: boolean;
   /** Multi-line breakdown of every check that ran — pass/fail + score each. */
@@ -296,7 +294,6 @@ export async function runQualityGate(
   let failMessage: string | undefined;
 
   for (const [key, check] of steps) {
-    await delay(120);
     const result = check();
     lines.push(`${result.pass ? "PASS" : "FAIL"} ${key} (score ${result.score}): ${result.message}`);
     console.log(`[QualityGate] ${key}: ${result.pass ? "PASS" : "FAIL"} score=${result.score} — ${result.message}`);
@@ -304,10 +301,7 @@ export async function runQualityGate(
       pass = false;
       if (!failMessage) failMessage = result.message;
     }
-    await delay(150);
   }
-
-  if (pass) await delay(300);
 
   return { pass, summary: lines.join("\n"), failMessage };
 }
