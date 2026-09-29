@@ -14,6 +14,7 @@ import {
   Animated,
   StatusBar
 } from "react-native";
+import * as Animatable from "react-native-animatable";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -209,6 +210,44 @@ function UserGuideCard({ onPress }: { onPress: () => void }) {
 // HEALTH WORKER HOME
 // ─────────────────────────────────────────────────────────────────────────────
 
+const REGISTERED_PATIENTS_SKELETON_COUNT = 2;
+
+function StatCardSkeleton() {
+  return (
+    <Animatable.View
+      animation="pulse"
+      easing="ease-out"
+      iterationCount="infinite"
+      style={hw.statCard}
+    >
+      <View style={[hw.statIcon, hw.skeletonBlock]} />
+      <View style={{ flex: 1, gap: 6 }}>
+        <View style={[hw.skeletonLine, { width: "70%" }]} />
+        <View style={[hw.skeletonLine, { width: "40%", height: 16 }]} />
+      </View>
+    </Animatable.View>
+  );
+}
+
+function PatientCardSkeleton() {
+  return (
+    <Animatable.View
+      animation="pulse"
+      easing="ease-out"
+      iterationCount="infinite"
+      style={hw.patientCard}
+    >
+      <View style={hw.cardTopRow}>
+        <View style={[hw.profileAvatar, hw.initialsAvatar, hw.skeletonBlock]} />
+        <View style={{ flex: 1, gap: 6 }}>
+          <View style={[hw.skeletonLine, { width: "65%" }]} />
+          <View style={[hw.skeletonLine, { width: "45%" }]} />
+        </View>
+      </View>
+    </Animatable.View>
+  );
+}
+
 function HealthWorkerHome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -217,44 +256,48 @@ function HealthWorkerHome() {
   const [totalPatients, setTotalPatients] = useState(0);
   const [todaysTests, setTodaysTests] = useState(0);
   const [registeredPatients, setRegisteredPatients] = useState<IPatient[]>([]);
-  const [loadingPatients, setLoadingPatients] = useState(false);
+  // Two separate flags, one per section — the stat cards and the registered-
+  // patients list are fetched independently, and sharing a single loading
+  // flag between them meant whichever request finished first hid BOTH
+  // sections' skeletons, even while the other was still loading.
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingRegisteredPatients, setLoadingRegisteredPatients] = useState(true);
 
   useFocusEffect(
     React.useCallback(() => {
-      getTotalPatientsCount();
-      getTotalTestsCount();
+      fetchStats();
       fetchRegisteredPatients();
     }, []),
   );
 
-  const getTotalPatientsCount = async () => {
-    try {
-      setLoadingPatients(true);
-      const res = (await getPatientsCount(user?.userId || "")) as any;
-      console.log("Total patients count:", res);
-      setTotalPatients(res.count || 0);
-    } catch (error) {
-      console.error("Error fetching total patients:", error);
-    } finally {
-      setLoadingPatients(false);
-    }
-  };
+  // Total patients + today's tests feed the same stats row, so they share
+  // one loading flag — Promise.allSettled means a slow one doesn't block the
+  // other's result, but the flag only clears once both have settled.
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    const [countsRes, testsRes] = await Promise.allSettled([
+      getPatientsCount(user?.userId || ""),
+      getTodaysTestsCount(user?.userId || ""),
+    ]);
 
-  const getTotalTestsCount = async () => {
-    try {
-      setLoadingPatients(true);
-      const res = (await getTodaysTestsCount(user?.userId || "")) as any;
-      setTodaysTests(res.count || 0);
-    } catch (error) {
-      console.error("Error fetching today's tests:", error);
-    } finally {
-      setLoadingPatients(false);
+    if (countsRes.status === "fulfilled") {
+      setTotalPatients((countsRes.value as any)?.count || 0);
+    } else {
+      console.error("Error fetching total patients:", countsRes.reason);
     }
+
+    if (testsRes.status === "fulfilled") {
+      setTodaysTests((testsRes.value as any)?.count || 0);
+    } else {
+      console.error("Error fetching today's tests:", testsRes.reason);
+    }
+
+    setLoadingStats(false);
   };
 
   const fetchRegisteredPatients = async () => {
     try {
-      setLoadingPatients(true);
+      setLoadingRegisteredPatients(true);
       const res = (await getPatientsWithStatus(
         Number.parseInt(user?.userId || "0"),
         3,
@@ -264,7 +307,7 @@ function HealthWorkerHome() {
     } catch (error) {
       console.error("Error fetching registered patients:", error);
     } finally {
-      setLoadingPatients(false);
+      setLoadingRegisteredPatients(false);
     }
   };
 
@@ -350,50 +393,67 @@ function HealthWorkerHome() {
         <View style={hw.lightSection}>
           {/* Stats */}
           <View style={hw.statsRow}>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={handleTotalPatientsClick}
-              style={{ flex: 1 }}
-            >
-              <View style={hw.statCard}>
-                <Image
-                  source={images.totalPatients}
-                  style={hw.statIcon}
-                  resizeMode="contain"
-                />
-                <View>
-                  <Text style={hw.statLabel}>Total Patient</Text>
-                  <Text style={hw.statValue}>
-                    {totalPatients > 0
-                      ? String(totalPatients).padStart(2, "0")
-                      : 0}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+            {loadingStats ? (
+              <>
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={handleTotalPatientsClick}
+                  style={{ flex: 1 }}
+                >
+                  <View style={hw.statCard}>
+                    <Image
+                      source={images.totalPatients}
+                      style={hw.statIcon}
+                      resizeMode="contain"
+                    />
+                    <View>
+                      <Text style={hw.statLabel}>Total Patient</Text>
+                      <Text style={hw.statValue}>
+                        {totalPatients > 0
+                          ? String(totalPatients).padStart(2, "0")
+                          : 0}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={handleTodaysTestClick}
-              style={{ flex: 1 }}
-            >
-              <View style={hw.statCard}>
-                <Image
-                  source={images.todayTests}
-                  style={hw.statIcon}
-                  resizeMode="contain"
-                />
-                <View>
-                  <Text style={hw.statLabel}>Today's Tests</Text>
-                  <Text style={hw.statValue}>
-                    {todaysTests > 0 ? String(todaysTests).padStart(2, "0") : 0}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleTodaysTestClick}
+                  style={{ flex: 1 }}
+                >
+                  <View style={hw.statCard}>
+                    <Image
+                      source={images.todayTests}
+                      style={hw.statIcon}
+                      resizeMode="contain"
+                    />
+                    <View>
+                      <Text style={hw.statLabel}>Today&apos;s Tests</Text>
+                      <Text style={hw.statValue}>
+                        {todaysTests > 0 ? String(todaysTests).padStart(2, "0") : 0}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
           {/* Registered Patient — single card */}
-          {!Array.isArray(registeredPatients) ||
+          {loadingRegisteredPatients ? (
+            <>
+              {Array.from({ length: REGISTERED_PATIENTS_SKELETON_COUNT }).map(
+                (_, i) => (
+                  <PatientCardSkeleton key={i} />
+                ),
+              )}
+            </>
+          ) : !Array.isArray(registeredPatients) ||
           registeredPatients.length === 0 ? (
             <TouchableOpacity
               onPress={() => router.push("/patients/add")}
@@ -774,6 +834,11 @@ const hw = StyleSheet.create({
     // elevation: 3,
   },
   statIcon: { width: 44, height: 44 },
+  // No borderRadius here on purpose — this is layered on top of whatever
+  // base style it's combined with (a circular avatar, a square icon), and
+  // should inherit that shape rather than override it.
+  skeletonBlock: { backgroundColor: "#DDE6F5" },
+  skeletonLine: { height: 12, borderRadius: 6, backgroundColor: "#E2E8F0" },
   statLabel: { fontSize: rf(12), color: colors.black },
   statValue: {
     fontSize: rf(20),

@@ -19,6 +19,7 @@ import {
   Image,
   Modal,
   PanResponder,
+  PixelRatio,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -45,7 +46,6 @@ import {
   CAMERA_TIMEOUT,
   ANALYSIS_INTERVAL,
   STABLE_TICKS_NEEDED,
-  STABLE_TICKS_PENALTY,
   C_SIZE,
   C_STROKE,
   C_RADIUS,
@@ -54,9 +54,25 @@ import {
   FrameState,
 } from "./constants";
 import { CameraOverlay } from "./CameraOverlay";
-import { runQualityGate, decodeBase64Jpeg, validateSharpness, validateExposure, validateContrast, validateCardBounds } from "./imageQuality";
+import { runQualityGate, runChecksInOrder, decodeBase64Jpeg, QualityKey } from "./imageQuality";
 
 const { width: screenWidth } = Dimensions.get("window");
+
+// Ionic captured at the screen's physical pixel size (innerWidth x dpr) and ran
+// every check on that frame. Match that here: the final photo is shrunk to the
+// screen's physical width for the checks (expo-camera would otherwise hand back
+// the sensor's full resolution, far larger than anything the thresholds were
+// tuned on). Live samples use a smaller frame so a tick stays quick.
+const CHECK_FRAME_WIDTH = Math.round(screenWidth * PixelRatio.get());
+const LIVE_SAMPLE_SHORT_SIDE = 720;
+
+// Which frame state each failing check drives (same visuals as before).
+const FAILED_CHECK_STATE: Record<QualityKey, FrameState> = {
+  sharpness: "BLUR",
+  exposure: "REFLECTION",
+  bounds: "IDLE",
+  contrast: "REFLECTION",
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -120,6 +136,13 @@ export default function TimerCameraUploader() {
   const [previewUri,     setPreviewUri]     = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  // ── Freeze frame: the just-captured photo, shown over the live CameraView
+  // for the "Capturing image…" window (crop + quality gate) so the feed
+  // doesn't keep visibly moving under the loader once a shot has already
+  // been taken. Cleared on both outcomes — gate failure resumes the live
+  // camera, success moves on to the preview screen.
+  const [captureFreezeFrameUri, setCaptureFreezeFrameUri] = useState<string | null>(null);
+
   // ── Modals
   const [showExitModal,     setShowExitModal]     = useState(false);
   const [showTimingWarning, setShowTimingWarning] = useState(false);
@@ -144,7 +167,15 @@ export default function TimerCameraUploader() {
 
   const [previewLayout, setPreviewLayout] = useState<{ width: number; height: number } | null>(null);
 
-  const visual           = FRAME_VISUAL[frameState];
+  // On a failed quality gate, frameState resets to "STRIP_ALIGN" (its green
+  // color) so live checking can resume once the user retakes — but that
+  // left the strip frame's border green at the exact moment the banner and
+  // "Retake" button are both telling the user the card wasn't detected.
+  // Override to the same red used elsewhere for a failed check, independent
+  // of frameState, for as long as that failure is showing.
+  const visual = qualityGateFailed
+    ? { color: "#F87171", label: "Card not detected" }
+    : FRAME_VISUAL[frameState];
   const strokeDashoffset = C_CIRC - C_CIRC * (countdown / TOTAL_WAIT);
 
   // Keep refs in sync with state
@@ -213,6 +244,13 @@ export default function TimerCameraUploader() {
   const liveFailureCountRef = useRef(0);
   const LIVE_FAILURE_FALLBACK_THRESHOLD = 4;
 
+  // Takes one cheap "live" sample — a real still capture, downscaled,
+  // decoded, and run through the same ordered checks used everywhere else —
+  // and returns just the check result. Shared by the polling loop below and
+  // by handleTakePhoto's one-more-check immediately before it commits to the
+  // real, expensive capture. Returns null only when no sample could be
+  // produced at all (missing base64); a genuine capture/decode error is left
+  // to propagate so each caller can log/handle it in its own context.
   const runLiveAnalysis = useCallback(async () => {
     if (
       liveAnalysisRunningRef.current ||
@@ -227,10 +265,38 @@ export default function TimerCameraUploader() {
 
     liveAnalysisRunningRef.current = true;
     try {
+      // A high-quality, modest-size sample — closest expo-camera gets to the
+      // Ionic page's captureSample({ quality: 100 }) preview frame. No
+      // skipProcessing: that flag was already tried here (bd1b237) and reverted
+      // (ba2d803) because it made takePictureAsync return unusable data on this
+      // device — the exact "stuck / never progresses" failure mode this streak
+      // would reproduce silently (a bad sample just fails a check and resets the
+      // streak, with no crash to point at it). base64 is not requested from the
+      // camera itself (it would encode the full sensor-resolution frame) — the
+      // manipulator below returns it for the shrunken copy only.
+      // shutterSound: false — this is a real still capture on every live tick,
+      // so without it the phone would click every ~1-2s while the card is
+      // being framed, well before the actual (auto-fired) capture.
+      // quality: 0.4, not 0.9 — every live sample gets its detail beyond
+      // LIVE_SAMPLE_SHORT_SIDE thrown away by the resize right below anyway,
+      // so encoding it at 0.9 was just spending extra time (bigger JPEG to
+      // encode and write to a temp file) on detail that never gets used. That
+      // extra time is exactly the visible "jerk" in the live preview — every
+      // still-photo capture briefly interrupts it, and a smaller/cheaper
+      // encode shortens how long that interruption lasts. 0.4 still leaves
+      // marker/card edges plenty sharp for the checks that read this frame.
       const snap = await cameraRef.current.takePictureAsync({
-        quality: 0.3, base64: true, exif: false,
+        quality: 0.4, exif: false, shutterSound: false,
       });
-      if (!snap?.base64) {
+      const shrinkShortSide = snap.width <= snap.height
+        ? { width: LIVE_SAMPLE_SHORT_SIDE }
+        : { height: LIVE_SAMPLE_SHORT_SIDE };
+      const sample = await ImageManipulator.manipulateAsync(
+        snap.uri,
+        [{ resize: shrinkShortSide }],
+        { compress: 0.95, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+      );
+      if (!sample?.base64) {
         console.warn("[LiveAnalysis] sample returned no base64 data");
         liveFailureCountRef.current += 1;
         if (liveFailureCountRef.current >= LIVE_FAILURE_FALLBACK_THRESHOLD) {
@@ -240,57 +306,25 @@ export default function TimerCameraUploader() {
         return;
       }
 
-      const image = decodeBase64Jpeg(snap.base64);
+      const image = decodeBase64Jpeg(sample.base64);
       liveFailureCountRef.current = 0;
 
-      // Card-presence check FIRST — sharpness/exposure/contrast all still
-      // read as "fine" when pointed at an empty wall or table, so without
-      // this the loop kept reporting "Card detected. Hold steady" even with
-      // no card anywhere in frame.
-      const bounds = validateCardBounds(image);
-      if (!bounds.pass) {
-        stableTicksRef.current = Math.max(0, stableTicksRef.current - STABLE_TICKS_PENALTY);
-        setFrameState("IDLE");
-        setLiveMessage(
-          bounds.score === 0 ? "Point camera at the test card" : bounds.message,
-        );
+      // Same order and stop rule as the Ionic live loop: sharpness, exposure,
+      // bounds (ArUco corner markers, 3 of 4), contrast — first failure wins
+      // and resets the streak to zero.
+      const checks = runChecksInOrder(image);
+      if (!checks.pass && checks.failedKey) {
+        stableTicksRef.current = 0;
+        setFrameState(FAILED_CHECK_STATE[checks.failedKey]);
+        setLiveMessage(checks.message ?? "");
         setLiveTone("error");
         return;
       }
 
-      const sharpness = validateSharpness(image);
-      if (!sharpness.pass) {
-        stableTicksRef.current = Math.max(0, stableTicksRef.current - STABLE_TICKS_PENALTY);
-        setFrameState("BLUR");
-        setLiveMessage(sharpness.message);
-        setLiveTone("error");
-        return;
-      }
-
-      const exposure = validateExposure(image);
-      if (!exposure.pass) {
-        stableTicksRef.current = Math.max(0, stableTicksRef.current - STABLE_TICKS_PENALTY);
-        setFrameState("REFLECTION");
-        setLiveMessage(exposure.message);
-        setLiveTone("error");
-        return;
-      }
-
-      const contrast = validateContrast(image);
-      if (!contrast.pass) {
-        stableTicksRef.current = Math.max(0, stableTicksRef.current - STABLE_TICKS_PENALTY);
-        setFrameState("REFLECTION");
-        setLiveMessage(contrast.message);
-        setLiveTone("error");
-        return;
-      }
-
-      // All 5 active checks (QR + bounds + sharpness + exposure + contrast)
-      // passed this tick. Once that's held for STABLE_TICKS_NEEDED ticks in a
-      // row (~STABLE_TICKS_NEEDED * ANALYSIS_INTERVAL ms of a genuinely clean
-      // frame, not just one lucky sample), fire the shutter automatically —
-      // the manual "Take Photo" button stays as a fallback, but the user no
-      // longer has to tap it themselves.
+      // All 5 active checks (QR already locked + the four above) passed this
+      // sample. Once that holds STABLE_TICKS_NEEDED samples in a row, fire the
+      // shutter automatically — the manual "Take Photo" button stays as a
+      // fallback.
       stableTicksRef.current += 1;
       setFrameState("STABLE");
       setLiveMessage("Card detected. Hold steady");
@@ -353,10 +387,29 @@ export default function TimerCameraUploader() {
     const cropW = Math.min(Math.round(STRIP_WIDTH  * scaleX), iW - cropX);
     const cropH = Math.min(Math.round(STRIP_HEIGHT * scaleY), iH - cropY);
 
+    // Match the image the backend received from the (accurate) Ionic page.
+    // That page captured at the screen's physical pixel size and cropped the
+    // dotted box out of it, so the strip it uploaded was roughly
+    // STRIP_WIDTH*dpr x STRIP_HEIGHT*dpr (~600px wide). expo-camera instead
+    // captures at the sensor's highest resolution, so the same crop came out
+    // 2-4x larger — different marker/swatch pixel sizes, noise and JPEG
+    // artifacts than the analysis was tuned on. Downscale (never upscale)
+    // to the Ionic-equivalent size, and re-encode at the Ionic crop quality
+    // (0.95).
+    const dpr     = PixelRatio.get();
+    const targetW = Math.min(cropW, Math.round(STRIP_WIDTH  * dpr));
+    const targetH = Math.min(cropH, Math.round(STRIP_HEIGHT * dpr));
+    const actions: ImageManipulator.Action[] = [
+      { crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } },
+    ];
+    if (targetW < cropW) {
+      actions.push({ resize: { width: targetW, height: targetH } });
+    }
+
     return ImageManipulator.manipulateAsync(
       photo.uri,
-      [{ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } }],
-      { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+      actions,
+      { compress: 0.95, format: ImageManipulator.SaveFormat.JPEG },
     );
   }, []);
 
@@ -369,6 +422,30 @@ export default function TimerCameraUploader() {
       return;
     }
 
+    // Claim the capture lock and disable the manual button IMMEDIATELY —
+    // before any await below. Auto-capture calls this fire-and-forget from
+    // the live loop, then awaits a "settle" delay before the real
+    // takePictureAsync(); while capturingRef stayed false across that delay,
+    // a manual tap landing in that same window (button wasn't disabled yet
+    // either, since frameState hadn't flipped to CAPTURING) passed this same
+    // guard and started a SECOND concurrent takePictureAsync() call — which
+    // is exactly what threw "Camera unmounted during taking photo process".
+    // Setting these synchronously, before the first await, closes that gap.
+    capturingRef.current = true;
+    setActionLoading(true);
+    setFrameState("CAPTURING");
+
+    // The status banner otherwise keeps showing whatever the last live tick
+    // said — usually "Card detected. Hold steady" — for the ENTIRE capture
+    // + quality-gate window (a real photo capture, a full-frame ArUco marker
+    // search, several seconds), since nothing updates liveMessage once the
+    // live loop stops. That's what made moving the camera off the card right
+    // as auto-capture fired look like the app was still lying about a card
+    // being there: it only found out, and said so, once the gate result came
+    // back. Say something honest immediately instead.
+    setLiveMessage("Checking captured photo…");
+    setLiveTone("idle");
+
     // Stop the live-analysis polling loop and let any in-flight sample
     // finish before the real capture — the camera can't service two
     // concurrent takePictureAsync() calls.
@@ -380,43 +457,45 @@ export default function TimerCameraUploader() {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
 
-    capturingRef.current = true;
-    setActionLoading(true);
-    setFrameState("CAPTURING");
+    // The Ionic page waits 350ms after stopping its live loop before the
+    // real capture. Live samples here are real still captures, so give the
+    // camera the same moment to settle (exposure/focus) instead of shooting
+    // straight off the back of one.
+    await new Promise((resolve) => setTimeout(resolve, 350));
     setQualityGateFailed(false);
     setQualityFailMessage("");
 
     try {
+      // Shutter sound stays on here (unlike the live-sample capture above) —
+      // it's the actual photo being taken, auto-fired or not, and the click
+      // is useful feedback that a shot was just captured.
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7, skipProcessing: false, base64: true, exif: false,
+        quality: 0.7, skipProcessing: false, exif: false,
       });
 
-      // Crop to the strip box BEFORE running quality checks — this is also
-      // the final image used for preview/upload if the gate passes, so it's
-      // only ever cropped once. Run alongside a cheap native downsize of the
-      // full frame for the bounds check: validateCardBounds() only ever
-      // looks at it at 500px max-dim anyway, but decodeBase64Jpeg() decodes
-      // whatever resolution it's handed in pure JS — feeding it the full
-      // camera-resolution shot (often 8-12MP) made that decode the single
-      // slowest step between "Capturing Image" and the preview showing.
-      // Resizing natively first (fast, hardware-accelerated) avoids that.
-      const [cropped, boundsSource] = await Promise.all([
+      // Freeze on the shot we just took — from here until the gate resolves,
+      // the "Capturing image…" loader sits over this static photo instead of
+      // the still-live CameraView underneath it.
+      setCaptureFreezeFrameUri(photo.uri);
+
+      // Two copies of the photo, made in parallel natively: the strip crop
+      // (what gets previewed and uploaded if the gate passes) and a copy of the
+      // whole frame at the screen's physical width, which is what every quality
+      // check reads — as on the Ionic page. Decoding in JS at the sensor's full
+      // resolution (often 8-12MP) would make the gate very slow.
+      const [cropped, checkFrame] = await Promise.all([
         cropToStripFrame(photo, layoutRef.current!),
         ImageManipulator.manipulateAsync(
           photo.uri,
-          [{ resize: { width: 600 } }],
-          { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+          photo.width > CHECK_FRAME_WIDTH ? [{ resize: { width: CHECK_FRAME_WIDTH } }] : [],
+          { compress: 0.95, format: ImageManipulator.SaveFormat.JPEG, base64: true },
         ),
       ]);
 
-      // ── Post-capture quality gate — sharpness → exposure → bounds →
-      // contrast, same order/behavior as the Ionic page's
-      // runQualityChecks(). `bounds` reads the (downsized) full frame,
-      // needed to judge card position/size within the whole shot;
-      // sharpness/exposure/contrast read only the cropped card region so
-      // background clutter outside the box can't fail the card's own
-      // lighting/focus.
-      const gateResult = await runQualityGate(boundsSource.base64!, cropped.base64!);
+      // ── Post-capture quality gate — same as the Ionic page: sharpness →
+      // exposure → bounds (ArUco corner markers) → contrast, ALL read from the
+      // full captured frame (not the strip crop), stopping at the first failure.
+      const gateResult = await runQualityGate(checkFrame.base64!);
 
       // TEMP DEBUG: shows the full pass/fail + score breakdown as an Alert
       // since device console logs aren't visible right now. Uncomment to
@@ -443,6 +522,7 @@ export default function TimerCameraUploader() {
     } finally {
       capturingRef.current = false;
       setActionLoading(false);
+      setCaptureFreezeFrameUri(null);
     }
   }, [qrLocked, clearDeadline, cropToStripFrame]);
 
@@ -471,6 +551,7 @@ export default function TimerCameraUploader() {
     setFrameState("IDLE");
     setLiveMessage("Place the card within the dotted outline");
     setLiveTone("idle");
+    setCaptureFreezeFrameUri(null);
     startDeadline();
   }, [startDeadline]);
 
@@ -485,6 +566,7 @@ export default function TimerCameraUploader() {
     setFrameState("IDLE");
     setLiveMessage("Place the card within the dotted outline");
     setLiveTone("idle");
+    setCaptureFreezeFrameUri(null);
     startDeadline();
   }, [startDeadline]);
 
@@ -721,6 +803,17 @@ export default function TimerCameraUploader() {
               onBarcodeScanned={qrLocked ? undefined : onBarcodeScanned}
             />
 
+            {/* Freeze frame — covers the still-live CameraView with the photo
+                that was just taken, for as long as "Capturing image…" is up,
+                so the feed doesn't keep visibly moving under that loader. */}
+            {captureFreezeFrameUri && (
+              <Image
+                source={{ uri: captureFreezeFrameUri }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+              />
+            )}
+
             {/* Camera overlay — dotted box + status banner stay visible through a
                 failed quality gate too (matches Ionic's overlay-canvas, which
                 only hides on the preview screen), only the button swaps to Retake. */}
@@ -732,6 +825,7 @@ export default function TimerCameraUploader() {
                 message={qualityGateFailed ? qualityFailMessage : liveMessage}
                 messageTone={qualityGateFailed ? "error" : liveTone}
                 captureLabel={qualityGateFailed ? "Retake" : "Take Photo"}
+                showCaptureButton={qualityGateFailed}
                 captureDisabled={qualityGateFailed ? false : !qrLocked || frameState === "CAPTURING"}
                 cameraTimeout={0}
                 insets={insets}

@@ -37,10 +37,22 @@ export function getStripBoxPosition(containerWidth: number, containerHeight: num
 
 export const TOTAL_WAIT          = 60;   // seconds on wait screen
 export const CAMERA_TIMEOUT      = 20;   // seconds before deadline warning (matches Ionic's CARD_DEADLINE_MS = 20_000)
-export const AUTO_CAPTURE_DELAY  = 0;    // unused (manual capture only)
-export const ANALYSIS_INTERVAL   = 900;  // ms between probe frames
-export const STABLE_TICKS_NEEDED = 2;    // consecutive clean ticks → STABLE
-export const STABLE_TICKS_PENALTY = 1;   // ticks deducted on blur/reflection
+export const AUTO_CAPTURE_DELAY  = 0;    // unused
+// Streak rule is in the spirit of the Ionic page (frame-processor.service.ts):
+// all checks must pass STABLE_TICKS_NEEDED times in a row before auto-capture
+// fires, and ANY failure resets the count to zero. The count itself can't
+// match Ionic's 8 though — Ionic samples cheap *preview* frames every 200ms
+// (8 x 200ms = 1.6s), but expo-camera has no live-frame API, so each sample
+// here is a real still capture + resize + decode + ArUco marker search, far
+// slower than a preview frame (v1 tried 8 and it practically never completed
+// — a single autofocus/exposure hunt or hand tremor between real captures
+// reset the streak to zero, and 8 consecutive real captures with zero misses
+// almost never happened). 2 consecutive real, fully-decoded, marker-verified
+// samples already represents several genuine seconds of a demonstrably clean
+// shot — a stronger signal than Ionic's 8 cheap frames, just built from fewer,
+// more expensive ones.
+export const ANALYSIS_INTERVAL   = 200;  // ms between sample attempts (samples never overlap; see runLiveAnalysis)
+export const STABLE_TICKS_NEEDED = 2;    // consecutive clean samples → auto-capture
 
 // ─── Timer circle ─────────────────────────────────────────────────────────────
 

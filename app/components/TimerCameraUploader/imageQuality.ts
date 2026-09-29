@@ -1,19 +1,21 @@
 /**
- * Post-capture image quality gate — ported from the Ionic app's
- * ImageQualityValidatorService (src/app/services/image-quality-validator.service.ts).
+ * Image quality checks — ported from the Ionic app's
+ * ImageQualityValidatorService (src/app/services/image-quality-validator.service.ts)
+ * and ArucoDetectorService.
  *
  * expo-camera has no live per-frame pixel access (unlike the Ionic app's
- * CameraPreview.captureSample() loop), so these checks run once, on the
- * full-resolution photo, right after the shutter fires — not continuously
- * while framing. The math itself (grayscale downsample, Laplacian variance
- * for sharpness, histogram for exposure/contrast, Sobel edge bounding-box
- * for card bounds) is the same pure-pixel algorithm as the source app; only
- * the "ArUco marker" bounds variant was left out in favor of the source
- * app's own generic Sobel fallback (validateCardBounds), since ArUco
- * requires a native/heavy detector this port intentionally skips.
+ * CameraPreview.captureSample() loop), so the live loop takes small stills and
+ * the final gate runs once on the captured photo. The math for sharpness
+ * (Laplacian variance), exposure and contrast (histogram / std-dev) is the same
+ * pure-pixel algorithm as the source app. Framing ("bounds") is the Ionic
+ * app's ArUco corner-marker check (see aruco.ts), not an edge heuristic.
+ *
+ * Order and stop rule match Ionic: sharpness, exposure, bounds, contrast,
+ * stopping at the first failure.
  */
 import { decode as decodeJpeg } from "jpeg-js";
 import { toByteArray as base64ToByteArray } from "base64-js";
+import { validateBoundsViaAruco } from "./aruco";
 
 export interface DecodedImage {
   data: Uint8Array;
@@ -36,9 +38,6 @@ const EXPOSURE_DARK_MAX = 55;
 const EXPOSURE_BRIGHT_MAX = 80;
 const EXPOSURE_MID_MIN = 5;
 
-const BOUNDS_EDGE_MAG_THRESHOLD = 45;
-const BOUNDS_MIN_AREA_PERCENT = 15;
-const BOUNDS_LARGE_AREA_PERCENT = 80;
 
 // ─── Decoding ───────────────────────────────────────────────────────────────
 
@@ -162,57 +161,6 @@ export function validateExposure(image: DecodedImage): QualityResult {
   return { pass, score, message };
 }
 
-// ─── Card bounds (Sobel edge bounding-box) ─────────────────────────────────
-
-export function validateCardBounds(image: DecodedImage): QualityResult {
-  const { gray, width, height } = toGrayscaleDownsampled(image, 500);
-
-  let minX = width, minY = height, maxX = -1, maxY = -1;
-
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      const idx = y * width + x;
-      const gx = gray[idx + 1] - gray[idx - 1];
-      const gy = gray[idx + width] - gray[idx - width];
-      if (Math.hypot(gx, gy) > BOUNDS_EDGE_MAG_THRESHOLD) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-  }
-
-  if (maxX < 0) {
-    return { pass: false, score: 0, message: "Card not detected in frame. Move camera to center card." };
-  }
-
-  const areaPercent = Math.round(((maxX - minX) * (maxY - minY) / (width * height)) * 100);
-
-  const margin = Math.round(Math.min(width, height) * 0.02);
-  const touchingSides = [
-    minX <= margin,
-    maxX >= width - 1 - margin,
-    minY <= margin,
-    maxY >= height - 1 - margin,
-  ].filter(Boolean).length;
-
-  const tooSmall = areaPercent < BOUNDS_MIN_AREA_PERCENT;
-  const fillsFrame = areaPercent >= BOUNDS_LARGE_AREA_PERCENT;
-  const pass = !tooSmall && (fillsFrame || touchingSides <= 1);
-  const cornersDetected = pass ? 4 : Math.max(0, 4 - touchingSides);
-  const score = Math.round((cornersDetected / 4) * 100);
-
-  let message = "All edges visible";
-  if (tooSmall) {
-    message = `Card too small in frame (${areaPercent}% of frame). Move closer.`;
-  } else if (!pass) {
-    message = "Card edges cut off. Move back or adjust position.";
-  }
-
-  return { pass, score, message };
-}
-
 // ─── Contrast (standard deviation) ─────────────────────────────────────────
 
 export function validateContrast(image: DecodedImage): QualityResult {
@@ -240,68 +188,73 @@ export function validateContrast(image: DecodedImage): QualityResult {
 
 // ─── Orchestration ──────────────────────────────────────────────────────────
 
+export type QualityKey = "sharpness" | "exposure" | "bounds" | "contrast";
+
+export interface OrderedChecksResult {
+  pass: boolean;
+  /** Which check failed first (undefined when everything passed). */
+  failedKey?: QualityKey;
+  /** The failing check's user-facing message. */
+  message?: string;
+  /** One line per check that ran — pass/fail + score. */
+  lines: string[];
+}
+
+/**
+ * Sharpness → exposure → bounds → contrast, stopping at the first failure —
+ * the same order and stop rule as the Ionic page (both its live loop and its
+ * post-capture gate). Used by both places here too.
+ */
+export function runChecksInOrder(image: DecodedImage): OrderedChecksResult {
+  const steps: [QualityKey, () => QualityResult][] = [
+    ["sharpness", () => validateSharpness(image)],
+    ["exposure", () => validateExposure(image)],
+    ["bounds", () => validateBoundsViaAruco(image)],
+    ["contrast", () => validateContrast(image)],
+  ];
+
+  const lines: string[] = [];
+  for (const [key, check] of steps) {
+    const result = check();
+    lines.push(`${result.pass ? "PASS" : "FAIL"} ${key} (score ${result.score}): ${result.message}`);
+    if (!result.pass) {
+      return { pass: false, failedKey: key, message: result.message, lines };
+    }
+  }
+  return { pass: true, lines };
+}
+
 export interface QualityGateResult {
   pass: boolean;
-  /** Multi-line breakdown of every check that ran — pass/fail + score each. */
+  /** Multi-line breakdown of the checks that ran. */
   summary: string;
   /** First failing check's user-facing message, if any. */
   failMessage?: string;
 }
 
 /**
- * Sharpness → exposure → bounds → contrast, matching the Ionic page's
- * runQualityChecks() order/timing. Unlike the Ionic version this runs ALL
- * four checks every time (doesn't stop at the first failure) so the caller
- * can show a full breakdown — useful while debugging on a device where
- * Metro logs aren't visible.
- *
- * `bounds` needs the FULL captured frame (it's checking whether the card is
- * well-positioned/sized within the whole shot), but sharpness/exposure/
- * contrast are run on `cardBase64` — the photo already cropped to just the
- * strip box — instead of the full frame. Measuring exposure/contrast against
- * the whole frame let background clutter around the card (a dim table, a
- * dark room past the card's edges) drag the reading down even when the card
- * itself was well-lit, causing "Image too dark" to fire far more than it
- * should have on real captures.
+ * Post-capture gate. Like the Ionic page, ALL four checks read the same full
+ * captured frame (not a crop of the strip), so what passes here is what the
+ * live loop was judging.
  */
-export async function runQualityGate(
-  fullBase64: string,
-  cardBase64: string,
-): Promise<QualityGateResult> {
+export async function runQualityGate(fullBase64: string): Promise<QualityGateResult> {
+  // Let the "Capturing image…" overlay paint before the heavy synchronous
+  // decode + marker search starts.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
   const decodeStart = Date.now();
-  let fullImage: DecodedImage;
-  let cardImage: DecodedImage;
+  let image: DecodedImage;
   try {
-    fullImage = decodeBase64Jpeg(fullBase64);
-    cardImage = decodeBase64Jpeg(cardBase64);
+    image = decodeBase64Jpeg(fullBase64);
   } catch (err) {
     console.error("[QualityGate] JPEG decode failed:", err);
     throw err;
   }
   const decodeMs = Date.now() - decodeStart;
 
-  const steps: Array<[string, () => QualityResult]> = [
-    ["sharpness", () => validateSharpness(cardImage)],
-    ["exposure", () => validateExposure(cardImage)],
-    ["bounds", () => validateCardBounds(fullImage)],
-    ["contrast", () => validateContrast(cardImage)],
-  ];
+  const result = runChecksInOrder(image);
+  const lines = [`Decoded ${image.width}x${image.height} in ${decodeMs}ms`, ...result.lines];
+  lines.forEach((l) => console.log(`[QualityGate] ${l}`));
 
-  const lines = [
-    `Decoded full ${fullImage.width}x${fullImage.height} + card ${cardImage.width}x${cardImage.height} in ${decodeMs}ms`,
-  ];
-  let pass = true;
-  let failMessage: string | undefined;
-
-  for (const [key, check] of steps) {
-    const result = check();
-    lines.push(`${result.pass ? "PASS" : "FAIL"} ${key} (score ${result.score}): ${result.message}`);
-    console.log(`[QualityGate] ${key}: ${result.pass ? "PASS" : "FAIL"} score=${result.score} — ${result.message}`);
-    if (!result.pass) {
-      pass = false;
-      if (!failMessage) failMessage = result.message;
-    }
-  }
-
-  return { pass, summary: lines.join("\n"), failMessage };
+  return { pass: result.pass, summary: lines.join("\n"), failMessage: result.message };
 }

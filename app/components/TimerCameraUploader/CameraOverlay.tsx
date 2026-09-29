@@ -32,6 +32,9 @@ interface CameraOverlayProps {
   messageTone: MessageTone;
   captureLabel: string;
   captureDisabled: boolean;
+  /** Hide the capture/retake button entirely — used while auto-capture is
+   * the only way a shot gets taken, so there's nothing for the user to tap. */
+  showCaptureButton: boolean;
   cameraTimeout: number;
   insets: EdgeInsets;
   onBack: () => void;
@@ -54,6 +57,7 @@ export function CameraOverlay({
   messageTone,
   captureLabel,
   captureDisabled,
+  showCaptureButton,
   cameraTimeout,
   insets,
   onBack,
@@ -102,11 +106,10 @@ export function CameraOverlay({
           adding it again (like the old code did) pushed the banner down an
           extra insets.top and into the dotted box. Same coordinate space as
           screenTitle/BackButton below, which don't add insets.top either. ── */}
-      <View
-        pointerEvents="none"
-        style={[s.banner, s[`banner_${messageTone}`], { top: 64 }]}
-      >
-        <Text style={s.bannerText}>{message}</Text>
+      <View pointerEvents="none" style={[s.bannerWrap, { top: 64 }]}>
+        <View style={[s.banner, s[`banner_${messageTone}`]]}>
+          <Text style={s.bannerText}>{message}</Text>
+        </View>
       </View>
 
       {/* ── HUD: camera timeout (top-left) ── */}
@@ -131,23 +134,28 @@ export function CameraOverlay({
         Capture Image
       </Text>
 
-      {/* ── Capture / Retake button — same position, label+handler swapped by parent ── */}
-      <View style={[s.captureRow, { bottom: insets.bottom + 20 }]}>
-        <PrimaryButton
-          title={captureLabel}
-          onPress={onCapture}
-          disabled={captureDisabled}
-          style={{
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            borderRadius: 30,
-            width: 200,
-            height: 52,
-            backgroundColor: captureDisabled ? colors.gray : colors.primary,
-          }}
-          textStyle={{ fontSize: 16, fontWeight: "600", color: captureDisabled ? "#ddd" : colors.white }}
-        />
-      </View>
+      {/* ── Capture / Retake button — same position, label+handler swapped by
+          parent. Hidden while auto-capture alone is expected to fire the
+          shutter (showCaptureButton is only true for the post-gate-failure
+          "Retake" case, which auto-capture can't resolve on its own). ── */}
+      {showCaptureButton && (
+        <View style={[s.captureRow, { bottom: insets.bottom + 20 }]}>
+          <PrimaryButton
+            title={captureLabel}
+            onPress={onCapture}
+            disabled={captureDisabled}
+            style={{
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 30,
+              width: 200,
+              height: 52,
+              backgroundColor: captureDisabled ? colors.gray : colors.primary,
+            }}
+            textStyle={{ fontSize: 16, fontWeight: "600", color: captureDisabled ? "#ddd" : colors.white }}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -174,21 +182,33 @@ const s = StyleSheet.create({
   stripFrame: {
     position: "absolute",
     borderWidth: 3,
-    borderRadius: 18,
+    // Sharp corners, matching the now-sharp CornerBrackets (Atoms.tsx) —
+    // this box's own radius was the other half of the mismatched-corner
+    // look: barely visible at full-screen scale, clearly rounded once
+    // you're zoomed in on just the corner.
+    borderRadius: 0,
     backgroundColor: "transparent",
   },
 
-  // Matches .status-banner / .banner-success / .banner-error 1:1
-  banner: {
+  // Outer wrapper spans the same left/right margins as before and centers
+  // the actual pill inside it — kept separate from `banner` so the pill
+  // itself can size to its text instead of stretching to fill this width.
+  bannerWrap: {
     position: "absolute",
     left: 20,
     right: 20,
-    alignSelf: "center",
+    alignItems: "center",
+    zIndex: 20,
+  },
+  // Matches .status-banner / .banner-success / .banner-error, minus the
+  // full-width stretch — this shrinks to its text, wrapping to a second
+  // line via maxWidth rather than spanning almost the whole screen.
+  banner: {
+    maxWidth: "75%",
     backgroundColor: "rgba(0,0,0,0.78)",
     borderRadius: 14,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    zIndex: 20,
   },
   banner_idle: { backgroundColor: "rgba(0,0,0,0.78)" },
   banner_success: { backgroundColor: "rgba(76,175,80,0.9)" },

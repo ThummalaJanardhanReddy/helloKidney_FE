@@ -61,6 +61,9 @@ const bracketStyles = StyleSheet.create({
     width: 18,
     height: 18,
     borderWidth: 3,
-    borderRadius: 3,
+    // Sharp corners — the outer strip frame (CameraOverlay's `stripFrame`)
+    // reads as sharp-cornered at its size, so a rounded corner here just
+    // looked like a mismatched, doubled-up corner sitting on top of it.
+    borderRadius: 0,
   },
 });

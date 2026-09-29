@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as Animatable from "react-native-animatable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -21,28 +22,25 @@ import commonStyles, { colors } from "@/app/shared/commonStyles";
 const { width } = Dimensions.get("window");
 const rf = (size: number) => Math.round(size * (width / 390));
 
-// ── Placeholder API data ──────────────────────────────────────────────────────
-const MOCK_PATIENTS = [
-  {
-    address: null,
-    age: 90,
-    city: null,
-    created_on: "2026-04-06T17:59:06.249485",
-    district: null,
-    email_id: null,
-    full_name: "Jana T",
-    gender: "Male",
-    locality: null,
-    mobile_no: "+918978298289",
-    patient_id: 1,
-    patient_uniqueid: null,
-    pincode: null,
-    state: null,
-    user_name: null,
-  },
-];
+const SKELETON_ROW_COUNT = 6;
 
-type Patient = (typeof MOCK_PATIENTS)[0];
+interface Patient {
+  address: string | null;
+  age: number;
+  city: string | null;
+  created_on: string;
+  district: string | null;
+  email_id: string | null;
+  full_name: string;
+  gender: string;
+  locality: string | null;
+  mobile_no: string;
+  patient_id: number;
+  patient_uniqueid: string | null;
+  pincode: string | null;
+  state: string | null;
+  user_name: string | null;
+}
 
 // ── Initials avatar ───────────────────────────────────────────────────────────
 function InitialsAvatar({ name }: { name: string }) {
@@ -84,13 +82,31 @@ function PatientRow({ item, onPress }: { item: Patient; onPress: () => void }) {
   );
 }
 
+// ── Skeleton row (pulses while the list is loading) ───────────────────────────
+function SkeletonRow() {
+  return (
+    <Animatable.View
+      animation="pulse"
+      easing="ease-out"
+      iterationCount="infinite"
+      style={styles.row}
+    >
+      <View style={[styles.initialsAvatar, styles.skeletonBlock]} />
+      <View style={styles.rowInfo}>
+        <View style={[styles.skeletonLine, { width: "60%" }]} />
+        <View style={[styles.skeletonLine, { width: "40%", marginTop: 8 }]} />
+      </View>
+    </Animatable.View>
+  );
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 export default function PatientsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
-  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
-  const [loading, setLoading] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true);
   const { user } = useUserStore();
 
   useFocusEffect(
@@ -167,22 +183,31 @@ export default function PatientsScreen() {
       </View>
 
       {/* List */}
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.patient_id.toString()}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <PatientRow item={item} onPress={() => handlePatientPress(item)} />
-        )}
-        
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🔎</Text>
-            <Text style={styles.emptyText}>No patients found</Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <View style={styles.listContent}>
+          {Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
+            <SkeletonRow key={i} />
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.patient_id.toString()}
+          contentContainerStyle={
+            filtered.length === 0 ? styles.emptyListContent : styles.listContent
+          }
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <PatientRow item={item} onPress={() => handlePatientPress(item)} />
+          )}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyIcon}>🔎</Text>
+              <Text style={styles.emptyText}>No patients found</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -236,6 +261,7 @@ const styles = StyleSheet.create({
   clearBtn: { fontSize: rf(13), color: "#9BADC4", paddingHorizontal: 4 },
 
   listContent: { backgroundColor: "#FFFFFF", paddingBottom: 20 },
+  emptyListContent: { flexGrow: 1, backgroundColor: "#FFFFFF", paddingBottom: 20 },
 
   row: {
     flexDirection: "row",
@@ -270,6 +296,9 @@ const styles = StyleSheet.create({
   rowMeta: { fontSize: rf(12), color: colors.black },
   chevron: { fontSize: rf(22), color: "#B0C0D8", lineHeight: rf(26) },
   separator: { height: 1, backgroundColor: "#EEF3FA", marginLeft: 90 },
+
+  skeletonBlock: { backgroundColor: "#DDE6F5" },
+  skeletonLine: { height: 12, borderRadius: 6, backgroundColor: "#E2E8F0" },
 
   empty: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyIcon: { fontSize: 40 },

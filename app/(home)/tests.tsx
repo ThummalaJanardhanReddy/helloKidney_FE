@@ -377,7 +377,7 @@ export default function TestList() {
           <Text style={styles.headerText}>Test List</Text>
         </View>
         <View style={styles.skeletonContainer}>
-          {Array.from({ length: 2 }).map((_, i) => (
+          {Array.from({ length: SKELETON_CARD_COUNT }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
         </View>
