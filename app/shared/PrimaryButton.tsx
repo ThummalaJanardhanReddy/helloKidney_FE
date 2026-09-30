@@ -57,7 +57,7 @@ export default function PrimaryButton({
 const styles = StyleSheet.create({
   button: {
     backgroundColor: "#eb0000ff",
-    borderRadius: 23,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     // elevation: 2,

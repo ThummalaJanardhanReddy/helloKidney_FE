@@ -133,7 +133,7 @@ export default function Register() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.statusbar }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg_primary }}>
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -157,7 +157,7 @@ export default function Register() {
               />
               {/* TO-DO: Add age, gender, address. Order: Name, Age, Gender, Phone number, email, password */}
               <View style={styles.formContainer}>
-                <Text style={styles.title}>Welcome to HelloKidney</Text>
+                <Text style={styles.title}>Welcome to Nephkare</Text>
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Full Name</Text>
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   signupText: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: colors.textBlack,
     lineHeight: 20,
     textAlign: "center",
   },
@@ -380,6 +380,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: "#d1d5db",
+    backgroundColor: "#ffffff",
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",

@@ -10,7 +10,6 @@ import timezone from "dayjs/plugin/timezone";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useEffect, useCallback } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   FlatList,
@@ -19,7 +18,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as Animatable from "react-native-animatable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const SKELETON_REPORT_COUNT = 4;
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -113,6 +115,26 @@ function ReportRow({ item, onPress }: { item: Report; onPress: () => void }) {
       </View>
       <Text style={styles.chevron}>›</Text>
     </TouchableOpacity>
+  );
+}
+
+// ── Report skeleton row (shown while reports are loading) ──────────────────────
+function ReportCardSkeleton() {
+  return (
+    <Animatable.View
+      animation="pulse"
+      easing="ease-out"
+      iterationCount="infinite"
+      style={styles.reportCard}
+    >
+      <View
+        style={[styles.pdfBox, styles.skeletonBlock, { borderColor: "transparent" }]}
+      />
+      <View style={styles.reportInfo}>
+        <View style={[styles.skeletonLine, { width: "60%" }]} />
+        <View style={[styles.skeletonLine, { width: "40%", marginTop: 8 }]} />
+      </View>
+    </Animatable.View>
   );
 }
 
@@ -325,9 +347,15 @@ export default function PatientProfileScreen() {
 
       {/* ── Reports list ── */}
       {loadingReports ? (
-        <ActivityIndicator size="large" color={ACCENT} />
+        <View style={[styles.listContent, { flex: 1 }]}>
+          <Text style={styles.sectionTitle}>List of Reports</Text>
+          {Array.from({ length: SKELETON_REPORT_COUNT }).map((_, i) => (
+            <ReportCardSkeleton key={i} />
+          ))}
+        </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={reports}
           keyExtractor={(item) => item?.id?.toString()}
           contentContainerStyle={styles.listContent}
@@ -511,6 +539,9 @@ const styles = StyleSheet.create({
   bold: { fontWeight: "800", color: "#0D1B2E" },
 
   chevron: { fontSize: rf(22), color: "#B0C0D8", lineHeight: rf(26) },
+
+  skeletonBlock: { backgroundColor: "#DDE6F5" },
+  skeletonLine: { height: 12, borderRadius: 6, backgroundColor: "#E2E8F0" },
   // emptyText: {
   //   textAlign: "center",
   //   color: "#9BADC4",
@@ -554,14 +585,9 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     backgroundColor: ACCENT,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
-    shadowColor: ACCENT,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
   },
   saveBtnText: {
     fontSize: rf(16),

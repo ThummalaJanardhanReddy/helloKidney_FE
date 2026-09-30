@@ -71,7 +71,7 @@ const CommonModal: React.FC<CommonModalProps> = ({
                     minWidth: 100,
                     paddingVertical: 12,
                     paddingHorizontal: 18,
-                    borderRadius: 6,
+                    borderRadius: 8,
                     borderWidth: 1,
                     borderColor: colors.primary,
                   },
@@ -97,7 +97,7 @@ const CommonModal: React.FC<CommonModalProps> = ({
                   width: "40%",
                   paddingVertical: 12,
                   paddingHorizontal: 18,
-                  borderRadius: 6,
+                  borderRadius: 8,
                 },
                 confirmButtonStyle,
               ]}

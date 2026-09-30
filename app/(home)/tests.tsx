@@ -84,9 +84,11 @@ export default function TestList() {
   const [refreshing, setRefreshing] = useState(false);
   const [isMoreLoading, setIsMoreLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Refs
   const didInitialLoadRef = useRef(false);
+  const isNavigatingRef = useRef(false);
 
   // Utility Functions
   const formatDate = useCallback((date: string): string => {
@@ -105,36 +107,46 @@ export default function TestList() {
 
   const navigateToTestResults = useCallback(
     async (item: TestResponse | HealthworkerTestResponse) => {
+      if (isNavigatingRef.current) return;
+
       const patientId = "patient_id" in item ? item.patient_id : null;
       if (!patientId) {
         console.warn("Cannot navigate: patient_id is missing");
         return;
       }
-      if (user?.userType === "healthworker") {
-        const patientData = await fetchHWPatientById(patientId);
-        console.log("Fetched patient data for navigation:", patientData);
 
-        router.push({
-          pathname: "/components/test-results",
-          params: {
-            data: JSON.stringify(item),
-            patientData: JSON.stringify(patientData?.patient) || null,
-          },
-        });
-      } else {
-        const patientData = await fetchPatientById(patientId);
-        console.log("Fetched patient data for navigation:", patientData);
+      isNavigatingRef.current = true;
+      setIsNavigating(true);
+      try {
+        if (user?.userType === "healthworker") {
+          const patientData = await fetchHWPatientById(patientId);
+          console.log("Fetched patient data for navigation:", patientData);
 
-        router.push({
-          pathname: "/components/test-results",
-          params: {
-            data: JSON.stringify(item),
-            patientData: JSON.stringify(patientData?.patient) || null,
-          },
-        });
+          router.push({
+            pathname: "/components/test-results",
+            params: {
+              data: JSON.stringify(item),
+              patientData: JSON.stringify(patientData?.patient) || null,
+            },
+          });
+        } else {
+          const patientData = await fetchPatientById(patientId);
+          console.log("Fetched patient data for navigation:", patientData);
+
+          router.push({
+            pathname: "/components/test-results",
+            params: {
+              data: JSON.stringify(item),
+              patientData: JSON.stringify(patientData?.patient) || null,
+            },
+          });
+        }
+      } finally {
+        isNavigatingRef.current = false;
+        setIsNavigating(false);
       }
     },
-    [router],
+    [router, user?.userType],
   );
 
   // API Functions
@@ -417,6 +429,12 @@ export default function TestList() {
         // ListFooterComponentStyle={styles.listFooter}
         ListEmptyComponent={renderEmptyState} // Show empty state when no data
       />
+
+      {isNavigating && (
+        <View style={styles.navigatingOverlay}>
+          <ActivityIndicator size="large" color={LOADING_INDICATOR_COLOR} />
+        </View>
+      )}
     </View>
   );
 }
@@ -543,4 +561,10 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyIcon: { fontSize: 40 },
   emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "500" },
+  navigatingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

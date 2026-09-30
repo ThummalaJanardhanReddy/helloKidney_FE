@@ -197,7 +197,22 @@ export default function AddPatientScreen() {
     type: "success",
   });
 
-  const { data: patientData } = useLocalSearchParams();
+  const { data: patientData, from } = useLocalSearchParams<{
+    data?: string;
+    from?: string;
+  }>();
+
+  // Add Patient is nested under the Patients tab's own stack, so a plain
+  // back()/replace-to-patients always lands on the Patients list — even
+  // when this screen was opened from the Home tab. The `from` param lets
+  // both Save and Close return to whichever tab actually opened this form.
+  const navigateToOrigin = useCallback(() => {
+    if (from === "home") {
+      router.replace("/(home)/home");
+    } else {
+      router.back();
+    }
+  }, [from, router]);
 
   useEffect(() => {
     if (!patientData) return;
@@ -423,7 +438,7 @@ export default function AddPatientScreen() {
       // Navigate back after short delay
       setTimeout(() => {
         if (!patientData) {
-          router.back();
+          navigateToOrigin();
           return;
         }
 
@@ -459,12 +474,12 @@ export default function AddPatientScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [form, validateForm, router]);
+  }, [form, validateForm, router, navigateToOrigin]);
 
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
-    router.replace("/(home)/patients");
-  }, [router]);
+    navigateToOrigin();
+  }, [navigateToOrigin]);
 
   const handleGenderSelect = useCallback((gender: Gender) => {
     setForm((prev) => ({ ...prev, gender }));
@@ -721,7 +736,7 @@ export default function AddPatientScreen() {
                 borderWidth: 1,
                 borderColor: errors.address ? ACCENT : BORDER,
                 height: 40,
-                borderRadius: 4,
+                borderRadius: 8,
                 paddingHorizontal: 14,
                 paddingVertical: 0,
                 fontSize: rf(14),
@@ -732,7 +747,7 @@ export default function AddPatientScreen() {
                 backgroundColor: "#FFFFFF",
                 borderWidth: 1,
                 borderColor: BORDER,
-                borderRadius: 4,
+                borderRadius: 8,
                 marginTop: 4,
                 maxHeight: 300,
               },
@@ -842,7 +857,7 @@ const BORDER = colors.BORDER;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F0F4FA",
+    backgroundColor: "#FDF4F5",
   },
 
   // Header
@@ -871,13 +886,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#1E2D42",
     alignItems: "center",
     justifyContent: "center",
   },
   closeIcon: {
     fontSize: rf(14),
-    color: "#FFFFFF",
+    color: ACCENT,
     fontWeight: "600",
   },
 
@@ -921,7 +935,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 4,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 0,
     height: 40,
@@ -962,7 +976,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 4,
+    borderRadius: 8,
     paddingHorizontal: 12,
     height: 40,
     gap: 6,
@@ -984,7 +998,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 4,
+    borderRadius: 8,
     height: 40,
     justifyContent: "center",
   },
@@ -1043,20 +1057,13 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     backgroundColor: ACCENT,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: ACCENT,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
   },
   saveBtnDisabled: {
     backgroundColor: "#AABBD0",
-    shadowOpacity: 0,
-    elevation: 0,
   },
   saveBtnText: {
     fontSize: rf(16),

@@ -22,6 +22,8 @@ const { width, height } = Dimensions.get("window");
 const scale = width / 390;
 const rf = (size: number) => Math.round(size * scale);
 
+const LOGIN_TYPE_BG = "#FDF4F5";
+
 export default function LoginTypeScreen({ navigation }) {
   // Animation values
   const logoAnim = useRef(new Animated.Value(0)).current;
@@ -118,7 +120,7 @@ export default function LoginTypeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* <StatusBar barStyle="dark-content" backgroundColor="#F2F6FF" /> */}
-      <StatusBar style="dark" backgroundColor={colors.bg_primary} animated />
+      <StatusBar style="dark" backgroundColor={LOGIN_TYPE_BG} animated />
       <Image
         source={images.loginType.logo}
         style={styles.logo}
@@ -229,7 +231,7 @@ const CARD_WIDTH = (width - 56) / 2;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F2F6FF",
+    backgroundColor: LOGIN_TYPE_BG,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -245,8 +247,6 @@ const styles = StyleSheet.create({
   logo: {
     width: width * 0.65,
     height: width * 0.65,
-    opacity: 0.1,
-    tintColor: "#C0392B",
   },
 
   // Content panel
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 16,
     alignItems: "center",

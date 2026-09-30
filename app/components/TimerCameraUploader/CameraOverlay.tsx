@@ -147,7 +147,7 @@ export function CameraOverlay({
             style={{
               paddingHorizontal: 20,
               paddingVertical: 10,
-              borderRadius: 30,
+              borderRadius: 8,
               width: 200,
               height: 52,
               backgroundColor: captureDisabled ? colors.gray : colors.primary,

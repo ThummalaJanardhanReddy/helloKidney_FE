@@ -113,7 +113,7 @@ export default function ProfilePage() {
           >
             <View style={styles.itemLeft}>
               <Ionicons name="log-out-outline" size={22} color="red" />
-              <Text style={[styles.itemText, { color: "red" }]}>Sign Out</Text>
+              <Text style={[styles.itemText, { color: "red" }]}>Sign out</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -133,9 +133,9 @@ export default function ProfilePage() {
         <Modal transparent animationType="fade" visible={logoutVisible}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalBox}>
-              <Text style={styles.modalTitle}>Logout</Text>
+              <Text style={styles.modalTitle}>Sign out</Text>
               <Text style={styles.modalMsg}>
-                Are you sure you want to logout?
+                Are you sure you want to Sign out?
               </Text>
 
               <View style={styles.modalActions}>
@@ -150,7 +150,7 @@ export default function ProfilePage() {
                   style={[styles.modalBtn, styles.logoutBtn]}
                   onPress={handleLogout}
                 >
-                  <Text style={styles.logoutText}>Logout</Text>
+                  <Text style={styles.logoutText}>Sign out</Text>
                 </Pressable>
               </View>
             </View>
@@ -164,7 +164,7 @@ export default function ProfilePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#ffffff",
     position: "relative",
     // backgroundColor: "#db1557ff",
     // paddingTop: 60,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   closeSheetBtn: {
     backgroundColor: "#1A82F7",
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 8,
     marginTop: 16,
     marginBottom: 10,
     alignItems: "center",

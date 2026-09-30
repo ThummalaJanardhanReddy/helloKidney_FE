@@ -21,12 +21,19 @@ interface UserState {
   patient: IPatient | null;
   hasHydrated: boolean;
 
+  // Ids of every user that has ever completed a login on this device.
+  // Kept separate from `user` so it survives clearUser() (logout) — that's
+  // what lets us tell a first-time login apart from a returning one.
+  seenUserIds: string[];
+  isReturningUser: boolean;
+
   // actions
   setHasHydrated: (value: boolean) => void;
   setUser: (user: IUser) => void;
   updateUser: (data: Partial<IUser>) => void;
   setUserType: (type: UserType) => void;
   clearUser: () => void;
+  registerLogin: (userId: string) => void;
 
   // helpers
   isLoggedIn: () => boolean;
@@ -41,6 +48,8 @@ export const useUserStore = create<UserState>()(
       user: null,
       patient: null,
       hasHydrated: false,
+      seenUserIds: [],
+      isReturningUser: false,
 
       // hydration flag
       setHasHydrated: (value) => set({ hasHydrated: value }),
@@ -64,6 +73,19 @@ export const useUserStore = create<UserState>()(
 
       // clear everything
       clearUser: () => set({ user: null }),
+
+      // stamp a completed login: first time for this userId on this
+      // device -> new user; otherwise -> returning user
+      registerLogin: (userId) =>
+        set((state) => {
+          const alreadySeen = state.seenUserIds.includes(userId);
+          return {
+            isReturningUser: alreadySeen,
+            seenUserIds: alreadySeen
+              ? state.seenUserIds
+              : [...state.seenUserIds, userId],
+          };
+        }),
 
       // helper
       isLoggedIn: () => !!get().user?.token,

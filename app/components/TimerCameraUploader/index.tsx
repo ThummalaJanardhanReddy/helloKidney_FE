@@ -765,13 +765,8 @@ export default function TimerCameraUploader() {
                   alignSelf: "center",
                   marginTop: 10,
                   backgroundColor: colors.primary,
-                  borderRadius: 6,
+                  borderRadius: 8,
                   paddingVertical: 12,
-                  shadowColor: colors.primary,
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
-                  elevation: 3,
                 }}
                 textStyle={{ color: "#fff", fontWeight: "700", letterSpacing: 0.3 }}
                 disabled={started}
@@ -975,7 +970,7 @@ const styles = StyleSheet.create({
     flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#020817",
   },
   permBtn: {
-    backgroundColor: "#008000", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10,
+    backgroundColor: "#008000", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8,
   },
 
   // ── Wait screen: header
@@ -1108,7 +1103,7 @@ const styles = StyleSheet.create({
   warningBullet:  { fontSize: 13, color: "#1a2340", alignSelf: "flex-start", lineHeight: 20 },
 
   warningActionBtn: {
-    width: "100%", height: 52, borderRadius: 12,
+    width: "100%", height: 52, borderRadius: 8,
     alignItems: "center", justifyContent: "center", marginTop: 4,
   },
   warningActionBtnOutline: {

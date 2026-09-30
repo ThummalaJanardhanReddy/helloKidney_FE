@@ -26,7 +26,7 @@ export default function MainLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#8E8E93",
+        tabBarInactiveTintColor: "#1A1A1A",
         tabBarIconStyle: {
           justifyContent: "center",
           alignItems: "center",
@@ -42,10 +42,16 @@ export default function MainLayout() {
         },
         tabBarStyle: {
           backgroundColor: colors.white,
-          borderTopWidth: 0,
+          borderTopWidth: 1,
+          borderTopColor: "rgba(0,0,0,0.08)",
           height: 58 + insets.bottom,
           paddingBottom: insets.bottom,
           // paddingTop: 7,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 4,
+          elevation: 8,
         },
       }}
       initialRouteName="home"

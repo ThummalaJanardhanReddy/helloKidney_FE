@@ -21,7 +21,7 @@ export const images = {
   totalPatients: require("./images/total-patients.png"),
 
   loginType: {
-    logo: require("./images/logo_bg.png"),
+    logo: require("./images/Choose_user.png"),
     report_logo: require("./images/hellokidney_logo_white.png"),
     patient: require("./images/patient.png"),
     socialWorker: require("./images/social-worker.png"),

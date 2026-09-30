@@ -35,6 +35,7 @@ export const login = async (email: string, password: string) => {
       country: user.country,
       countryCode: user.country_code
     });
+    useUserStore.getState().registerLogin(user.sub);
     // await setAccessToken(access_token);
     return response;
   } catch (error) {
@@ -58,6 +59,7 @@ export const hw_login = async (email: string, password: string) => {
       country: user.country,
       countryCode: user.country_code
     });
+    useUserStore.getState().registerLogin(user.sub);
     // await setAccessToken(access_token);
     return response;
   } catch (error) {

@@ -29,6 +29,8 @@ import { useUserStore } from "../stores/userStore";
 import BackButton from "../shared/BackButton";
 import { rms, rs, rvs } from "@/src/utils/responsive";
 
+const VERIFY_DETAILS_BG = "#FDF4F5";
+
 // Validation constants
 const VALIDATION_RULES = {
   EMPLOYEE_ID_MIN_LENGTH: 3,
@@ -162,7 +164,7 @@ export default function VerifyDetailsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg_primary }}>
+    <View style={{ flex: 1, backgroundColor: VERIFY_DETAILS_BG }}>
       <SafeAreaView style={{ flex: 1 }}>
         {/* <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -178,8 +180,8 @@ export default function VerifyDetailsScreen() {
             <BackButton
               title="Back"
               onPress={handleBack}
-              arrowColor={colors.black}
-              color={colors.black}
+              arrowColor={colors.primary}
+              color={colors.primary}
             />
             {/* Header */}
             <View style={styles.header}>
@@ -253,6 +255,21 @@ export default function VerifyDetailsScreen() {
                   />
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity
+                onPress={() => router.push("/components/forgot-password")}
+                style={{ alignSelf: "flex-end" }}
+              >
+                <Text
+                  style={{
+                    color: colors.black,
+                    marginTop: rvs(8),
+                  }}
+                >
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+
               {commonError ? (
                 <Text role="log" style={styles.commonError}>
                   {commonError}
@@ -268,20 +285,6 @@ export default function VerifyDetailsScreen() {
                   style={styles.continueButton}
                 />
               </View>
-              
-              <TouchableOpacity
-                onPress={() => router.push("/components/forgot-password")}
-              >
-                <Text
-                  style={{
-                    color: colors.black,
-                    marginTop: rvs(20),
-                    textAlign: "center",
-                  }}
-                >
-                  Forgot Password?
-                </Text>
-              </TouchableOpacity>
               {/* To-Do: un comment once the signup ready */}
               {userType === "patient" && (
                 <View style={styles.signupContainer}>
@@ -316,7 +319,7 @@ const styles = StyleSheet.create({
     flex: 1,
     // minHeight: 100,
     // paddingBottom: getResponsivePadding(40),
-    backgroundColor: "#F2F6FF",
+    backgroundColor: VERIFY_DETAILS_BG,
   },
   scrollContainer: {
     flex: 1,
@@ -400,7 +403,8 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     position: 'absolute',
-    
+    left: 0,
+    right: 0,
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: rvs(10),

@@ -19,6 +19,8 @@ import commonStyles, { colors } from "../shared/commonStyles";
 import responsive, { rms, rs, rvs } from "@/src/utils/responsive";
 import { useUserStore } from "../stores/userStore";
 
+const WELCOME_BG = "#FDF4F5";
+
 export default function WelcomeScreen() {
   // const {isAuthenticated, isLoading} = useAuth();
   const clearUser = useUserStore((state) => state.clearUser);
@@ -53,7 +55,7 @@ export default function WelcomeScreen() {
         translucent={false}
         animated
       /> */}
-      <StatusBar style="dark" backgroundColor={colors.bg_primary} animated />
+      <StatusBar style="dark" backgroundColor={WELCOME_BG} animated />
       <ScrollView
         style={[
           styles.scrollView,
@@ -83,8 +85,7 @@ export default function WelcomeScreen() {
 
           {/* Support Message */}
           <Text style={styles.supportText}>
-            HelloKidney.ai offers a convenient smartphone-powered urine ACR test
-            for early kidney disease detection.
+            A simple urine test at home can give you an early look at your kidney health
           </Text>
         </View>
 
@@ -92,7 +93,7 @@ export default function WelcomeScreen() {
           <PrimaryButton
             title="Let's Get Start"
             onPress={handleContinue}
-            style={{ width: "100%" }}
+            style={{ width: "100%", borderRadius: 8 }}
           />
         </View>
       </ScrollView>
@@ -104,7 +105,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: WELCOME_BG,
   },
   scrollView: {
     flex: 1,
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flexGrow: 1,
     ...commonStyles.container_layout,
-    backgroundColor: colors.bg_primary,
+    backgroundColor: WELCOME_BG,
   },
   header: {
     flexShrink: 1,

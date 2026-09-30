@@ -1,12 +1,24 @@
 import { images } from "@/assets";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  FadingView,
+  Header as PinnedHeader,
+  ScrollViewWithHeaders,
+} from "@codeherence/react-native-header";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  interpolate,
+  SharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import { router, useFocusEffect, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Dimensions,
   Image,
+  Linking,
   Modal,
   PanResponder,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -33,6 +45,12 @@ import {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const rf = (size: number) => Math.round(size * (screenWidth / 390));
+
+// TODO: replace with the real care-team support number before release.
+const SUPPORT_PHONE_NUMBER = "+911234567890";
+
+const HOME_GRADIENT_COLORS = ["#FAE3E4", "#FDF3F3", "#FAF8F8"] as const;
+const HOME_GRADIENT_LOCATIONS = [0, 0.2, 1] as const;
 
 interface IPatient {
   address: null;
@@ -180,6 +198,28 @@ function UserGuideModal({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SHARED: Menu icon — three bars, middle one longer than top/bottom
+// ─────────────────────────────────────────────────────────────────────────────
+function MenuIcon({
+  size = 28,
+  color = colors.black,
+}: {
+  size?: number;
+  color?: string;
+}) {
+  const barHeight = Math.max(3, Math.round(size * 0.12));
+  const gap = Math.round(size * 0.2);
+  const barStyle = { height: barHeight, borderRadius: barHeight / 2, backgroundColor: color };
+  return (
+    <View style={{ width: size, justifyContent: "center", gap }}>
+      <View style={[barStyle, { width: "70%" }]} />
+      <View style={[barStyle, { width: "100%" }]} />
+      <View style={[barStyle, { width: "55%" }]} />
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SHARED: User Guide Info Card  ← identical look for both user types
 // ─────────────────────────────────────────────────────────────────────────────
 function UserGuideCard({ onPress }: { onPress: () => void }) {
@@ -250,9 +290,9 @@ function PatientCardSkeleton() {
 
 function HealthWorkerHome() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [showGuide, setShowGuide] = useState(false);
   const { user } = useUserStore();
+  const isReturningUser = useUserStore((s) => s.isReturningUser);
   const [totalPatients, setTotalPatients] = useState(0);
   const [todaysTests, setTodaysTests] = useState(0);
   const [registeredPatients, setRegisteredPatients] = useState<IPatient[]>([]);
@@ -262,6 +302,11 @@ function HealthWorkerHome() {
   // sections' skeletons, even while the other was still loading.
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingRegisteredPatients, setLoadingRegisteredPatients] = useState(true);
+  // Only the very first load should show skeletons — refetching on every
+  // focus (e.g. returning from a patient's detail page) shouldn't wipe out
+  // the already-loaded stats/list.
+  const didInitialStatsLoadRef = useRef(false);
+  const didInitialPatientsLoadRef = useRef(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -274,7 +319,9 @@ function HealthWorkerHome() {
   // one loading flag — Promise.allSettled means a slow one doesn't block the
   // other's result, but the flag only clears once both have settled.
   const fetchStats = async () => {
-    setLoadingStats(true);
+    if (!didInitialStatsLoadRef.current) {
+      setLoadingStats(true);
+    }
     const [countsRes, testsRes] = await Promise.allSettled([
       getPatientsCount(user?.userId || ""),
       getTodaysTestsCount(user?.userId || ""),
@@ -293,11 +340,14 @@ function HealthWorkerHome() {
     }
 
     setLoadingStats(false);
+    didInitialStatsLoadRef.current = true;
   };
 
   const fetchRegisteredPatients = async () => {
     try {
-      setLoadingRegisteredPatients(true);
+      if (!didInitialPatientsLoadRef.current) {
+        setLoadingRegisteredPatients(true);
+      }
       const res = (await getPatientsWithStatus(
         Number.parseInt(user?.userId || "0"),
         3,
@@ -308,6 +358,7 @@ function HealthWorkerHome() {
       console.error("Error fetching registered patients:", error);
     } finally {
       setLoadingRegisteredPatients(false);
+      didInitialPatientsLoadRef.current = true;
     }
   };
 
@@ -345,50 +396,113 @@ function HealthWorkerHome() {
     console.log("User guide opened");
   };
 
-  return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: colors.white,
-      }}
+  const handleSearchPress = () => {
+    router.push("/patients");
+  };
+
+  const handleAddPatient = () => {
+    router.push({ pathname: "/patients/add", params: { from: "home" } });
+  };
+
+  const handleCallCareTeam = () => {
+    Linking.openURL(`tel:${SUPPORT_PHONE_NUMBER}`);
+  };
+
+  const handleChatCareTeam = () => {
+    Linking.openURL(`https://wa.me/${SUPPORT_PHONE_NUMBER.replace("+", "")}`);
+  };
+
+  const SearchBar = () => (
+    <TouchableOpacity
+      style={hw.searchBar}
+      activeOpacity={0.8}
+      onPress={handleSearchPress}
     >
-      {/* <StatusBar backgroundColor={colors.bg_home} animated /> */}
-      <StatusBar backgroundColor={colors.white} barStyle={"dark-content"} />
-      <ScrollView
-        style={{
-          flex: 1,
-          paddingTop: insets.top,
-          backgroundColor: colors.white,
-        }}
+      <Ionicons name="search" size={18} color="#8A8A8E" />
+      <Text style={hw.searchPlaceholder}>
+        Search for patient name, test id
+      </Text>
+    </TouchableOpacity>
+  );
+
+  // Pinned header content — paddingTop animates with the library's own
+  // showNavBar value (0 at rest, 1 once scrolled past the large header), so
+  // it's 0 while nothing has scrolled and eases up to 65 (status-bar
+  // clearance) only once the header actually docks at the top.
+  const PinnedSearchHeader = ({ showNavBar }: { showNavBar: SharedValue<number> }) => {
+    const animatedHeaderStyle = useAnimatedStyle(() => ({
+      paddingTop: interpolate(showNavBar.value, [0, 1], [0, 65]),
+    }));
+
+    return (
+      <PinnedHeader
+        showNavBar={showNavBar}
+        ignoreTopSafeArea
+        headerStyle={animatedHeaderStyle}
+        headerCenter={
+          <View style={{ flex: 1 }}>
+            <SearchBar />
+          </View>
+        }
+        headerCenterStyle={{ flex: 1, paddingHorizontal: 0 }}
+        headerLeftStyle={{ width: 0 }}
+        headerRightStyle={{ width: 0 }}
+        noBottomBorder
+        SurfaceComponent={() => (
+          <FadingView
+            opacity={showNavBar}
+            style={[
+              StyleSheet.absoluteFillObject,
+              { backgroundColor: HOME_GRADIENT_COLORS[1] },
+            ]}
+          />
+        )}
+      />
+    );
+  };
+
+  return (
+    <LinearGradient
+      colors={HOME_GRADIENT_COLORS}
+      locations={HOME_GRADIENT_LOCATIONS}
+      style={{ flex: 1 }}
+    >
+      <StatusBar backgroundColor={HOME_GRADIENT_COLORS[0]} barStyle={"dark-content"} />
+
+      {/* Blinkit-style collapsing header: the welcome/add-patient row scrolls
+          away with the content (LargeHeaderComponent), while the search bar
+          settles into a pinned header once it's scrolled under (HeaderComponent). */}
+      <ScrollViewWithHeaders
+        style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={hw.header}>
-          <View style={hw.headerLeft}>
-            <View style={[hw.profileAvatar, hw.initialsAvatar]}>
-              <Text style={hw.initialsText}>
-                {user?.userName
-                  ?.split(" ")
-                  .map((w: string) => w[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase()}
-              </Text>
+        headerFadeInThreshold={0.9}
+        absoluteHeader
+        LargeHeaderComponent={() => (
+          <View>
+            <View style={hw.header}>
+              <View style={hw.headerLeft}>
+                <TouchableOpacity activeOpacity={0.7} hitSlop={10}>
+                  <MenuIcon size={28} color={colors.black} />
+                </TouchableOpacity>
+                <View style={hw.headerTextWrap}>
+                  <Text style={hw.welcomeText}>
+                    {isReturningUser ? "Welcome back!" : "Welcome!"}
+                  </Text>
+                  <Text style={hw.nameText}>
+                    {capitalizeName(user?.userName)}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={handleAddPatient} activeOpacity={0.75}>
+                <Text style={hw.addPatientBtn}>+ Add Patient</Text>
+              </TouchableOpacity>
             </View>
-            <View>
-              <Text style={hw.welcomeText}>Welcome</Text>
-              <Text style={hw.nameText}>{capitalizeName(user?.userName)}</Text>
-            </View>
+            <SearchBar />
           </View>
-          <TouchableOpacity
-            onPress={() => router.push("/patients/add")}
-            activeOpacity={0.8}
-          >
-            <Text style={hw.addPatientBtn}>+ Add Patient</Text>
-          </TouchableOpacity>
-        </View>
-
+        )}
+        HeaderComponent={PinnedSearchHeader}
+      >
         {/* Light section */}
         <View style={hw.lightSection}>
           {/* Stats */}
@@ -456,7 +570,7 @@ function HealthWorkerHome() {
           ) : !Array.isArray(registeredPatients) ||
           registeredPatients.length === 0 ? (
             <TouchableOpacity
-              onPress={() => router.push("/patients/add")}
+              onPress={handleAddPatient}
               style={hw.emptyCard}
               activeOpacity={0.75}
             >
@@ -567,10 +681,54 @@ function HealthWorkerHome() {
             Other Links
           </Text>
           <UserGuideCard onPress={handleUserGuidePress} />
+
+          {/* <View style={hw.careTeamCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={hw.careTeamTitle}>Talk to your care team</Text>
+              <Text style={hw.careTeamSubtitle}>
+                Get support for your kidney health
+              </Text>
+              <View style={hw.careTeamBtnRow}>
+                <TouchableOpacity
+                  style={hw.careTeamBtn}
+                  activeOpacity={0.8}
+                  onPress={handleCallCareTeam}
+                >
+                  <Ionicons name="call" size={16} color={colors.white} />
+                  <Text style={hw.careTeamBtnText}>Call</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={hw.careTeamBtn}
+                  activeOpacity={0.8}
+                  onPress={handleChatCareTeam}
+                >
+                  <Ionicons
+                    name="logo-whatsapp"
+                    size={16}
+                    color={colors.white}
+                  />
+                  <Text style={hw.careTeamBtnText}>Chat</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <Image
+              source={images.cust_rep}
+              resizeMode="contain"
+              style={hw.careTeamImage}
+            />
+          </View> */}
         </View>
-      </ScrollView>
+
+        {/* Footer tagline */}
+        <View style={hw.footerTagline}>
+          <Text style={hw.footerTaglineTitle}>Screen Early – Act Early</Text>
+          <Text style={hw.footerTaglineSubtitle}>
+            Prevention ❤️ Is better than Cure.
+          </Text>
+        </View>
+      </ScrollViewWithHeaders>
       <UserGuideModal visible={showGuide} onClose={() => setShowGuide(false)} />
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -705,7 +863,7 @@ const shared = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 35,
-    borderRadius: 40,
+    borderRadius: 8,
     marginBottom: 10,
   },
   stepButtonText: { color: "white", fontSize: 16, fontWeight: "700" },
@@ -741,7 +899,7 @@ const shared = StyleSheet.create({
     backgroundColor: "white",
     paddingVertical: 4,
     paddingHorizontal: 22,
-    borderRadius: 50,
+    borderRadius: 8,
     alignSelf: "flex-start",
     borderColor: "#EF3024",
     borderWidth: 1,
@@ -754,21 +912,19 @@ const shared = StyleSheet.create({
 // ─────────────────────────────────────────────────────────────────────────────
 const hw = StyleSheet.create({
   header: {
-    backgroundColor: colors.white,
     paddingHorizontal: 20,
     paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.08)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
+  headerTextWrap: {},
+  addPatientBtn: {
+    fontSize: rf(14),
+    fontWeight: "700",
+    color: colors.DARKBLUE,
+  },
   headerAvatar: {
     width: 52,
     height: 52,
@@ -795,25 +951,85 @@ const hw = StyleSheet.create({
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
-  welcomeText: { fontSize: rf(13), color: "#000000", fontWeight: "500" },
+  welcomeText: { fontSize: rf(15), color: "#000000", fontWeight: "500" },
   nameText: {
-    fontSize: rf(17),
+    fontSize: rf(20),
     color: "#000000",
     fontWeight: "800",
     letterSpacing: -0.2,
   },
-  addPatientBtn: {
-    fontSize: rf(14),
-    fontWeight: "700",
-    color: colors.DARKBLUE,
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.BORDER1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginHorizontal: 16,
+    marginBottom: 20,
   },
+  searchPlaceholder: { fontSize: rf(14), color: "#8A8A8E" },
 
   lightSection: {
-    backgroundColor: "#EEF3FA",
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 0,
     paddingBottom: 24,
     gap: 10,
+  },
+
+  careTeamCard: {
+    backgroundColor: "#DDEEDD",
+    borderRadius: 14,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  careTeamTitle: {
+    fontSize: rf(17),
+    fontWeight: "800",
+    color: colors.black,
+    marginBottom: 4,
+  },
+  careTeamSubtitle: {
+    fontSize: rf(12),
+    color: colors.black,
+    marginBottom: 14,
+  },
+  careTeamBtnRow: { flexDirection: "row", gap: 10 },
+  careTeamBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#111111",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 30,
+  },
+  careTeamBtnText: { color: colors.white, fontWeight: "700", fontSize: rf(13) },
+  careTeamImage: { width: 84, height: 84 },
+
+  footerTagline: {
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  footerTaglineTitle: {
+    fontSize: rf(26),
+    fontWeight: "800",
+    color: "#F2B4BA",
+    textAlign: "center",
+  },
+  footerTaglineSubtitle: {
+    fontSize: rf(15),
+    fontWeight: "700",
+    color: colors.black,
+    textAlign: "center",
   },
 
   statsRow: { flexDirection: "row", gap: 12, marginBottom: 8 },

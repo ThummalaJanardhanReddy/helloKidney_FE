@@ -27,6 +27,8 @@ import { colors } from "../shared/commonStyles";
 import Toast from "../shared/Toast";
 import { useUserStore } from "../stores/userStore";
 
+const FORGOT_PASSWORD_BG = "#FDF4F5";
+
 // To-Do:
 // Author: Janardhan
 // Date: 21-01-2026
@@ -123,9 +125,9 @@ export default function ForgotPassword() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.statusbar }}>
+    <View style={{ flex: 1, backgroundColor: FORGOT_PASSWORD_BG }}>
       {/* <StatusBar backgroundColor={colors.bg_primary} barStyle={"dark-content"} /> */}
-      <StatusBar style="dark" backgroundColor={colors.bg_primary} animated/>
+      <StatusBar style="dark" backgroundColor={FORGOT_PASSWORD_BG} animated/>
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -294,7 +296,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 24,
     paddingTop: 20,
-    backgroundColor: "#F2F6FF",
+    backgroundColor: FORGOT_PASSWORD_BG,
   },
   title: {
     fontSize: 22,
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
   ruleText: {
     marginLeft: 8,
     fontSize: 13,
-    color: "#555",
+    color: "#1a1a1a",
   },
   button: {
     marginTop: 20,
