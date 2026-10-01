@@ -19,6 +19,9 @@ export const images = {
   heart: require("./images/heart.png"),
   todayTests: require('./images/today-tests.png'),
   totalPatients: require("./images/total-patients.png"),
+  maleProfile: require("./images/male_profile.png"),
+  femaleProfile: require("./images/female_profile.png"),
+  noProfile: require("./images/no_profile.png"),
 
   loginType: {
     logo: require("./images/Choose_user.png"),

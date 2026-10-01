@@ -21,11 +21,13 @@ import {
   SharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getAllPatients } from "@/src/services/healthworkerService";
 import { useUserStore } from "@/app/stores/userStore";
 import commonStyles, { colors } from "@/app/shared/commonStyles";
+import { images } from "@/assets";
 
 const { width } = Dimensions.get("window");
 const rf = (size: number) => Math.round(size * (width / 390));
@@ -50,30 +52,23 @@ interface Patient {
   user_name: string | null;
 }
 
-// ── Initials avatar ───────────────────────────────────────────────────────────
-function InitialsAvatar({ name }: { name: string }) {
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-  return (
-    <View style={styles.initialsAvatar}>
-      <Text style={styles.initialsText}>{initials}</Text>
-    </View>
-  );
-}
+// ── Gender avatar ──────────────────────────────────────────────────────────────
+const getGenderAvatar = (gender?: string | null) => {
+  const g = gender?.trim().toLowerCase();
+  if (g === "male") return images.maleProfile;
+  if (g === "female") return images.femaleProfile;
+  return images.noProfile;
+};
 
 // ── Single patient row ────────────────────────────────────────────────────────
 function PatientRow({ item, onPress }: { item: Patient; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={styles.row}>
-      {/* {item.avatar ? (
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-      ) : ( */}
-        <InitialsAvatar name={item.full_name} />
-      {/* )} */}
+      <Image
+        source={getGenderAvatar(item.gender)}
+        style={styles.initialsAvatar}
+        resizeMode="cover"
+      />
       <View style={styles.rowInfo}>
         <Text style={styles.rowName}>
           {item.full_name?.replaceAll(",", "")}
@@ -108,9 +103,93 @@ function SkeletonRow() {
   );
 }
 
+// ── Search input — hoisted to module scope (NOT defined inside the screen
+// component) so it keeps a stable component identity across renders. When a
+// component like this is defined inline inside a parent's render body, React
+// treats every render's version as a brand-new component type, which forces
+// the underlying TextInput to unmount/remount on every keystroke — exactly
+// what was closing the keyboard after each letter typed. ──────────────────
+function SearchInput({
+  query,
+  onChangeText,
+  onClear,
+}: {
+  query: string;
+  onChangeText: (text: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <View style={styles.searchBar}>
+      <Ionicons name="search" size={18} color="#8A8A8E" />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by name or mobile number"
+        placeholderTextColor="#8A8A8E"
+        value={query}
+        onChangeText={onChangeText}
+        returnKeyType="search"
+      />
+      {query.length > 0 && (
+        <TouchableOpacity onPress={onClear}>
+          <Text style={styles.clearBtn}>✕</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// ── Pinned header content — also hoisted for the same reason as SearchInput
+// above. paddingTop animates with the library's own showNavBar value (0 at
+// rest, 1 once scrolled past the large header), so it's 0 while nothing has
+// scrolled and eases up to the device's actual safe-area top inset (not a
+// hardcoded number — that over-clears on devices with a smaller status bar,
+// e.g. notch vs Dynamic Island) only once the header actually docks at the
+// top. ───────────────────────────────────────────────────────────────────
+function PinnedSearchHeader({
+  showNavBar,
+  insetsTop,
+  query,
+  onChangeText,
+  onClear,
+}: {
+  showNavBar: SharedValue<number>;
+  insetsTop: number;
+  query: string;
+  onChangeText: (text: string) => void;
+  onClear: () => void;
+}) {
+  const animatedHeaderStyle = useAnimatedStyle(() => ({
+    paddingTop: interpolate(showNavBar.value, [0, 1], [0, insetsTop]),
+  }));
+
+  return (
+    <PinnedHeader
+      showNavBar={showNavBar}
+      ignoreTopSafeArea
+      headerStyle={animatedHeaderStyle}
+      headerCenter={
+        <View style={{ flex: 1 }}>
+          <SearchInput query={query} onChangeText={onChangeText} onClear={onClear} />
+        </View>
+      }
+      headerCenterStyle={{ flex: 1, paddingHorizontal: 16 }}
+      headerLeftStyle={{ width: 0 }}
+      headerRightStyle={{ width: 0 }}
+      noBottomBorder
+      SurfaceComponent={() => (
+        <FadingView
+          opacity={showNavBar}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.white }]}
+        />
+      )}
+    />
+  );
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 export default function PatientsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,58 +242,7 @@ export default function PatientsScreen() {
   //     router.push("/patients/add");
   //   };
   const handleAddPatient = () => router.push("/patients/add");
-
-  const SearchInput = () => (
-    <View style={styles.searchBar}>
-      <Ionicons name="search" size={18} color="#8A8A8E" />
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search by name or mobile number"
-        placeholderTextColor="#8A8A8E"
-        value={query}
-        onChangeText={setQuery}
-        returnKeyType="search"
-      />
-      {query.length > 0 && (
-        <TouchableOpacity onPress={() => setQuery("")}>
-          <Text style={styles.clearBtn}>✕</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
-  // Pinned header content — paddingTop animates with the library's own
-  // showNavBar value (0 at rest, 1 once scrolled past the large header), so
-  // it's 0 while nothing has scrolled and eases up to 65 (status-bar
-  // clearance) only once the header actually docks at the top.
-  const PinnedSearchHeader = ({ showNavBar }: { showNavBar: SharedValue<number> }) => {
-    const animatedHeaderStyle = useAnimatedStyle(() => ({
-      paddingTop: interpolate(showNavBar.value, [0, 1], [0, 65]),
-    }));
-
-    return (
-      <PinnedHeader
-        showNavBar={showNavBar}
-        ignoreTopSafeArea
-        headerStyle={animatedHeaderStyle}
-        headerCenter={
-          <View style={{ flex: 1 }}>
-            <SearchInput />
-          </View>
-        }
-        headerCenterStyle={{ flex: 1, paddingHorizontal: 16, paddingBottom: 20 }}
-        headerLeftStyle={{ width: 0 }}
-        headerRightStyle={{ width: 0 }}
-        noBottomBorder
-        SurfaceComponent={() => (
-          <FadingView
-            opacity={showNavBar}
-            style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.white }]}
-          />
-        )}
-      />
-    );
-  };
+  const handleClearQuery = () => setQuery("");
 
   return (
     <View style={styles.container}>
@@ -222,6 +250,8 @@ export default function PatientsScreen() {
 
       {/* List */}
       <FlatListWithHeaders
+        initialAbsoluteHeaderHeight={60}
+        disableAutoFixScroll
         data={loading ? [] : filtered}
         keyExtractor={(item) => item.patient_id.toString()}
         contentContainerStyle={
@@ -247,18 +277,30 @@ export default function PatientsScreen() {
         }
         LargeHeaderComponent={() => (
           <View>
-            <View style={[styles.header, { paddingTop: 16 }]}>
+            <View style={[styles.header, { paddingTop: 0, paddingBottom: 16 }]}>
               <Text style={styles.headerTitle}>Patient List</Text>
               <TouchableOpacity onPress={handleAddPatient} activeOpacity={0.75}>
                 <Text style={styles.addBtn}>+ Add Patient</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.searchWrapper}>
-              <SearchInput />
+              <SearchInput
+                query={query}
+                onChangeText={setQuery}
+                onClear={handleClearQuery}
+              />
             </View>
           </View>
         )}
-        HeaderComponent={PinnedSearchHeader}
+        HeaderComponent={(props) => (
+          <PinnedSearchHeader
+            {...props}
+            insetsTop={insets.top}
+            query={query}
+            onChangeText={setQuery}
+            onClear={handleClearQuery}
+          />
+        )}
       />
     </View>
   );
@@ -288,7 +330,6 @@ const styles = StyleSheet.create({
   searchWrapper: {
     backgroundColor: HEADER_BG,
     paddingHorizontal: 16,
-    paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.08)",
     shadowColor: "#000",
@@ -305,8 +346,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    height: 40,
     gap: 10,
+    marginBottom: 20,
   },
   searchIcon: { fontSize: rf(15) },
   searchInput: { flex: 1, fontSize: rf(14), color: colors.black, padding: 0 },
@@ -318,7 +360,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 14,
     backgroundColor: "#FFFFFF",
     gap: 14,
@@ -334,14 +376,13 @@ const styles = StyleSheet.create({
     borderColor: "#EEF3FA",
   },
   initialsAvatar: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     borderRadius: 28,
     backgroundColor: "#DDE6F5",
     alignItems: "center",
     justifyContent: "center",
   },
-  initialsText: { fontSize: rf(12), fontWeight: "700", color: "#3A6BA8" },
   rowInfo: { flex: 1, gap: 3 },
   rowName: { fontSize: rf(14), fontWeight: "700", color: colors.black, marginBottom: 3 },
   rowMetaInline: { fontSize: rf(12), fontWeight: "400", color: colors.black },

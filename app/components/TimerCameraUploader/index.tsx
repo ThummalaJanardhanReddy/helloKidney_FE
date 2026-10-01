@@ -470,7 +470,7 @@ export default function TimerCameraUploader() {
       // it's the actual photo being taken, auto-fired or not, and the click
       // is useful feedback that a shot was just captured.
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7, skipProcessing: false, exif: false,
+        quality: 0.73, skipProcessing: false, exif: false,
       });
 
       // Freeze on the shot we just took — from here until the gate resolves,

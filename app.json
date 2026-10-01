@@ -25,7 +25,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "39"
+      "buildNumber": "40"
     },
     "android": {
       "config": {
@@ -39,7 +39,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "ai.hellokidney",
-      "versionCode": 79,
+      "versionCode": 78,
       "permissions": [
         "CAMERA",
         "INTERNET"

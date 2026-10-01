@@ -18,14 +18,14 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <KeyboardProvider>
-        {/* <SafeAreaProvider> */}
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: "slide_from_right",
-          }}
-        />
-        {/* </SafeAreaProvider> */}
+        <SafeAreaProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: "slide_from_right",
+            }}
+          />
+        </SafeAreaProvider>
       </KeyboardProvider>
     </AuthProvider>
   );

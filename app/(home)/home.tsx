@@ -288,8 +288,73 @@ function PatientCardSkeleton() {
   );
 }
 
+// ── Search bar — hoisted to module scope (NOT defined inside the screen
+// component) so it keeps a stable component identity across renders. A
+// component defined inline inside a parent's render body gets treated by
+// React as a brand-new component type on every render, which would force
+// anything stateful inside it (e.g. a focused TextInput) to unmount/remount
+// on every keystroke elsewhere in the screen. ──────────────────────────────
+function SearchBar({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity style={hw.searchBar} activeOpacity={0.8} onPress={onPress}>
+      <Ionicons name="search" size={18} color="#8A8A8E" />
+      <Text style={hw.searchPlaceholder}>
+        Search for patient name, test id
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// ── Pinned header content — also hoisted for the same reason as SearchBar
+// above. paddingTop animates with the library's own showNavBar value (0 at
+// rest, 1 once scrolled past the large header), so it's 0 while nothing has
+// scrolled and eases up to the device's actual safe-area top inset (not a
+// hardcoded number — that over-clears on devices with a smaller status bar,
+// e.g. notch vs Dynamic Island) only once the header actually docks at the
+// top. ───────────────────────────────────────────────────────────────────
+function PinnedSearchHeader({
+  showNavBar,
+  insetsTop,
+  onSearchPress,
+}: {
+  showNavBar: SharedValue<number>;
+  insetsTop: number;
+  onSearchPress: () => void;
+}) {
+  const animatedHeaderStyle = useAnimatedStyle(() => ({
+    paddingTop: interpolate(showNavBar.value, [0, 1], [0, insetsTop]),
+  }));
+
+  return (
+    <PinnedHeader
+      showNavBar={showNavBar}
+      ignoreTopSafeArea
+      headerStyle={animatedHeaderStyle}
+      headerCenter={
+        <View style={{ flex: 1 }}>
+          <SearchBar onPress={onSearchPress} />
+        </View>
+      }
+      headerCenterStyle={{ flex: 1, paddingHorizontal: 0 }}
+      headerLeftStyle={{ width: 0 }}
+      headerRightStyle={{ width: 0 }}
+      noBottomBorder
+      SurfaceComponent={() => (
+        <FadingView
+          opacity={showNavBar}
+          style={[
+            StyleSheet.absoluteFillObject,
+            { backgroundColor: HOME_GRADIENT_COLORS[1] },
+          ]}
+        />
+      )}
+    />
+  );
+}
+
 function HealthWorkerHome() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [showGuide, setShowGuide] = useState(false);
   const { user } = useUserStore();
   const isReturningUser = useUserStore((s) => s.isReturningUser);
@@ -384,6 +449,13 @@ function HealthWorkerHome() {
     router.push("/(home)/tests");
   };
 
+  const getGenderAvatar = (gender?: string | null) => {
+    const g = gender?.trim().toLowerCase();
+    if (g === "male") return images.maleProfile;
+    if (g === "female") return images.femaleProfile;
+    return images.noProfile;
+  };
+
   const capitalizeName = (name?: string) =>
     name
       ?.trim()
@@ -400,6 +472,10 @@ function HealthWorkerHome() {
     router.push("/patients");
   };
 
+  const handleMenuPress = () => {
+    router.push("/profile");
+  };
+
   const handleAddPatient = () => {
     router.push({ pathname: "/patients/add", params: { from: "home" } });
   };
@@ -410,55 +486,6 @@ function HealthWorkerHome() {
 
   const handleChatCareTeam = () => {
     Linking.openURL(`https://wa.me/${SUPPORT_PHONE_NUMBER.replace("+", "")}`);
-  };
-
-  const SearchBar = () => (
-    <TouchableOpacity
-      style={hw.searchBar}
-      activeOpacity={0.8}
-      onPress={handleSearchPress}
-    >
-      <Ionicons name="search" size={18} color="#8A8A8E" />
-      <Text style={hw.searchPlaceholder}>
-        Search for patient name, test id
-      </Text>
-    </TouchableOpacity>
-  );
-
-  // Pinned header content — paddingTop animates with the library's own
-  // showNavBar value (0 at rest, 1 once scrolled past the large header), so
-  // it's 0 while nothing has scrolled and eases up to 65 (status-bar
-  // clearance) only once the header actually docks at the top.
-  const PinnedSearchHeader = ({ showNavBar }: { showNavBar: SharedValue<number> }) => {
-    const animatedHeaderStyle = useAnimatedStyle(() => ({
-      paddingTop: interpolate(showNavBar.value, [0, 1], [0, 65]),
-    }));
-
-    return (
-      <PinnedHeader
-        showNavBar={showNavBar}
-        ignoreTopSafeArea
-        headerStyle={animatedHeaderStyle}
-        headerCenter={
-          <View style={{ flex: 1 }}>
-            <SearchBar />
-          </View>
-        }
-        headerCenterStyle={{ flex: 1, paddingHorizontal: 0 }}
-        headerLeftStyle={{ width: 0 }}
-        headerRightStyle={{ width: 0 }}
-        noBottomBorder
-        SurfaceComponent={() => (
-          <FadingView
-            opacity={showNavBar}
-            style={[
-              StyleSheet.absoluteFillObject,
-              { backgroundColor: HOME_GRADIENT_COLORS[1] },
-            ]}
-          />
-        )}
-      />
-    );
   };
 
   return (
@@ -477,12 +504,14 @@ function HealthWorkerHome() {
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
         headerFadeInThreshold={0.9}
+        initialAbsoluteHeaderHeight={60}
+        disableAutoFixScroll
         absoluteHeader
         LargeHeaderComponent={() => (
           <View>
             <View style={hw.header}>
               <View style={hw.headerLeft}>
-                <TouchableOpacity activeOpacity={0.7} hitSlop={10}>
+                <TouchableOpacity activeOpacity={0.7} hitSlop={10} onPress={handleMenuPress}>
                   <MenuIcon size={28} color={colors.black} />
                 </TouchableOpacity>
                 <View style={hw.headerTextWrap}>
@@ -498,10 +527,16 @@ function HealthWorkerHome() {
                 <Text style={hw.addPatientBtn}>+ Add Patient</Text>
               </TouchableOpacity>
             </View>
-            <SearchBar />
+            <SearchBar onPress={handleSearchPress} />
           </View>
         )}
-        HeaderComponent={PinnedSearchHeader}
+        HeaderComponent={(props) => (
+          <PinnedSearchHeader
+            {...props}
+            insetsTop={insets.top}
+            onSearchPress={handleSearchPress}
+          />
+        )}
       >
         {/* Light section */}
         <View style={hw.lightSection}>
@@ -611,15 +646,6 @@ function HealthWorkerHome() {
               </View>
 
               {registeredPatients.map((patient) => {
-                const initials = patient?.full_name
-                  ? patient.full_name
-                      .split(" ")
-                      .map((w: string) => w[0])
-                      .slice(0, 2)
-                      .join("")
-                      .toUpperCase()
-                  : "NA";
-
                 return (
                   <View key={patient.patient_id} style={hw.patientCard}>
                     {/* Card Click */}
@@ -628,9 +654,11 @@ function HealthWorkerHome() {
                       activeOpacity={0.85}
                     >
                       <View style={hw.cardTopRow}>
-                        <View style={[hw.profileAvatar, hw.initialsAvatar]}>
-                          <Text style={hw.initialsText}>{initials}</Text>
-                        </View>
+                        <Image
+                          source={getGenderAvatar(patient.gender)}
+                          style={hw.profileAvatar}
+                          resizeMode="cover"
+                        />
 
                         <View style={{ flex: 1 }}>
                           <Text style={hw.cardName}>
@@ -913,7 +941,8 @@ const shared = StyleSheet.create({
 const hw = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 0,
+    paddingBottom: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -967,7 +996,7 @@ const hw = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.BORDER1,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    height: 40,
     marginHorizontal: 16,
     marginBottom: 20,
   },
@@ -1120,7 +1149,6 @@ const hw = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  initialsText: { fontSize: rf(16), fontWeight: "700", color: "#3A6BA8" },
   cardName: {
     fontSize: rf(16),
     fontWeight: "600",

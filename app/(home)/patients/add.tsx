@@ -571,7 +571,7 @@ export default function AddPatientScreen() {
           accessibilityRole="button"
           disabled={isSubmitting}
         >
-          <Text style={styles.closeIcon}>✕</Text>
+          <Ionicons name="close" size={rf(22)} color={ACCENT} />
         </TouchableOpacity>
       </View>
 
@@ -857,7 +857,7 @@ const BORDER = colors.BORDER;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FDF4F5",
+    backgroundColor: "#FFFFFF",
   },
 
   // Header
@@ -888,11 +888,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-  },
-  closeIcon: {
-    fontSize: rf(14),
-    color: ACCENT,
-    fontWeight: "600",
   },
 
   // Scroll

@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 12,
     paddingVertical: 14,
-    // paddingHorizontal: 20,
+    paddingHorizontal: 20,
     // borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -510,7 +510,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   skeletonContainer: {
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   skeletonCard: {
     flexDirection: "row",
