@@ -26,7 +26,7 @@ type RegisterFormData = {
   mobile_no: string;
   password: string;
   role: string;
-  age: string;
+  age: string | Number;
   gender: string;
 };
 
@@ -102,7 +102,8 @@ export default function Register() {
     try {
       result = await registerUser({
         ...formData,
-        email_id: email_id.toLowerCase(),
+        age: Number(age),
+        email_id: email_id.trim().toLowerCase(),
       });
     } catch {
       setToast({
@@ -118,12 +119,16 @@ export default function Register() {
         type: "success",
       });
 
-      setTimeout(() => {
-        router.replace("/components/verify-details");
-      }, 2000);
+      // setTimeout(() => {
+      //   router.replace("/components/verify-details");
+      // }, 2000);
     } else {
       setToast({
-        message: (result as any).message || "Registration failed. Try again.",
+        message:
+          (result as any)?.response?.data?.detail ||
+          (result as any)?.message?.[0]?.msg ||
+          (result as any)?.message ||
+          "Registration failed. Try again.",
         type: "error",
       });
     }
@@ -143,8 +148,6 @@ export default function Register() {
             contentContainerStyle={[
               {
                 flexGrow: 1,
-
-                // paddingBottom: insets.bottom,
               },
             ]}
             keyboardShouldPersistTaps="handled"
@@ -177,7 +180,7 @@ export default function Register() {
                     placeholder="Enter"
                     placeholderTextColor="#9ca3af"
                     keyboardType="number-pad"
-                    value={formData.age}
+                    value={formData.age.toString()}
                     onChangeText={(value) =>
                       handleChange("age", value.replace(/[^0-9]/g, ""))
                     }
@@ -228,10 +231,10 @@ export default function Register() {
                     placeholder="name@companyname.com"
                     placeholderTextColor="#9ca3af"
                     keyboardType="email-address"
-                    value={formData.email_id}
-                    onChangeText={(value) =>
-                      handleChange("email_id", value.toLowerCase())
-                    }
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={formData.email_id ?? ""}
+                    onChangeText={(value) => handleChange("email_id", value)}
                   />
                 </View>
 
