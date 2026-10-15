@@ -767,12 +767,12 @@ function PatientHome() {
   const [showGuide, setShowGuide] = useState(false);
   const insets = useSafeAreaInsets();
   const startTest = () => {
-    // router.push({
-    //   pathname: "/components/TimerCameraUploader",
-    // });
-     router.push({
-      pathname: "/components/camera/TimerCameraUploader",
+    router.push({
+      pathname: "/components/TimerCameraUploader",
     });
+    //  router.push({
+    //   pathname: "/components/camera/TimerCameraUploader",
+    // });
   };
 
   return (
@@ -784,7 +784,7 @@ function PatientHome() {
       }}
     >
       {/* <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} /> */}
-      <StatusBar style="dark" backgroundColor={colors.bg_home} animated />
+      <StatusBar barStyle={"dark-content"} backgroundColor={colors.bg_home} animated />
       <View style={pt.container}>
         <View style={pt.logoSection}>
           <Image

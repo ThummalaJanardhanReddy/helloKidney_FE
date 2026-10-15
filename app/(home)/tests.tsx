@@ -63,6 +63,8 @@ const LOADING_INDICATOR_COLOR = "#4A90E2";
 const { width } = Dimensions.get("window");
 const rf = (size: number) => Math.round(size * (width / 390));
 
+const PAGE_SIZE = 10;
+
 export default function TestList() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -76,9 +78,9 @@ export default function TestList() {
   const [tests, setTests] = useState<
     TestResponse[] | HealthworkerTestResponse[]
   >([]);
-  const [healthworkerTests, setHealthworkerTests] = useState<
-    HealthworkerTestResponse[]
-  >([]);
+  // const [healthworkerTests, setHealthworkerTests] = useState<
+  //   HealthworkerTestResponse[]
+  // >([]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,6 +91,9 @@ export default function TestList() {
   // Refs
   const didInitialLoadRef = useRef(false);
   const isNavigatingRef = useRef(false);
+  const currentPageRef = useRef(1);
+  const hasMoreRef = useRef(true);
+  const isFetchingRef = useRef(false);
 
   // Utility Functions
   const formatDate = useCallback((date: string): string => {
@@ -150,55 +155,134 @@ export default function TestList() {
   );
 
   // API Functions
+  // const fetchTests = useCallback(
+  //   async ({ pageNumber = 1, refresh = false }: FetchTestsParams = {}) => {
+  //     if (!userId) {
+  //       console.warn("Cannot fetch tests: No userId available");
+  //       setLoading(false);
+  //       return;
+  //     }
+
+  //     try {
+  //       // Set appropriate loading state
+  //       if (refresh) {
+  //         setRefreshing(true);
+  //       } else if (pageNumber === 1) {
+  //         setLoading(true);
+  //       } else {
+  //         setIsMoreLoading(true);
+  //       }
+  //       let data = null;
+  //       if (user?.userType === "healthworker") {
+  //         data = await axiosClient.get<HealthworkerTestResponse[]>(
+  //           "/healthworker/tests",
+  //           {
+  //             params: { hw_id: userId },
+  //           },
+  //         );
+  //         console.log("Fetched healthworker tests (/healthworker/tests):", data);
+  //         // setHealthworkerTests(data);
+  //       } else {
+  //         data = await axiosClient.get<TestResponse[]>("/users/tests", {
+  //           params: { patient_id: userId },
+  //         });
+  //         console.log("Fetched tests (/users/tests):", data);
+  //       }
+
+  //       // Update tests list
+  //       setTests((prev) =>
+  //         refresh || pageNumber === 1 ? data : [...prev, ...data],
+  //       );
+  //       setHasMore(data?.length > 0);
+  //     } catch (error) {
+  //       console.error("Failed to fetch tests:", error);
+  //       setHasMore(false);
+  //     } finally {
+  //       setLoading(false);
+  //       setRefreshing(false);
+  //       setIsMoreLoading(false);
+  //     }
+  //   },
+  //   [userId],
+  // );
+
   const fetchTests = useCallback(
     async ({ pageNumber = 1, refresh = false }: FetchTestsParams = {}) => {
-      if (!userId) {
-        console.warn("Cannot fetch tests: No userId available");
-        setLoading(false);
-        return;
+      if (!userId || isFetchingRef.current) return;
+
+      // Prevent loading beyond the last page.
+      if (pageNumber > 1 && !hasMoreRef.current) return;
+
+      isFetchingRef.current = true;
+
+      if (refresh) {
+        setRefreshing(true);
+      } else if (pageNumber === 1) {
+        setLoading(true);
+      } else {
+        setIsMoreLoading(true);
       }
 
       try {
-        // Set appropriate loading state
-        if (refresh) {
-          setRefreshing(true);
-        } else if (pageNumber === 1) {
-          setLoading(true);
-        } else {
-          setIsMoreLoading(true);
-        }
-        let data = null;
+        let data: (TestResponse | HealthworkerTestResponse)[] = [];
+
         if (user?.userType === "healthworker") {
           data = await axiosClient.get<HealthworkerTestResponse[]>(
             "/healthworker/tests",
             {
-              params: { hw_id: userId },
+              params: {
+                hw_id: userId,
+                page: pageNumber,
+                limit: PAGE_SIZE,
+              },
             },
           );
-          console.log("Fetched healthworker tests (/healthworker/tests):", data);
-          setHealthworkerTests(data);
         } else {
           data = await axiosClient.get<TestResponse[]>("/users/tests", {
-            params: { patient_id: userId },
+            params: {
+              patient_id: userId,
+              page: pageNumber,
+              limit: PAGE_SIZE,
+            },
           });
-          console.log("Fetched tests (/users/tests):", data);
         }
 
-        // Update tests list
-        setTests((prev) =>
-          refresh || pageNumber === 1 ? data : [...prev, ...data],
-        );
-        setHasMore(data?.length > 0);
+        console.log(`Fetched tests (page ${pageNumber}):`, data);
+        // Handle an unexpected empty response safely.
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid tests API response");
+        }
+
+        // A short page indicates that there are no more records.
+        const moreAvailable = data.length === PAGE_SIZE;
+
+        hasMoreRef.current = moreAvailable;
+        setHasMore(moreAvailable);
+
+        if (pageNumber === 1 || refresh) {
+          setTests(data);
+          currentPageRef.current = 1;
+        } else {
+          setTests((previous) => {
+            // Deduplicate records by their unique ID.
+            const existingIds = new Set(previous.map((item) => item.id));
+            const newItems = data.filter((item) => !existingIds.has(item.id));
+
+            return [...previous, ...newItems];
+          });
+
+          currentPageRef.current = pageNumber;
+        }
       } catch (error) {
         console.error("Failed to fetch tests:", error);
-        setHasMore(false);
       } finally {
+        isFetchingRef.current = false;
         setLoading(false);
         setRefreshing(false);
         setIsMoreLoading(false);
       }
     },
-    [userId],
+    [userId, user?.userType],
   );
 
   const fetchHWPatientById = useCallback(async (patientId: number) => {
@@ -231,18 +315,35 @@ export default function TestList() {
   }, []);
 
   // Event Handlers
+  // const handleRefresh = useCallback(() => {
+  //   setHasMore(true);
+  //   fetchTests({ pageNumber: 1, refresh: true });
+  // }, [fetchTests]);
+
   const handleRefresh = useCallback(() => {
+    if (isFetchingRef.current) return;
+
+    hasMoreRef.current = true;
     setHasMore(true);
+
     fetchTests({ pageNumber: 1, refresh: true });
   }, [fetchTests]);
 
   const handleLoadMore = useCallback(() => {
-    if (!isMoreLoading && hasMore) {
-      setIsMoreLoading(true);
-      // Note: Actual pagination would require tracking page number
-      // and calling fetchTests({ pageNumber: currentPage + 1 })
+    if (
+      loading ||
+      refreshing ||
+      isMoreLoading ||
+      isFetchingRef.current ||
+      !hasMoreRef.current
+    ) {
+      return;
     }
-  }, [isMoreLoading, hasMore]);
+
+    fetchTests({
+      pageNumber: currentPageRef.current + 1,
+    });
+  }, [fetchTests, loading, refreshing, isMoreLoading]);
 
   const clearRefreshParam = useCallback(() => {
     setTimeout(() => {
@@ -420,12 +521,12 @@ export default function TestList() {
             : styles.listContent
         }
         ItemSeparatorComponent={renderItemSeparator}
-        // onEndReached={handleLoadMore}
-        // onEndReachedThreshold={END_REACHED_THRESHOLD}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={END_REACHED_THRESHOLD}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
-        // ListFooterComponent={renderListFooter}
+        ListFooterComponent={renderListFooter}
         // ListFooterComponentStyle={styles.listFooter}
         ListEmptyComponent={renderEmptyState} // Show empty state when no data
       />

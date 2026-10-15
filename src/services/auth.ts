@@ -126,7 +126,7 @@ export const updateUserPassword = async (
 
 export const registerUser = async (formData: {
   full_name: string;
-  age: string;
+  age: string | number;
   gender: string;
   email_id: string;
   mobile_no: string;
