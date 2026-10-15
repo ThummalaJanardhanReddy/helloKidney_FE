@@ -879,7 +879,7 @@ const shared = StyleSheet.create({
     width: 276,
     height: 176,
     marginBottom: 0,
-    backgroundColor: "red",
+   
   },
   stepBottomText: {
     fontSize: 16,

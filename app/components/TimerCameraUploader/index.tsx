@@ -266,14 +266,26 @@ export default function TimerCameraUploader() {
     liveAnalysisRunningRef.current = true;
     try {
       // A high-quality, modest-size sample — closest expo-camera gets to the
-      // Ionic page's captureSample({ quality: 100 }) preview frame. No
-      // skipProcessing: that flag was already tried here (bd1b237) and reverted
-      // (ba2d803) because it made takePictureAsync return unusable data on this
-      // device — the exact "stuck / never progresses" failure mode this streak
-      // would reproduce silently (a bad sample just fails a check and resets the
-      // streak, with no crash to point at it). base64 is not requested from the
-      // camera itself (it would encode the full sensor-resolution frame) — the
-      // manipulator below returns it for the shrunken copy only.
+      // Ionic page's captureSample({ quality: 100 }) preview frame.
+      // skipProcessing: false, explicit — that flag was already tried here
+      // (bd1b237) and reverted (ba2d803) because it made takePictureAsync
+      // return unusable data on this device — the exact "stuck / never
+      // progresses" failure mode this streak would reproduce silently (a bad
+      // sample just fails a check and resets the streak, with no crash to
+      // point at it). It's also now confirmed as the wrong setting for a
+      // second, independent reason: expo-camera's own TS docs for this
+      // option say plainly that enabling it "would cause orientation
+      // uncertainty" — Android's skipProcessing path writes the sensor's raw
+      // JPEG bytes straight through with no rotation applied at all (see
+      // ResolveTakenPicture.kt's skipProcessing()), same risk class as the
+      // iOS orientation bug patched in patches/expo-camera+17.0.10.patch
+      // (see the comment above the real takePictureAsync call below). Was
+      // previously left implicit (the native default is already false on
+      // both platforms); made explicit here so that never regresses
+      // silently if that default ever changes upstream.
+      // base64 is not requested from the camera itself (it would encode the
+      // full sensor-resolution frame) — the manipulator below returns it for
+      // the shrunken copy only.
       // shutterSound: false — this is a real still capture on every live tick,
       // so without it the phone would click every ~1-2s while the card is
       // being framed, well before the actual (auto-fired) capture.
@@ -286,7 +298,7 @@ export default function TimerCameraUploader() {
       // encode shortens how long that interruption lasts. 0.4 still leaves
       // marker/card edges plenty sharp for the checks that read this frame.
       const snap = await cameraRef.current.takePictureAsync({
-        quality: 0.4, exif: false, shutterSound: false,
+        quality: 0.7, skipProcessing: false, exif: false, shutterSound: false,
       });
       const shrinkShortSide = snap.width <= snap.height
         ? { width: LIVE_SAMPLE_SHORT_SIDE }
@@ -469,6 +481,42 @@ export default function TimerCameraUploader() {
       // Shutter sound stays on here (unlike the live-sample capture above) —
       // it's the actual photo being taken, auto-fired or not, and the click
       // is useful feedback that a shot was just captured.
+      //
+      // Color/geometry accuracy: this is the photo the backend reads the test
+      // pad's color from, against the card's own printed reference swatches
+      // on the same card — so anything that shifts color inconsistently
+      // between shots, or hands over a misrotated image, corrupts the
+      // result. On a real device comparison against the same third-party
+      // reading API this app's result was off from the Ionic reference
+      // app's by a large, inconsistent-ratio margin on the same physical
+      // strip (120 mg/g here vs. 20-60 mg/g there). Two concrete, platform-
+      // specific causes found and patched so far, both in
+      // patches/expo-camera+17.0.10.patch:
+      //   iOS — AVCapturePhotoOutput's .balanced quality prioritization let
+      //     iOS apply its own per-shot multi-frame/noise-reduction
+      //     processing before this app ever saw the pixels (→ .speed), AND
+      //     UIImage.jpegData() doesn't bake imageOrientation into the actual
+      //     pixel grid, so with exif:false (used here) a rotated photo had
+      //     nothing telling any consumer how to right it — the server reads
+      //     wrong regions of the card entirely (→ redraw into a new graphics
+      //     context before encoding, see CameraPhotoCapture.swift).
+      //   Android — ImageCapture defaulted to CAPTURE_MODE_MINIMIZE_LATENCY,
+      //     which doesn't wait for 3A (focus/exposure/white-balance) to
+      //     converge before capturing (→ CAPTURE_MODE_MAXIMIZE_QUALITY).
+      //     Android's own orientation handling was already correct for this
+      //     app's options (exif:false bakes in rotation via
+      //     ResolveTakenPicture.kt's decodeAndRotateBitmap) — see the
+      //     skipProcessing note on the live-sample capture above for why
+      //     that specific option has to stay false on both platforms.
+      // This app's other capture settings were already matched to the
+      // reference app (resolution, crop, JPEG quality, no brightness/
+      // contrast enhancement — see Phase 10 of the comparison work in this
+      // file's git history). What's still missing, and can't be done from
+      // this client alone, is calibrating per-shot against the card's own
+      // printed reference swatches the way the published colorimetric-
+      // reader research this was checked against does it — that needs real
+      // reference color values from whoever owns the backend's color-match
+      // logic, not something to guess at here.
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.73, skipProcessing: false, exif: false,
       });
@@ -732,11 +780,11 @@ export default function TimerCameraUploader() {
               <View style={styles.circleWrapper}>
                 <Svg width={C_SIZE} height={C_SIZE}>
                   <Circle
-                    stroke="#E7EAF2" fill="none"
+                    stroke="#3a4665" fill="none"
                     cx={C_SIZE / 2} cy={C_SIZE / 2} r={C_RADIUS} strokeWidth={C_STROKE}
                   />
                   <Circle
-                    stroke="#4ADE80" fill="none"
+                    stroke="#12791a" fill="none"
                     cx={C_SIZE / 2} cy={C_SIZE / 2} r={C_RADIUS} strokeWidth={C_STROKE}
                     strokeDasharray={C_CIRC} strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
