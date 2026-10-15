@@ -1,0 +1,101 @@
+diff --git a/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt b/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
+index fc56526..d5c3617 100644
+--- a/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
++++ b/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
+@@ -447,6 +447,22 @@ class ExpoCameraView(
+     imageCaptureUseCase = ImageCapture.Builder()
+       .setResolutionSelector(resolutionSelector)
+       .setFlashMode(flashMode.mapToLens())
++      // Patched (see patches/expo-camera+17.0.10.patch) — not calling
++      // setCaptureMode() left this on CameraX's default,
++      // CAPTURE_MODE_MINIMIZE_LATENCY, which explicitly does NOT wait for
++      // 3A (auto-focus/auto-exposure/auto-white-balance) to converge before
++      // grabbing the frame. That's a different failure mode than iOS's
++      // over-processing (see CameraPhotoCapture.swift's patch comment) but
++      // the same underlying problem for a colorimetric reader: a shot taken
++      // while white balance is still settling gets whatever color
++      // temperature the sensor happened to be mid-adjustment on, not a
++      // stable, reproducible one — and this reader's accuracy depends on the
++      // test pad's color relative to the card's printed reference swatches
++      // staying consistent shot to shot. CAPTURE_MODE_MAXIMIZE_QUALITY
++      // explicitly waits for 3A to finish first. The extra latency is a
++      // non-issue here: this app already budgets multiple seconds per real
++      // capture for its own quality checks.
++      .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+       .build()
+ 
+     val videoCapture = createVideoCapture()
+diff --git a/node_modules/expo-camera/ios/Current/CameraPhotoCapture.swift b/node_modules/expo-camera/ios/Current/CameraPhotoCapture.swift
+index 09ac20b..cc933c8 100644
+--- a/node_modules/expo-camera/ios/Current/CameraPhotoCapture.swift
++++ b/node_modules/expo-camera/ios/Current/CameraPhotoCapture.swift
+@@ -90,7 +90,21 @@ class CameraPhotoCapture: NSObject, AVCapturePhotoCaptureDelegate {
+         photoSettings.isHighResolutionPhotoEnabled = true
+       }
+ 
+-      photoSettings.photoQualityPrioritization = .balanced
++      // Patched (see patches/expo-camera+17.0.10.patch): .balanced lets
++      // AVCapturePhotoOutput apply its own per-shot computational-photography
++      // techniques (noise reduction, detail fusion across multiple frames,
++      // tone adjustments) before this module ever sees the pixels — exactly
++      // the kind of scene-adaptive, non-reproducible processing a colorimetric
++      // reader can't tolerate, since it depends on the test pad's color
++      // relative to the card's printed reference swatches staying consistent
++      // shot to shot. .speed skips that multi-frame pipeline. This does not
++      // fully explain or fix color accuracy on its own; it removes one
++      // concrete, undocumented source of shot-to-shot color variance that
++      // the Ionic reference app's older, more direct camera plugin never
++      // introduced in the first place. See the comment above the real
++      // takePictureAsync call in TimerCameraUploader/index.tsx's
++      // handleTakePhoto for the rest of that investigation.
++      photoSettings.photoQualityPrioritization = .speed
+ 
+       photoOutput.capturePhoto(with: photoSettings, delegate: self)
+     }
+@@ -159,6 +173,46 @@ class CameraPhotoCapture: NSObject, AVCapturePhotoCaptureDelegate {
+ 
+     takenImage = ExpoCameraUtils.crop(image: takenImage, to: croppedSize)
+ 
++    // Patched (see patches/expo-camera+17.0.10.patch): on iOS, UIImage.jpegData()
++    // does NOT rotate the underlying pixel buffer to match imageOrientation —
++    // it writes the sensor's raw pixel layout and (at most) an EXIF
++    // orientation tag describing how a viewer should rotate it for display.
++    // That's invisible in anything that honors EXIF orientation, but this
++    // app calls takePictureAsync with exif:false (metadata isn't needed
++    // downstream and the live-loop samples are deliberately lightweight), so
++    // no orientation tag reaches the uploaded file at all — and even with
++    // exif:true, many server-side image readers (PIL's Image.open(), for
++    // one, by far the most common Python path) ignore EXIF orientation by
++    // default unless the caller explicitly calls exif_transpose(). Either
++    // way, a receiver with no reason to assume a particular rotation gets a
++    // sideways or upside-down photo of the card and samples the wrong pixel
++    // regions for the printed reference swatches and the test pad — not a
++    // color-processing error, a geometry error, but one that shows up as a
++    // wrong color/concentration reading all the same, and it's a strong
++    // candidate for the gross, inconsistent-ratio discrepancy seen against
++    // the reference app (e.g. 120 mg/g here vs. 20-60 mg/g there on the same
++    // physical strip). Redrawing into a new graphics context here bakes
++    // imageOrientation into the actual pixel grid, so the JPEG this app
++    // uploads is right-side-up by its raw pixels alone — correct regardless
++    // of whether anything downstream reads EXIF at all. (Android's
++    // equivalent path, ResolveTakenPicture.kt's decodeAndRotateBitmap(),
++    // already does this unconditionally — this brings iOS to parity.)
++    if takenImage.imageOrientation != .up {
++      // format.scale pinned to the source image's own scale (normally 1.0
++      // for a camera capture) — UIGraphicsImageRenderer otherwise defaults
++      // to the main screen's scale, which would silently upscale a
++      // multi-megapixel photo by the device's 2x/3x Retina factor.
++      let format = UIGraphicsImageRendererFormat()
++      format.scale = takenImage.scale
++      let renderer = UIGraphicsImageRenderer(size: takenImage.size, format: format)
++      let normalizedImage = renderer.image { _ in
++        takenImage.draw(in: CGRect(origin: .zero, size: takenImage.size))
++      }
++      if let normalizedCgImage = normalizedImage.cgImage {
++        takenImage = UIImage(cgImage: normalizedCgImage)
++      }
++    }
++
+     let width = takenImage.size.width
+     let height = takenImage.size.height
+     var processedImageData: Data?

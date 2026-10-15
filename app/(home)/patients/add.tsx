@@ -168,7 +168,7 @@ export default function AddPatientScreen() {
     countryCode: "+91",
     phone: "",
     age: "",
-    gender: "Male",
+    gender: "",
     address: "",
     city: "",
     district: "",
@@ -878,9 +878,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: rf(20),
-    fontWeight: "800",
+    fontWeight: "600",
     color: "#000000",
-    letterSpacing: -0.3,
+    //letterSpacing: -0.3,
   },
   closeBtn: {
     width: 36,
@@ -896,6 +896,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
+    paddingBottom: 24,
     gap: 0,
   },
 

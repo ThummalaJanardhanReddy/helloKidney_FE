@@ -56,8 +56,8 @@ export const STABLE_TICKS_NEEDED = 2;    // consecutive clean samples → auto-c
 
 // ─── Timer circle ─────────────────────────────────────────────────────────────
 
-export const C_SIZE   = 150;
-export const C_STROKE = 12;
+export const C_SIZE   = 180;
+export const C_STROKE = 18;
 export const C_RADIUS = (C_SIZE - C_STROKE) / 2;
 export const C_CIRC   = 2 * Math.PI * C_RADIUS;
 
