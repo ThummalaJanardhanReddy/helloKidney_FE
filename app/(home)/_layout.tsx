@@ -1,19 +1,17 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Image } from "react-native";
 
 import { useDoubleBackExit } from "@/src/services/useDoubleBackExit";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { tabsImages } from "../../assets";
-import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
+import FloatingTabBar from "@/src/navigation/FloatingTabBar";
+import { TabBarVisibilityProvider } from "@/src/navigation/tabBarVisibility";
 
 // ── Replace with your real auth store / context ───────────────────────────────
 // e.g. const { userType } = useAuthStore();
 // const userType: "healthworker" | "patient" = "healthworker";
 
 export default function MainLayout() {
-  const insets = useSafeAreaInsets();
   const userType = useUserStore((s) => s.user?.userType);
   const hasHydrated = useUserStore((s) => s.hasHydrated);
 
@@ -22,51 +20,21 @@ export default function MainLayout() {
   useDoubleBackExit();
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#1A1A1A",
-        tabBarIconStyle: {
-          justifyContent: "center",
-          alignItems: "center",
-          marginTop: 0,
-        },
-        tabBarLabelStyle: {
-          fontWeight: "600",
-          // marginTop: 2,
-        },
-        tabBarItemStyle: {
-          justifyContent: "center",
-          alignItems: "center",
-        },
-        tabBarStyle: {
-          backgroundColor: colors.white,
-          borderTopWidth: 1,
-          borderTopColor: "rgba(0,0,0,0.08)",
-          height: 58 + insets.bottom,
-          paddingBottom: insets.bottom,
-          // paddingTop: 7,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 4,
-          elevation: 8,
-        },
-      }}
-      initialRouteName="home"
-    >
+    <TabBarVisibilityProvider>
+      <Tabs
+        tabBar={(props) => <FloatingTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+        }}
+        initialRouteName="home"
+      >
       {/* ── Home — all users ── */}
       <Tabs.Screen
         name="home"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={tabsImages.home}
-              style={{ width: 18, height: 18, tintColor: color }}
-              resizeMode="contain"
-            />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "home" : "home-outline"} size={21} color={color} />
           ),
         }}
       />
@@ -76,12 +44,8 @@ export default function MainLayout() {
         name="tests"
         options={{
           title: "Tests",
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={tabsImages.tests}
-              style={{ width: 18, height: 18, tintColor: color }}
-              resizeMode="contain"
-            />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "flask" : "flask-outline"} size={21} color={color} />
           ),
         }}
       />
@@ -93,12 +57,8 @@ export default function MainLayout() {
           title: "Patients",
           // null hides it from tab bar; screen still exists in the router
           href: isHealthWorker ? "/patients" : null,
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={tabsImages.patients}
-              style={{ width: 18, height: 18, tintColor: color }}
-              resizeMode="contain"
-            />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "people" : "people-outline"} size={21} color={color} />
           ),
         }}
       />
@@ -108,15 +68,12 @@ export default function MainLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={tabsImages.profile}
-              style={{ width: 18, height: 18, tintColor: color }}
-              resizeMode="contain"
-            />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "person" : "person-outline"} size={21} color={color} />
           ),
         }}
       />
-    </Tabs>
+      </Tabs>
+    </TabBarVisibilityProvider>
   );
 }

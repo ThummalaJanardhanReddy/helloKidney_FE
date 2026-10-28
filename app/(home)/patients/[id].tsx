@@ -20,6 +20,8 @@ import {
 } from "react-native";
 import * as Animatable from "react-native-animatable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { withTiming } from "react-native-reanimated";
+import { useTabBarProgress } from "@/src/navigation/tabBarVisibility";
 
 const SKELETON_REPORT_COUNT = 4;
 
@@ -170,6 +172,19 @@ export default function PatientProfileScreen() {
   // Card entrance animation
   const cardAnim = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(-20)).current;
+
+  const tabBarProgress = useTabBarProgress();
+
+  // Hide the floating tab bar while this screen is focused — it otherwise
+  // floats on top of the "Start New Test" footer button.
+  useFocusEffect(
+    useCallback(() => {
+      tabBarProgress.value = withTiming(1, { duration: 220 });
+      return () => {
+        tabBarProgress.value = withTiming(0, { duration: 220 });
+      };
+    }, [tabBarProgress]),
+  );
 
   useEffect(() => {
     Animated.parallel([

@@ -25,7 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, SvgXml } from "react-native-svg";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -747,7 +747,7 @@ export default function TimerCameraUploader() {
 
           {/* ── Step guide swiper ── */}
           <View style={styles.swiperSection}>
-            <View style={{ flex: 1 }} {...stepPanResponder.panHandlers}>
+            <View style={{ flex: 1, justifyContent: "center" }} {...stepPanResponder.panHandlers}>
               <Animated.View
                 style={{
                   flexDirection: "row",
@@ -757,9 +757,12 @@ export default function TimerCameraUploader() {
               >
                 {steps.map((step, index) => (
                   <View key={step.id} style={styles.slideCard}>
+                    {step.svg ? (
+                      <SvgXml xml={step.svg} width="100%" height={170} />
+                    ) : (
+                      <Image source={step.image} style={styles.slideImage} resizeMode="contain" />
+                    )}
                     <Text style={styles.slideStep}>Step {index + 1}</Text>
-                    <Text style={styles.slideHeading}>{step.topText}</Text>
-                    <Image source={step.image} style={styles.slideImage} resizeMode="contain" />
                     <Text style={styles.slideDescription}>{step.bottomText}</Text>
                   </View>
                 ))}
@@ -1029,20 +1032,20 @@ const styles = StyleSheet.create({
   guideHeaderTitle: { fontSize: 18, fontWeight: "600", color: "#FFFFFF" },
 
   // ── Wait screen: step guide swiper
-  swiperSection: { flex: 1.05, backgroundColor: colors.bg_home },
+  swiperSection: { flex: 1.05, backgroundColor: colors.bg_home, paddingTop: 0 },
   slideCard: { width: screenWidth, alignItems: "center", paddingHorizontal: 24 },
-  slideStep: { color: colors.primary, fontSize: 13, fontWeight: "600", marginVertical: 8 },
+  slideStep: { color: colors.primary, fontSize: 13, fontWeight: "600", marginVertical: 14 },
   slideHeading: {
     fontSize: 15, fontWeight: "300", textAlign: "center",
     color: "#FFFFFF", marginBottom: 8,
   },
   slideImage: { width: "100%", height: 170 },
   slideDescription: {
-    fontSize: 14, textAlign: "center", color: "#878C99", lineHeight: 18,
+    fontSize: 14, textAlign: "center", color: "#FFFFFF", lineHeight: 18,
   },
   dotsRow: {
     flexDirection: "row", justifyContent: "center", alignItems: "center",
-    gap: 6, paddingBottom: 18,
+    gap: 6, paddingBottom: 25,
   },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#D9DBE1" },
   dotActive: { backgroundColor: colors.primary },

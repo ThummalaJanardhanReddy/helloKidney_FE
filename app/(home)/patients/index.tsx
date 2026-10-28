@@ -28,6 +28,11 @@ import { getAllPatients } from "@/src/services/healthworkerService";
 import { useUserStore } from "@/app/stores/userStore";
 import commonStyles, { colors } from "@/app/shared/commonStyles";
 import { images } from "@/assets";
+import {
+  FLOATING_TAB_BAR_HEIGHT,
+  FLOATING_TAB_BAR_BOTTOM_MARGIN,
+  useTabBarScrollWorklet,
+} from "@/src/navigation/tabBarVisibility";
 
 const { width } = Dimensions.get("window");
 const rf = (size: number) => Math.round(size * (width / 390));
@@ -190,6 +195,7 @@ function PinnedSearchHeader({
 export default function PatientsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const tabBarScrollWorklet = useTabBarScrollWorklet();
   const [query, setQuery] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -238,10 +244,6 @@ export default function PatientsScreen() {
     });
   };
 
-  //   const handleAddPatient = () => {
-  //     router.push("/patients/add");
-  //   };
-  const handleAddPatient = () => router.push("/patients/add");
   const handleClearQuery = () => setQuery("");
 
   return (
@@ -252,6 +254,7 @@ export default function PatientsScreen() {
       <FlatListWithHeaders
         initialAbsoluteHeaderHeight={60}
         disableAutoFixScroll
+        onScrollWorklet={tabBarScrollWorklet}
         data={loading ? [] : filtered}
         keyExtractor={(item) => item.patient_id.toString()}
         contentContainerStyle={
@@ -279,9 +282,6 @@ export default function PatientsScreen() {
           <View>
             <View style={[styles.header, { paddingTop: 0, paddingBottom: 16 }]}>
               <Text style={styles.headerTitle}>Patient List</Text>
-              <TouchableOpacity onPress={handleAddPatient} activeOpacity={0.75}>
-                <Text style={styles.addBtn}>+ Add Patient</Text>
-              </TouchableOpacity>
             </View>
             <View style={styles.searchWrapper}>
               <SearchInput
@@ -354,7 +354,10 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: rf(14), color: colors.black, padding: 0 },
   clearBtn: { fontSize: rf(13), color: "#9BADC4", paddingHorizontal: 4 },
 
-  listContent: { backgroundColor: "#FFFFFF", paddingBottom: 20 },
+  listContent: {
+    backgroundColor: "#FFFFFF",
+    paddingBottom: FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_BOTTOM_MARGIN,
+  },
   emptyListContent: { flexGrow: 1, backgroundColor: "#FFFFFF", paddingBottom: 20 },
 
   row: {

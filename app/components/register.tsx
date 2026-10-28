@@ -1,8 +1,11 @@
 import { registerUser } from "@/src/services/auth";
+import { COUNTRIES, Country } from "@/src/utils/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,9 +19,18 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { CustomCountryPickerModal } from "./CustomCountryPickerModal";
 import BackButton from "../shared/BackButton";
 import commonStyles, { colors } from "../shared/commonStyles";
 import Toast from "../shared/Toast";
+
+const DEFAULT_COUNTRY: Country =
+  COUNTRIES.find((c) => c.dial_code === "+91") ?? {
+    name: "India",
+    dial_code: "+91",
+    code: "IN",
+    flag: "🇮🇳",
+  };
 
 type RegisterFormData = {
   full_name: string;
@@ -41,6 +53,9 @@ export default function Register() {
     role: "patient",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -71,13 +86,12 @@ export default function Register() {
       return;
     }
 
-    // if (!/^\d{10}$/.test(mobile_no)) {
-    //   setToast({
-    //     message: "Enter a valid 10-digit mobile number",
-    //     type: "error",
-    //   });
-    //   return;
-    // }
+    const fullPhoneNumber = `${selectedCountry.dial_code}${mobile_no}`;
+    const parsedPhone = parsePhoneNumberFromString(fullPhoneNumber);
+    if (!parsedPhone?.isValid()) {
+      setToast({ message: "Enter a valid phone number", type: "error" });
+      return;
+    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email_id)) {
@@ -98,14 +112,18 @@ export default function Register() {
       return;
     }
 
+    setIsSubmitting(true);
+
     let result;
     try {
       result = await registerUser({
         ...formData,
         age: Number(age),
         email_id: email_id.trim().toLowerCase(),
+        mobile_no: fullPhoneNumber,
       });
     } catch {
+      setIsSubmitting(false);
       setToast({
         message: "Network error. Please try again.",
         type: "error",
@@ -119,10 +137,19 @@ export default function Register() {
         type: "success",
       });
 
-      // setTimeout(() => {
-      //   router.replace("/components/verify-details");
-      // }, 2000);
+      // Keep the loader spinning until we navigate away so the button
+      // doesn't flash back to its idle state right before the redirect.
+      setTimeout(() => {
+        router.replace({
+          pathname: "/components/verify-details",
+          params: {
+            prefillEmail: email_id.trim().toLowerCase(),
+            prefillPassword: password,
+          },
+        });
+      }, 1500);
     } else {
+      setIsSubmitting(false);
       setToast({
         message:
           (result as any)?.response?.data?.detail ||
@@ -214,15 +241,48 @@ export default function Register() {
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Phone Number</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="phone-pad"
-                    value={formData.mobile_no}
-                    onChangeText={(value) => handleChange("mobile_no", value)}
-                  />
+                  <View style={styles.phoneRow}>
+                    <TouchableOpacity
+                      style={styles.countryCodeBtn}
+                      activeOpacity={0.7}
+                      onPress={() => setShowCountryPicker(true)}
+                    >
+                      <Text style={styles.flagEmoji}>{selectedCountry.flag}</Text>
+                      <Text style={styles.countryCodeText}>
+                        {selectedCountry.dial_code}
+                      </Text>
+                      <Ionicons
+                        name="chevron-down"
+                        size={16}
+                        color="#374151"
+                        style={{ marginLeft: 2 }}
+                      />
+                    </TouchableOpacity>
+
+                    <TextInput
+                      style={[styles.input, styles.phoneInput]}
+                      placeholder="Enter"
+                      placeholderTextColor="#9ca3af"
+                      keyboardType="phone-pad"
+                      maxLength={15}
+                      value={formData.mobile_no}
+                      onChangeText={(value) =>
+                        handleChange("mobile_no", value.replace(/[^0-9]/g, ""))
+                      }
+                    />
+                  </View>
                 </View>
+
+                <CustomCountryPickerModal
+                  visible={showCountryPicker}
+                  onClose={() => setShowCountryPicker(false)}
+                  selectedCountry={selectedCountry}
+                  onSelect={(country) => {
+                    setSelectedCountry(country);
+                    setShowCountryPicker(false);
+                    handleChange("mobile_no", "");
+                  }}
+                />
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Email Id (User Name)</Text>
@@ -267,8 +327,16 @@ export default function Register() {
                   </Text>
                 </View>
 
-                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                  <Text style={styles.buttonText}>Submit</Text>
+                <TouchableOpacity
+                  style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                  onPress={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>Submit</Text>
+                  )}
                 </TouchableOpacity>
 
                 <View style={styles.signupContainer}>
@@ -277,7 +345,7 @@ export default function Register() {
                   </Text>
                   <TouchableOpacity onPress={handleBack}>
                     <Text style={styles.signupLinkText} onPress={handleBack}>
-                      Log in
+                      Sign In
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -340,6 +408,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     color: colors.black,
   },
+  phoneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  countryCodeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  flagEmoji: {
+    fontSize: 16,
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.black,
+  },
+  phoneInput: {
+    flex: 1,
+  },
   placeholder_text: {
     color: "#9ca3af",
   },
@@ -352,6 +447,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 8,
     height: 45,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: "white",

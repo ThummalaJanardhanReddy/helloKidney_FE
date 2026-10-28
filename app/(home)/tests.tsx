@@ -7,7 +7,6 @@ import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
-  FlatList,
   RefreshControl,
   StatusBar,
   StyleSheet,
@@ -16,11 +15,19 @@ import {
   View,
 } from "react-native";
 import * as Animatable from "react-native-animatable";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import axiosClient from "../../src/services/axiosClient";
 import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
 import { IPatient } from "@/src/utils/constants";
+import {
+  FLOATING_TAB_BAR_HEIGHT,
+  FLOATING_TAB_BAR_BOTTOM_MARGIN,
+  useTabBarScrollHandler,
+} from "@/src/navigation/tabBarVisibility";
+
+const AnimatedFlatList = Animated.FlatList;
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -69,6 +76,7 @@ export default function TestList() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ refresh?: string }>();
+  const tabBarScrollHandler = useTabBarScrollHandler();
 
   // Session
   const user = useUserStore((state) => state.user);
@@ -508,7 +516,7 @@ export default function TestList() {
       </View>
 
       {/* Content */}
-      <FlatList
+      <AnimatedFlatList
         data={tests}
         keyExtractor={keyExtractor}
         renderItem={
@@ -523,6 +531,8 @@ export default function TestList() {
         ItemSeparatorComponent={renderItemSeparator}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={END_REACHED_THRESHOLD}
+        onScroll={tabBarScrollHandler}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
@@ -640,7 +650,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: 0,
-    paddingBottom: 0,
+    paddingBottom: FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_BOTTOM_MARGIN,
   },
   listFooter: {
     paddingBottom: 0,

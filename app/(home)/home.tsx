@@ -6,11 +6,22 @@ import {
   ScrollViewWithHeaders,
 } from "@codeherence/react-native-header";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, {
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Path,
+  Stop,
+} from "react-native-svg";
 import {
   interpolate,
   SharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
+import {
+  FLOATING_TAB_BAR_HEIGHT,
+  FLOATING_TAB_BAR_BOTTOM_MARGIN,
+  useTabBarScrollWorklet,
+} from "@/src/navigation/tabBarVisibility";
 import { router, useFocusEffect, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -51,6 +62,31 @@ const SUPPORT_PHONE_NUMBER = "+911234567890";
 
 const HOME_GRADIENT_COLORS = ["#FAE3E4", "#FDF3F3", "#FAF8F8"] as const;
 const HOME_GRADIENT_LOCATIONS = [0, 0.2, 1] as const;
+
+const mixHex = (a: string, b: string, t: number) => {
+  const clampedT = Math.max(0, Math.min(1, t));
+  const parse = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [ar, ag, ab] = parse(a);
+  const [br, bg, bb] = parse(b);
+  const mix = (x: number, y: number) => Math.round(x + (y - x) * clampedT);
+  const toHex = (v: number) => v.toString(16).padStart(2, "0");
+  return `#${toHex(mix(ar, br))}${toHex(mix(ag, bg))}${toHex(mix(ab, bb))}`;
+};
+
+// Decorative top-right accent: a soft wave (not a hard-edged rectangle) so
+// it reads as part of the background instead of a block stamped on top.
+const ACCENT_WIDTH = screenWidth * 0.4;
+const ACCENT_HEIGHT = 140;
+const ACCENT_PATH = `M0,0 H${ACCENT_WIDTH} V${ACCENT_HEIGHT} H${ACCENT_WIDTH * 0.4} C${ACCENT_WIDTH * 0.18},${ACCENT_HEIGHT} 0,${ACCENT_HEIGHT * 0.55} 0,${ACCENT_HEIGHT * 0.3} Z`;
+// The underlying page LinearGradient reaches HOME_GRADIENT_COLORS[1] at
+// HOME_GRADIENT_LOCATIONS[1] * screenHeight. The accent's own fill is
+// blended to match that same curve across its height, instead of being a
+// flat color next to a fast-changing gradient (which read as a hard seam).
+const ACCENT_BOTTOM_COLOR = mixHex(
+  HOME_GRADIENT_COLORS[0],
+  HOME_GRADIENT_COLORS[1],
+  ACCENT_HEIGHT / (screenHeight * HOME_GRADIENT_LOCATIONS[1]),
+);
 
 interface IPatient {
   address: null;
@@ -355,6 +391,7 @@ function PinnedSearchHeader({
 function HealthWorkerHome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const tabBarScrollWorklet = useTabBarScrollWorklet();
   const [showGuide, setShowGuide] = useState(false);
   const { user } = useUserStore();
   const isReturningUser = useUserStore((s) => s.isReturningUser);
@@ -494,21 +531,38 @@ function HealthWorkerHome() {
       locations={HOME_GRADIENT_LOCATIONS}
       style={{ flex: 1 }}
     >
-      <StatusBar backgroundColor={HOME_GRADIENT_COLORS[0]} barStyle={"dark-content"} />
+      <StatusBar translucent backgroundColor="transparent" barStyle={"dark-content"} />
 
       {/* Blinkit-style collapsing header: the welcome/add-patient row scrolls
           away with the content (LargeHeaderComponent), while the search bar
           settles into a pinned header once it's scrolled under (HeaderComponent). */}
       <ScrollViewWithHeaders
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingBottom: FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_BOTTOM_MARGIN,
+        }}
         showsVerticalScrollIndicator={false}
         headerFadeInThreshold={0.9}
         initialAbsoluteHeaderHeight={60}
         disableAutoFixScroll
+        onScrollWorklet={tabBarScrollWorklet}
         absoluteHeader
         LargeHeaderComponent={() => (
           <View>
+            <Svg
+              width={ACCENT_WIDTH}
+              height={ACCENT_HEIGHT}
+              viewBox={`0 0 ${ACCENT_WIDTH} ${ACCENT_HEIGHT}`}
+              style={hw.headerAccent}
+            >
+              <Defs>
+                <SvgLinearGradient id="accentFade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={HOME_GRADIENT_COLORS[0]} />
+                  <Stop offset="1" stopColor={ACCENT_BOTTOM_COLOR} />
+                </SvgLinearGradient>
+              </Defs>
+              <Path d={ACCENT_PATH} fill="url(#accentFade)" />
+            </Svg>
             <View style={hw.header}>
               <View style={hw.headerLeft}>
                 <TouchableOpacity activeOpacity={0.7} hitSlop={10} onPress={handleMenuPress}>
@@ -523,9 +577,6 @@ function HealthWorkerHome() {
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={handleAddPatient} activeOpacity={0.75}>
-                <Text style={hw.addPatientBtn}>+ Add Patient</Text>
-              </TouchableOpacity>
             </View>
             <SearchBar onPress={handleSearchPress} />
           </View>
@@ -830,7 +881,7 @@ export default function Home() {
   const hasHydrated = useUserStore((s) => s.hasHydrated);
 
   if (!hasHydrated) return null;
-  return userType === "healthworker" ? <View style={{flex:1, backgroundColor: 'red'}}><HealthWorkerHome /></View> : <PatientHome />;
+  return userType === "healthworker" ? <HealthWorkerHome /> : <PatientHome />;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -939,6 +990,11 @@ const shared = StyleSheet.create({
 // HEALTH WORKER STYLES
 // ─────────────────────────────────────────────────────────────────────────────
 const hw = StyleSheet.create({
+  headerAccent: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 0,

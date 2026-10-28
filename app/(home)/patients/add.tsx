@@ -1,6 +1,8 @@
 import { colors } from "@/app/shared/commonStyles";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { withTiming } from "react-native-reanimated";
+import { useTabBarProgress } from "@/src/navigation/tabBarVisibility";
 import {
   ActivityIndicator,
   Dimensions,
@@ -159,6 +161,19 @@ export default function AddPatientScreen() {
   const insets = useSafeAreaInsets();
   const user = useUserStore((s) => s.user);
   const placesRef = useRef<any>(null);
+  const tabBarProgress = useTabBarProgress();
+
+  // Hide the floating tab bar while this screen is focused — it otherwise
+  // floats on top of the form (overlapping the Save button) since it's
+  // rendered by the parent Tabs navigator, not this nested stack screen.
+  useFocusEffect(
+    useCallback(() => {
+      tabBarProgress.value = withTiming(1, { duration: 220 });
+      return () => {
+        tabBarProgress.value = withTiming(0, { duration: 220 });
+      };
+    }, [tabBarProgress]),
+  );
 
   // ── State ──
   const [form, setForm] = useState<FormState>({

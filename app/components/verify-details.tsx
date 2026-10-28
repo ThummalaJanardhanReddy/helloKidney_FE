@@ -1,6 +1,6 @@
 // import useKeyboardVisible from "@/src/hooks/useKeyboardVisible";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -47,9 +47,13 @@ interface ValidationResponse {
 
 export default function VerifyDetailsScreen() {
   // const { userData, setUserData } = useUser();
+  const { prefillEmail, prefillPassword } = useLocalSearchParams<{
+    prefillEmail?: string;
+    prefillPassword?: string;
+  }>();
   const [employeeId, setEmployeeId] = useState(""); // useState(userData.employeeId || "");
-  const [email, setEmail] = useState(""); // useState(userData.email || "");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(prefillEmail ?? ""); // useState(userData.email || "");
+  const [password, setPassword] = useState(prefillPassword ?? "");
   const [employeeIdError, setEmployeeIdError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [commonError, setCommonError] = useState("");
