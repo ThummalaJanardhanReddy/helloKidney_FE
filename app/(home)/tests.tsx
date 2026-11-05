@@ -4,16 +4,8 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Dimensions,
-  RefreshControl,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Dimensions, RefreshControl, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "../components/Text";
 import * as Animatable from "react-native-animatable";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -558,7 +550,7 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingBottom: 18,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.08)",
@@ -578,7 +570,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 12,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     // borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -621,7 +613,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   skeletonContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingVertical: 16,
   },
   skeletonCard: {

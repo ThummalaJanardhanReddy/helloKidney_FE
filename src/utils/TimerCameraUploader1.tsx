@@ -5,18 +5,11 @@ import {
 } from "expo-camera";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Image, Modal, StyleSheet, TouchableOpacity, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import * as ImageManipulator from "expo-image-manipulator";
 import { Dimensions } from "react-native";
+import Text from "../../app/components/Text";
 import axiosClient from "../services/axiosClient";
 import { colors } from "../../app/shared/commonStyles";
 import BackButton from "../../app/shared/BackButton";

@@ -9,19 +9,15 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useEffect, useCallback } from "react";
-import {
-  Animated,
-  Dimensions,
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, Dimensions, FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "../../components/Text";
 import * as Animatable from "react-native-animatable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { withTiming } from "react-native-reanimated";
-import { useTabBarProgress } from "@/src/navigation/tabBarVisibility";
+import {
+  FLOATING_TAB_BAR_BOTTOM_MARGIN,
+  useTabBarProgress,
+} from "@/src/navigation/tabBarVisibility";
 
 const SKELETON_REPORT_COUNT = 4;
 
@@ -296,7 +292,7 @@ export default function PatientProfileScreen() {
   return (
     <View style={styles.container}>
       {/* ── Dark header ── */}
-      <View style={[styles.headerBg, { paddingTop: insets.top + 2 }]}>
+      <View style={[styles.headerBg, { paddingTop: insets.top + 12 }]}>
         {/* Back */}
 
         <BackButton title="Back" onPress={() => router.back()} color="#000000" />
@@ -391,7 +387,14 @@ export default function PatientProfileScreen() {
       )}
 
       {/* ── Start New Test CTA ── */}
-      <View style={[styles.footer, { paddingBottom: 10 }]}>
+      <View
+        style={[
+          styles.footer,
+          // Same bottom offset as the floating tab bar, so this CTA sits
+          // exactly where the tabs would be, instead of its own one-off gap.
+          { paddingBottom: FLOATING_TAB_BAR_BOTTOM_MARGIN + insets.bottom },
+        ]}
+      >
         <TouchableOpacity
           onPress={handleStartNewTest}
           activeOpacity={0.85}
@@ -414,7 +417,7 @@ const styles = StyleSheet.create({
 
   headerBg: {
     backgroundColor: HEADER_BG,
-    paddingHorizontal: 16,
+    paddingHorizontal: 22,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.08)",
@@ -466,7 +469,7 @@ const styles = StyleSheet.create({
   initialsText: { fontSize: rf(22), fontWeight: "700", color: "#FFFFFF" },
   profileName: {
     fontSize: rf(20),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
@@ -487,17 +490,17 @@ const styles = StyleSheet.create({
   statBlock: { flex: 1, alignItems: "center", gap: 4 },
   statSep: { width: 1, height: 36, backgroundColor: "rgba(0,0,0,0.12)" },
   statLabel: { fontSize: rf(12.5), color: "#3D5068", fontWeight: "500" },
-  statValue: { fontSize: rf(15), fontWeight: "800", color: "#0D1B2E" },
+  statValue: { fontSize: rf(15), fontWeight: "700", color: "#0D1B2E" },
 
   listContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 22,
     paddingTop: 12,
     // paddingBottom: 20,
     gap: 0,
   },
   sectionTitle: {
     fontSize: rf(16),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2E",
     marginBottom: 8,
   },
@@ -515,7 +518,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     // elevation: 3,
     borderWidth: 1,
-    borderColor: "#E8EFF8",
+    borderColor: "#D2D2D5",
     marginBottom: 10,
   },
 
@@ -542,7 +545,7 @@ const styles = StyleSheet.create({
   },
   pdfLabel: {
     fontSize: rf(9),
-    fontWeight: "800",
+    fontWeight: "700",
     color: ACCENT,
     letterSpacing: 0.5,
     marginTop: 4,
@@ -551,7 +554,7 @@ const styles = StyleSheet.create({
   reportInfo: { flex: 1, gap: 4 },
   reportTestId: { fontSize: rf(13.5), color: "#4A5E74" },
   reportDate: { fontSize: rf(13), color: "#4A5E74" },
-  bold: { fontWeight: "800", color: "#0D1B2E" },
+  bold: { fontWeight: "700", color: "#0D1B2E" },
 
   chevron: { fontSize: rf(22), color: "#B0C0D8", lineHeight: rf(26) },
 
@@ -593,7 +596,7 @@ const styles = StyleSheet.create({
 
   footer: {
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "#E0EAF5",

@@ -1,12 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import Text from "./Text";
 import { colors } from "../shared/commonStyles";
 
 export default function VerifyOtp() {
@@ -48,12 +43,17 @@ export default function VerifyOtp() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center" },
+  container: {
+    flex: 1,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    justifyContent: "center",
+  },
   title: { fontSize: 26, fontWeight: "700", marginBottom: 8 },
   subtitle: { fontSize: 16, color: "#666", marginBottom: 20 },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#D2D2D5",
     borderRadius: 8,
     padding: 14,
     marginBottom: 20,

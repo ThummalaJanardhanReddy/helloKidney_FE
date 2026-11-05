@@ -6,8 +6,9 @@ export const steps = [
     id: 1,
     topText: "Collect your urine sample in\n the provided container",
     bottomText:
-      "Collect urine in the container from the\n Midpoint of urination until it reaches the top",
+      "Collect your urine sample in\n the container",
     svg: STEP1_SVG,
+    image: images.userGuide?.urineContainer,
     buttonText: "Urine Collected",
   },
   {
@@ -22,14 +23,14 @@ export const steps = [
     topText:
       "Dip the test card in the urine sample\n for 2 seconds, then remove",
     bottomText:
-      "tap or shake the card gently\n in order to remove excess droplets",
+      "Dip the Test card in the urine sample \n for 2 sec and remove it",
     svg: STEP2_SVG,
     buttonText: "Card dipped and shaken",
   },
   {
     id: 4,
     topText: "Now, place the test card on the control\n pad & start the timer",
-    bottomText: "Align the test card on the\n control pad centre",
+    bottomText: "Now, place the test card on the\ncontrol pad & Start the timer",
     image: images.userGuide?.step3,
     buttonText: "Start the timer",
   },
@@ -37,14 +38,14 @@ export const steps = [
     id: 5,
     topText: "Take the clear photo and upload it",
     bottomText:
-      "If an invalid image error appears after upload,\ntake another photo and try uploading again",
+      "Take the Clear Photo\n and upload it",
     image: images.userGuide?.step4,
     buttonText: "Click the photo and upload",
   },
   {
     id: 6,
     topText: "Results will appear after a few seconds",
-    bottomText: "View the Results",
+    bottomText: "Results will appear \n after a few seconds",
     image: images.userGuide?.step5,
     buttonText: "Test completed",
   },

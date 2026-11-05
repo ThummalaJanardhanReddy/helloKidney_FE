@@ -2,18 +2,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, Image, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import Text from "./Text";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 // import { HelperText, TextInput, useTheme } from "react-native-paper";
 import {
@@ -29,7 +19,7 @@ import { useUserStore } from "../stores/userStore";
 import BackButton from "../shared/BackButton";
 import { rms, rs, rvs } from "@/src/utils/responsive";
 
-const VERIFY_DETAILS_BG = "#FDF4F5";
+const VERIFY_DETAILS_BG = "#FCF2ED";
 
 // Validation constants
 const VALIDATION_RULES = {
@@ -375,7 +365,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     height: rvs(40),
     borderWidth: 1,
-    borderColor: "#c3c4c6",
+    borderColor: "#D2D2D5",
   },
   textInputContent: {
     borderRadius: 50,
@@ -409,7 +399,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingBottom: 20,
     paddingTop: rvs(10),
     alignItems: "center",

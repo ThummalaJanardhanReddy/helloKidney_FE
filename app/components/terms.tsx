@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import Text from "./Text";
 // import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackButton from '../shared/BackButton';

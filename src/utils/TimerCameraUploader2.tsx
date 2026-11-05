@@ -30,18 +30,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  Easing,
-  Image,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Easing, Image, Modal, StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "../../app/components/Text";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -894,7 +884,7 @@ const styles = StyleSheet.create({
 
   ringWrapper: { justifyContent: "center", alignItems: "center" },
   ringInner:   { position: "absolute", alignItems: "center" },
-  ringNum:     { color: "#F1F5F9", fontSize: 48, fontWeight: "800", letterSpacing: -2 },
+  ringNum:     { color: "#F1F5F9", fontSize: 48, fontWeight: "700", letterSpacing: -2 },
   ringSub:     { color: "#64748B", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginTop: -4 },
 
   stepCard: {

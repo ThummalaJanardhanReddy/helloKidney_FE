@@ -2,18 +2,12 @@ import { colors } from "@/app/shared/commonStyles";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { withTiming } from "react-native-reanimated";
-import { useTabBarProgress } from "@/src/navigation/tabBarVisibility";
 import {
-  ActivityIndicator,
-  Dimensions,
-  Keyboard,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+  FLOATING_TAB_BAR_BOTTOM_MARGIN,
+  useTabBarProgress,
+} from "@/src/navigation/tabBarVisibility";
+import { ActivityIndicator, Dimensions, Keyboard, Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import Text from "../../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { savePatient } from "@/src/services/healthworkerService";
 import {
@@ -834,7 +828,14 @@ export default function AddPatientScreen() {
       {/* </KeyboardAvoidingView> */}
 
       {/* ── Save Button ── */}
-      <View style={[styles.footer, { paddingBottom: 15 }]}>
+      <View
+        style={[
+          styles.footer,
+          // Same bottom offset as the floating tab bar, so this CTA sits
+          // exactly where the tabs would be, instead of its own one-off gap.
+          { paddingBottom: FLOATING_TAB_BAR_BOTTOM_MARGIN + insets.bottom },
+        ]}
+      >
         <TouchableOpacity
           onPress={handleSave}
           activeOpacity={0.85}
@@ -878,7 +879,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     backgroundColor: HEADER_BG,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingBottom: 18,
     flexDirection: "row",
     alignItems: "center",
@@ -910,7 +911,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingBottom: 24,
     gap: 0,
   },
@@ -1061,7 +1062,7 @@ const styles = StyleSheet.create({
   // Footer / Save
   footer: {
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "#E0EAF5",

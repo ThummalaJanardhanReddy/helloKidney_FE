@@ -43,7 +43,8 @@ export default function MainLayout() {
       <Tabs.Screen
         name="tests"
         options={{
-          title: "Tests",
+          title: "Test List",
+          tabBarLabel: "Tests",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "flask" : "flask-outline"} size={21} color={color} />
           ),
@@ -63,14 +64,32 @@ export default function MainLayout() {
         }}
       />
 
-      {/* ── Profile — all users ── */}
+      {/* ── Profile — hidden from the tab bar for every role; reached via
+          the menu icon on Home instead (see handleMenuPress / the header
+          menu button in home.tsx, for both healthworker and patient). The
+          floating tab bar itself is also hidden while inside it — same as
+          Help Center below — since the screen has its own back button. ── */}
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
+          // null hides it from tab bar; screen still exists in the router
+          href: null,
+          tabBarStyle: { display: "none" },
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "person" : "person-outline"} size={21} color={color} />
           ),
+        }}
+      />
+
+      {/* ── Help Center — reachable from the Home header, not shown in the tab bar,
+          and the floating tab bar itself is hidden while inside it ── */}
+      <Tabs.Screen
+        name="help"
+        options={{
+          title: "Help",
+          href: null,
+          tabBarStyle: { display: "none" },
         }}
       />
       </Tabs>

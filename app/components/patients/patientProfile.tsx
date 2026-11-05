@@ -1,15 +1,6 @@
 import React, { useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Image,
-  Animated,
-  Platform,
-} from "react-native";
+import { View, FlatList, TouchableOpacity, StyleSheet, Dimensions, Image, Animated, Platform } from "react-native";
+import Text from "../Text";
 
 const { width } = Dimensions.get("window");
 const scale = width / 390;
@@ -306,7 +297,7 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: rf(20),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
@@ -345,7 +336,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: rf(15),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2E",
     letterSpacing: -0.2,
   },
@@ -359,7 +350,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: rf(16),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2E",
     marginBottom: 14,
     letterSpacing: -0.2,
@@ -379,7 +370,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "#E8EFF8",
+    borderColor: "#D2D2D5",
     marginBottom: 12,
   },
 
@@ -413,7 +404,7 @@ const styles = StyleSheet.create({
   },
   pdfIconText: {
     fontSize: rf(9),
-    fontWeight: "800",
+    fontWeight: "700",
     color: ACCENT,
     letterSpacing: 0.5,
     marginTop: 4,
@@ -429,7 +420,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   reportTestIdBold: {
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2E",
   },
   reportDate: {

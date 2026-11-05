@@ -310,7 +310,7 @@
 //   heading: {
 //     color: "#F1F5F9",
 //     fontSize: 26,
-//     fontWeight: "800",
+//     fontWeight: "700",
 //     letterSpacing: -0.5,
 //     marginBottom: 8,
 //     textAlign: "center",
@@ -334,7 +334,7 @@
 //   },
 //   countdownNum: {
 //     fontSize: 48,
-//     fontWeight: "800",
+//     fontWeight: "700",
 //     color: "#334155",
 //   },
 //   countdownActive: {

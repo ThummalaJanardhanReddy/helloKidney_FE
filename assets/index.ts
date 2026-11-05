@@ -15,6 +15,11 @@ export const images = {
   logoFull1: require("./images/welcome/Hellokidney_logo.png"),
   logoFull: require("./images/logo_full.png"),
   cust_rep: require("./images/support_ic_home.png"),
+  whatsappSupportAgent: require("./images/whatsapp_support_agent.png"),
+  twoKidneyTest: require("./images/two_kidney_test.png"),
+  kidneyGlow: require("./images/kidney_glow.png"),
+  uacrKit: require("./images/uacr_kit.png"),
+  kidneyThemeTest: require("./images/kidney_theme_test.png"),
   close: require("./images/close_ic.png"),
   heart: require("./images/heart.png"),
   todayTests: require('./images/today-tests.png'),
@@ -43,5 +48,6 @@ export const images = {
     step3: require("./images/user_guide/step3_img.png"),
     step4: require("./images/user_guide/step4_img.png"),
     step5: require("./images/user_guide/step5_img.png"),
+    urineContainer: require("./images/step_1_img.png"),
   }
 };

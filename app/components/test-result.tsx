@@ -1,13 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "./Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
@@ -80,7 +75,7 @@ const TestResult = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={{
-          paddingHorizontal: 20,
+          paddingHorizontal: 22,
           paddingVertical: 10,
           backgroundColor: "#F2f6ff",
         }}
@@ -256,7 +251,7 @@ const styles = StyleSheet.create({
     gap: 20,
     // marginBottom: 20,
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
   },
   header: {
     fontSize: 18,
@@ -269,7 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#E6E6E6",
+    borderColor: "#D2D2D5",
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -310,7 +305,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#ECECEC",
+    borderColor: "#D2D2D5",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -345,7 +340,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E6E6E6",
+    borderColor: "#D2D2D5",
   },
   notesText: {
     fontSize: 15,
@@ -357,7 +352,7 @@ const styles = StyleSheet.create({
     marginTop: 25,
     backgroundColor: "#4A90E2",
     paddingVertical: 14,
-    paddingHorizontal: 25,
+    paddingHorizontal: 22,
     borderRadius: 8,
     flexDirection: "row",
     justifyContent: "center",
@@ -407,7 +402,7 @@ const styles = StyleSheet.create({
 
   metricValue: {
     fontSize: 22,
-    fontWeight: "800",
+    fontWeight: "700",
     color: colors.white,
   },
 
@@ -423,7 +418,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "stretch",
     // marginTop: 15,
-    borderColor: "#d3d0d0",
+    borderColor: "#D2D2D5",
     borderWidth: 1,
     gap: 6,
     overflow: "hidden",
@@ -431,7 +426,7 @@ const styles = StyleSheet.create({
 
   uacrValue: {
     fontSize: 26,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "black",
   },
 
@@ -442,7 +437,7 @@ const styles = StyleSheet.create({
   },
 
   doneWrap: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingBottom: 16,
   },
   done: {

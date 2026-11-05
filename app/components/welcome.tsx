@@ -1,13 +1,7 @@
 import { router } from "expo-router";
 import React, { useEffect } from "react";
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Image, ScrollView, StyleSheet, useColorScheme, View } from "react-native";
+import Text from "./Text";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -19,7 +13,7 @@ import commonStyles, { colors } from "../shared/commonStyles";
 import responsive, { rms, rs, rvs } from "@/src/utils/responsive";
 import { useUserStore } from "../stores/userStore";
 
-const WELCOME_BG = "#FDF4F5";
+const WELCOME_BG = "#FCF2ED";
 
 export default function WelcomeScreen() {
   // const {isAuthenticated, isLoading} = useAuth();

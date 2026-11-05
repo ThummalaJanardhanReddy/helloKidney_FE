@@ -14,6 +14,9 @@ export interface IUser {
   userName?: string;
   country?: string;
   countryCode?: string;
+  age?: string;
+  gender?: string;
+  phone?: string;
 }
 
 interface UserState {

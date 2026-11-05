@@ -1,0 +1,18 @@
+// Raw SVG markup for the home-screen test-result card's kidney icon,
+// rendered via react-native-svg's SvgXml so it stays crisp.
+
+export const KIDNEY_RESULT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="49.451" height="67.26" viewBox="0 0 49.451 67.26">
+  <g id="Group_26997" data-name="Group 26997" transform="translate(-341.473 -988.256)">
+    <path id="Path_55300" data-name="Path 55300" d="M4585.537,17801.184c.912-5.639,3.757-16.424,19.618-12.395s18.421,23.191,18.421,23.191,3.954,26.3-10.254,35.521a22.645,22.645,0,0,1-15.658,3.092c-11.477-1.736-14.243-8.17-15.439-13.393-1.881-8.133,3.921-9.266,4.747-18.27S4584.63,17806.824,4585.537,17801.184Z" transform="translate(-4240.277 -16799.451)" fill="#d51e16" stroke="#fff" stroke-width="0.4"/>
+    <g id="Path_55304" data-name="Path 55304" transform="translate(360.125 1027.439)">
+      <path id="Path_55307" data-name="Path 55307" d="M24.607,29.908H10.228a7.65,7.65,0,0,1-6.516-11.66L10.9,6.565a7.65,7.65,0,0,1,13.031,0l7.189,11.683a7.65,7.65,0,0,1-6.516,11.66Z" transform="translate(-2.019 -2.378)" fill="#d51e16"/>
+      <path id="Path_55308" data-name="Path 55308" d="M17.763,3.817A7.057,7.057,0,0,0,11.713,7.2L4.524,18.881a7.1,7.1,0,0,0,6.05,10.827H24.953A7.1,7.1,0,0,0,31,18.881L23.813,7.2a7.057,7.057,0,0,0-6.05-3.381m0-1.093a8.128,8.128,0,0,1,6.981,3.9l7.189,11.683A8.2,8.2,0,0,1,24.953,30.8H10.574A8.2,8.2,0,0,1,3.593,18.308L10.782,6.625A8.128,8.128,0,0,1,17.763,2.724Z" transform="translate(-2.364 -2.724)" fill="#fff"/>
+    </g>
+    <text id="_" data-name="!" transform="translate(373.524 1045.903)" fill="#fff" font-size="12" font-family="Poppins-SemiBold, Poppins" font-weight="600"><tspan x="0" y="0">!</tspan></text>
+    <g id="Group_26995" data-name="Group 26995" transform="translate(353.666 1007.093)">
+      <path id="Path_55301" data-name="Path 55301" d="M4615.421,17876.7a12.573,12.573,0,0,0-4.049,7.688,15.553,15.553,0,0,0,4.05,8.389" transform="translate(-4610.982 -17872.184)" fill="none" stroke="#fff" stroke-width="0.5"/>
+      <path id="Path_55302" data-name="Path 55302" d="M4613.4,17876.7a6.293,6.293,0,0,0-2.023,3.85,7.774,7.774,0,0,0,2.025,4.186" transform="translate(-4611.373 -17876.699)" fill="none" stroke="#fff" stroke-width="0.5"/>
+      <path id="Path_55303" data-name="Path 55303" d="M4613.4,17876.7a6.293,6.293,0,0,0-2.023,3.85,7.774,7.774,0,0,0,2.025,4.186" transform="translate(-4611.373 -17858.924)" fill="none" stroke="#fff" stroke-width="0.5"/>
+    </g>
+  </g>
+</svg>`;

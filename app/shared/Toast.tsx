@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet } from "react-native";
+import Text from "../components/Text";
 import * as Animatable from "react-native-animatable";
 
 interface ToastProps {

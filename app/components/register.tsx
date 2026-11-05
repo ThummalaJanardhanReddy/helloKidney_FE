@@ -4,16 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import Text from "./Text";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import {
   SafeAreaView,
@@ -400,13 +392,15 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
+    height: 48,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 0,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#D2D2D5",
     borderRadius: 8,
     backgroundColor: "#ffffff",
     color: colors.black,
+    textAlignVertical: "center",
   },
   phoneRow: {
     flexDirection: "row",
@@ -416,12 +410,14 @@ const styles = StyleSheet.create({
   countryCodeBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    height: 48,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#D2D2D5",
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingVertical: 0,
     gap: 4,
   },
   flagEmoji: {
@@ -475,12 +471,11 @@ const styles = StyleSheet.create({
   },
   genderRow: {
     flexDirection: "row",
-    marginTop: 6,
   },
   genderButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#D2D2D5",
     backgroundColor: "#ffffff",
     paddingVertical: 10,
     borderRadius: 8,
@@ -499,7 +494,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#D2D2D5",
     backgroundColor: "#ffffff",
     borderRadius: 8,
     paddingHorizontal: 10,

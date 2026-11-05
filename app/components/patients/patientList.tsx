@@ -1,16 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Image,
-  Animated,
-  Platform,
-} from "react-native";
+import { View, FlatList, TextInput, TouchableOpacity, StyleSheet, Dimensions, Image, Animated, Platform } from "react-native";
+import Text from "../Text";
 
 const { width } = Dimensions.get("window");
 const scale = width / 390;
@@ -188,7 +178,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: rf(22),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: -0.3,
   },

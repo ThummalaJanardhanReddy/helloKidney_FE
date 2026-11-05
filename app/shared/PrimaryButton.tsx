@@ -1,13 +1,7 @@
 import responsive from "@/src/utils/responsive";
 import React from "react";
-import {
-  StyleProp,
-  StyleSheet,
-  Text,
-  TextStyle,
-  TouchableOpacity,
-  ViewStyle,
-} from "react-native";
+import { StyleProp, StyleSheet, TextStyle, TouchableOpacity, ViewStyle } from "react-native";
+import Text from "../components/Text";
 // import { getResponsiveFontSize, getResponsiveSpacing, wp } from '../utils/responsive';
 
 interface PrimaryButtonProps {
@@ -27,7 +21,7 @@ export default function PrimaryButton({
   style,
   textStyle,
   width = 80, // 80% of screen width
-  height = responsive.getResponsiveFontSize(45),
+  height = 44,
 }: PrimaryButtonProps) {
   return (
     <TouchableOpacity

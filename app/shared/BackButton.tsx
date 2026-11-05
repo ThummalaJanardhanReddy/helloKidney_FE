@@ -1,6 +1,7 @@
 import { AntDesign } from "@expo/vector-icons";
 import React from 'react';
-import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
+import { StyleSheet, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
+import Text from "../components/Text";
 import { colors } from './commonStyles';
 
 interface BackButtonProps {

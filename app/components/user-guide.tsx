@@ -1,16 +1,8 @@
 import { images } from "@/assets";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
-import {
-  Animated,
-  Dimensions,
-  Image,
-  PanResponder,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, Dimensions, Image, PanResponder, StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "./Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../shared/commonStyles";
 
@@ -21,7 +13,7 @@ const steps = [
     id: 1,
     topText: `Collect your urine sample \nin the container`,
     bottomText:
-      "sssCollect urine in the container from the midpoint \nof urination until it reaches the top",
+      "Collect urine in the container from the midpoint \nof urination until it reaches the top",
     image: images.userGuide.step1,
     buttonText: "Next",
   },
@@ -166,10 +158,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#D2D2D5",
   },
 
   title: { fontSize: 20, fontWeight: "700" },
@@ -178,7 +170,8 @@ const styles = StyleSheet.create({
   stepCard: {
     width: screenWidth,
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
     // backgroundColor: "red",
   },
 

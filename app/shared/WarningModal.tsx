@@ -1,13 +1,8 @@
 // WarningModal.tsx
 
 import React from "react";
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Modal, StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "../components/Text";
 
 interface WarningModalProps {
   visible: boolean;

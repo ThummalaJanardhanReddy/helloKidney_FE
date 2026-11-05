@@ -6,13 +6,7 @@ import {
   ScrollViewWithHeaders,
 } from "@codeherence/react-native-header";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, {
-  Defs,
-  LinearGradient as SvgLinearGradient,
-  Path,
-  Stop,
-} from "react-native-svg";
-import {
+import ReanimatedAnimated, {
   interpolate,
   SharedValue,
   useAnimatedStyle,
@@ -20,26 +14,16 @@ import {
 import {
   FLOATING_TAB_BAR_HEIGHT,
   FLOATING_TAB_BAR_BOTTOM_MARGIN,
+  useTabBarScrollHandler,
   useTabBarScrollWorklet,
 } from "@/src/navigation/tabBarVisibility";
 import { router, useFocusEffect, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
-import {
-  Dimensions,
-  Image,
-  Linking,
-  Modal,
-  PanResponder,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Animated,
-  StatusBar
-} from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Dimensions, FlatList, Image, Linking, Modal, PanResponder, StyleSheet, TouchableOpacity, View, Animated, StatusBar, Platform } from "react-native";
+import Text from "../components/Text";
 import * as Animatable from "react-native-animatable";
+import { SvgXml } from "react-native-svg";
 import {
-  SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 // import { StatusBar } from "expo-status-bar";
@@ -47,6 +31,10 @@ import RoundButton from "../shared/RoundButton";
 import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
 import { steps } from "../shared/userGuideSteps";
+import { KIDNEY_RESULT_SVG } from "../shared/resultSvgs";
+import dayjs from "dayjs";
+import advancedFormat from "dayjs/plugin/advancedFormat";
+import axiosClient from "@/src/services/axiosClient";
 import {
   getAllPatients,
   getPatientsCount,
@@ -54,39 +42,50 @@ import {
   getTodaysTestsCount,
 } from "@/src/services/healthworkerService";
 
+dayjs.extend(advancedFormat);
+
+type LatestUacrResult = {
+  uacr?: string;
+  stage?: string;
+  albumin?: string;
+  creatinine?: string;
+  date?: string;
+};
+
+const UACR_STAGE_META: Record<string, { label: string; color: string }> = {
+  A1: { label: "Normal", color: "#1FA24A" },
+  A2: { label: "Slightly Abnormal", color: "#F5A623" },
+  A3: { label: "Abnormal", color: "#D51E16" },
+};
+
+// Stage derived from the observed uACR value itself (mg/g): <30 Normal,
+// 30–300 Slightly Abnormal, >300 Abnormal.
+const getUacrStage = (uacrText?: string): "A1" | "A2" | "A3" | undefined => {
+  if (!uacrText) return undefined;
+  const value = parseFloat(uacrText);
+  if (Number.isNaN(value)) return undefined;
+  if (value < 30) return "A1";
+  if (value <= 300) return "A2";
+  return "A3";
+};
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const rf = (size: number) => Math.round(size * (screenWidth / 390));
 
 // TODO: replace with the real care-team support number before release.
-const SUPPORT_PHONE_NUMBER = "+911234567890";
+const SUPPORT_PHONE_NUMBER = "+917660009100";
 
-const HOME_GRADIENT_COLORS = ["#FAE3E4", "#FDF3F3", "#FAF8F8"] as const;
-const HOME_GRADIENT_LOCATIONS = [0, 0.2, 1] as const;
+// Dedicated to the Home screen's background only — change this to re-theme
+// just this section without touching other screens/colors.
+const HOME_BG_COLOR = "#FCF2ED";
 
-const mixHex = (a: string, b: string, t: number) => {
-  const clampedT = Math.max(0, Math.min(1, t));
-  const parse = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  const [ar, ag, ab] = parse(a);
-  const [br, bg, bb] = parse(b);
-  const mix = (x: number, y: number) => Math.round(x + (y - x) * clampedT);
-  const toHex = (v: number) => v.toString(16).padStart(2, "0");
-  return `#${toHex(mix(ar, br))}${toHex(mix(ag, bg))}${toHex(mix(ab, bb))}`;
-};
-
-// Decorative top-right accent: a soft wave (not a hard-edged rectangle) so
-// it reads as part of the background instead of a block stamped on top.
-const ACCENT_WIDTH = screenWidth * 0.4;
-const ACCENT_HEIGHT = 140;
-const ACCENT_PATH = `M0,0 H${ACCENT_WIDTH} V${ACCENT_HEIGHT} H${ACCENT_WIDTH * 0.4} C${ACCENT_WIDTH * 0.18},${ACCENT_HEIGHT} 0,${ACCENT_HEIGHT * 0.55} 0,${ACCENT_HEIGHT * 0.3} Z`;
-// The underlying page LinearGradient reaches HOME_GRADIENT_COLORS[1] at
-// HOME_GRADIENT_LOCATIONS[1] * screenHeight. The accent's own fill is
-// blended to match that same curve across its height, instead of being a
-// flat color next to a fast-changing gradient (which read as a hard seam).
-const ACCENT_BOTTOM_COLOR = mixHex(
-  HOME_GRADIENT_COLORS[0],
-  HOME_GRADIENT_COLORS[1],
-  ACCENT_HEIGHT / (screenHeight * HOME_GRADIENT_LOCATIONS[1]),
-);
+// Separate decorative accent for just the top-right corner of the header
+// (roughly half the screen's width) — its own color vars, independent of
+// the page background above. Fades out via alpha, not a hand-matched solid
+// color, so it blends cleanly no matter what the background colors are.
+const CORNER_ACCENT_COLORS = ["rgba(250, 227, 228, 0.1)", "#FAE3E4"] as const;
+const CORNER_ACCENT_WIDTH = screenWidth * 0.4;
+const CORNER_ACCENT_HEIGHT = 130;
 
 interface IPatient {
   address: null;
@@ -120,6 +119,7 @@ function UserGuideModal({
   const [currentStep, setCurrentStep] = useState(0);
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const stepSlide = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
 
   const open = () =>
     Animated.timing(slideAnim, {
@@ -168,10 +168,11 @@ function UserGuideModal({
     <Modal visible={visible} transparent animationType="none">
       <View style={shared.modalOverlay}>
         <TouchableOpacity style={{ flex: 1 }} onPress={close} />
-        <SafeAreaView style={{ flex: 0, backgroundColor: "transparent" }}>
+        <View>
           <Animated.View
             style={[
               shared.modalContainer,
+              { paddingBottom: insets.bottom },
               { transform: [{ translateY: slideAnim }] },
             ]}
           >
@@ -181,10 +182,11 @@ function UserGuideModal({
                 <Image source={images.close} style={shared.closeIcon} />
               </TouchableOpacity>
             </View>
-            <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+            <View {...panResponder.panHandlers}>
               <Animated.View
                 style={{
                   flexDirection: "row",
+                  alignItems: "flex-start",
                   width: screenWidth * steps.length,
                   transform: [{ translateX: stepSlide }],
                 }}
@@ -193,11 +195,15 @@ function UserGuideModal({
                   <View key={step.id} style={shared.stepCard}>
                     <Text style={shared.stepCounter}>Step {index + 1}</Text>
                     <Text style={shared.stepTopText}>{step.topText}</Text>
-                    <Image
-                      source={step.image}
-                      style={shared.stepImage}
-                      resizeMode="contain"
-                    />
+                    {step.svg ? (
+                      <SvgXml xml={step.svg} width="100%" height={170} />
+                    ) : (
+                      <Image
+                        source={step.image}
+                        style={shared.stepImage}
+                        resizeMode="contain"
+                      />
+                    )}
                     <Text style={shared.stepBottomText}>{step.bottomText}</Text>
                     <TouchableOpacity
                       style={shared.stepButton}
@@ -227,7 +233,7 @@ function UserGuideModal({
               </View>
             </View>
           </Animated.View>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );
@@ -254,6 +260,17 @@ function MenuIcon({
     </View>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED: capitalize a full name — used by both HealthWorkerHome and
+// PatientHome's header
+// ─────────────────────────────────────────────────────────────────────────────
+const capitalizeName = (name?: string) =>
+  name
+    ?.trim()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SHARED: User Guide Info Card  ← identical look for both user types
@@ -324,6 +341,26 @@ function PatientCardSkeleton() {
   );
 }
 
+// WhatsApp/Help "assist" cards share one shape — same skeleton with the
+// real card's own container style passed in so the pulse matches its size.
+function AssistCardSkeleton({ cardStyle }: { cardStyle: any }) {
+  return (
+    <Animatable.View
+      animation="pulse"
+      easing="ease-out"
+      iterationCount="infinite"
+      style={[cardStyle, { backgroundColor: colors.white }]}
+    >
+      <View style={{ flex: 1, gap: 8 }}>
+        <View style={[hw.skeletonLine, { width: "70%", height: 16 }]} />
+        <View style={[hw.skeletonLine, { width: "90%" }]} />
+        <View style={[hw.skeletonBlock, hw.skeletonBtn]} />
+      </View>
+      <View style={[hw.assistCardImage, hw.skeletonBlock, { borderRadius: 12 }]} />
+    </Animatable.View>
+  );
+}
+
 // ── Search bar — hoisted to module scope (NOT defined inside the screen
 // component) so it keeps a stable component identity across renders. A
 // component defined inline inside a parent's render body gets treated by
@@ -380,7 +417,7 @@ function PinnedSearchHeader({
           opacity={showNavBar}
           style={[
             StyleSheet.absoluteFillObject,
-            { backgroundColor: HOME_GRADIENT_COLORS[1] },
+            { backgroundColor: HOME_BG_COLOR },
           ]}
         />
       )}
@@ -493,13 +530,6 @@ function HealthWorkerHome() {
     return images.noProfile;
   };
 
-  const capitalizeName = (name?: string) =>
-    name
-      ?.trim()
-      .split(/\s+/)
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(" ");
-
   const handleUserGuidePress = () => {
     setShowGuide(true);
     console.log("User guide opened");
@@ -517,20 +547,12 @@ function HealthWorkerHome() {
     router.push({ pathname: "/patients/add", params: { from: "home" } });
   };
 
-  const handleCallCareTeam = () => {
-    Linking.openURL(`tel:${SUPPORT_PHONE_NUMBER}`);
-  };
-
   const handleChatCareTeam = () => {
     Linking.openURL(`https://wa.me/${SUPPORT_PHONE_NUMBER.replace("+", "")}`);
   };
 
   return (
-    <LinearGradient
-      colors={HOME_GRADIENT_COLORS}
-      locations={HOME_GRADIENT_LOCATIONS}
-      style={{ flex: 1 }}
-    >
+    <View style={{ flex: 1, backgroundColor: HOME_BG_COLOR }}>
       <StatusBar translucent backgroundColor="transparent" barStyle={"dark-content"} />
 
       {/* Blinkit-style collapsing header: the welcome/add-patient row scrolls
@@ -548,21 +570,20 @@ function HealthWorkerHome() {
         onScrollWorklet={tabBarScrollWorklet}
         absoluteHeader
         LargeHeaderComponent={() => (
-          <View>
-            <Svg
-              width={ACCENT_WIDTH}
-              height={ACCENT_HEIGHT}
-              viewBox={`0 0 ${ACCENT_WIDTH} ${ACCENT_HEIGHT}`}
-              style={hw.headerAccent}
-            >
-              <Defs>
-                <SvgLinearGradient id="accentFade" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={HOME_GRADIENT_COLORS[0]} />
-                  <Stop offset="1" stopColor={ACCENT_BOTTOM_COLOR} />
-                </SvgLinearGradient>
-              </Defs>
-              <Path d={ACCENT_PATH} fill="url(#accentFade)" />
-            </Svg>
+          // `absoluteHeader` already reserves ~60px of space above this
+          // (the collapsed, invisible pinned search header's own height —
+          // see PinnedSearchHeader/SearchBar below, height:40 + marginBottom:20)
+          // before this View ever renders, so adding `insets.top` again here
+          // double-clears the status bar — this just needs its own breathing
+          // room on top of that.
+          <View style={{ paddingTop: 12 }}>
+            <LinearGradient
+              pointerEvents="none"
+              colors={CORNER_ACCENT_COLORS}
+              start={{ x: 1, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={hw.cornerAccent}
+            />
             <View style={hw.header}>
               <View style={hw.headerLeft}>
                 <TouchableOpacity activeOpacity={0.7} hitSlop={10} onPress={handleMenuPress}>
@@ -577,6 +598,15 @@ function HealthWorkerHome() {
                   </Text>
                 </View>
               </View>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                hitSlop={10}
+                style={hw.helpBtn}
+                onPress={() => router.push("/help")}
+              >
+                <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
+                <Text style={hw.helpBtnText}>Help</Text>
+              </TouchableOpacity>
             </View>
             <SearchBar onPress={handleSearchPress} />
           </View>
@@ -676,7 +706,7 @@ function HealthWorkerHome() {
                   margin: 0,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: "800" }}>
+                <Text style={{ fontSize: 13, fontWeight: "700" }}>
                   Registered Patients
                 </Text>
                 <TouchableOpacity
@@ -755,47 +785,63 @@ function HealthWorkerHome() {
         </View>
         <View style={[hw.lightSection, { paddingTop: 0 }]}>
           <Text
-            style={{ fontSize: 13, fontWeight: "800", color: colors.black }}
+            style={{ fontSize: 13, fontWeight: "700", color: colors.black }}
           >
             Other Links
           </Text>
-          <UserGuideCard onPress={handleUserGuidePress} />
+          {/* User guide card hidden on Home */}
+          {/* <UserGuideCard onPress={handleUserGuidePress} /> */}
 
-          {/* <View style={hw.careTeamCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={hw.careTeamTitle}>Talk to your care team</Text>
-              <Text style={hw.careTeamSubtitle}>
-                Get support for your kidney health
-              </Text>
-              <View style={hw.careTeamBtnRow}>
-                <TouchableOpacity
-                  style={hw.careTeamBtn}
-                  activeOpacity={0.8}
-                  onPress={handleCallCareTeam}
-                >
-                  <Ionicons name="call" size={16} color={colors.white} />
-                  <Text style={hw.careTeamBtnText}>Call</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={hw.careTeamBtn}
-                  activeOpacity={0.8}
-                  onPress={handleChatCareTeam}
-                >
-                  <Ionicons
-                    name="logo-whatsapp"
-                    size={16}
-                    color={colors.white}
-                  />
-                  <Text style={hw.careTeamBtnText}>Chat</Text>
-                </TouchableOpacity>
+          {loadingRegisteredPatients ? (
+            <>
+              <AssistCardSkeleton cardStyle={hw.whatsappCard} />
+              <AssistCardSkeleton cardStyle={hw.helpCard} />
+            </>
+          ) : (
+            <>
+              <View style={hw.whatsappCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={hw.assistCardTitle}>Need further assistance?</Text>
+                  <Text style={hw.assistCardSubtitle}>
+                    We are here to help you!
+                  </Text>
+                  <TouchableOpacity
+                    style={hw.whatsappBtn}
+                    activeOpacity={0.8}
+                    onPress={handleChatCareTeam}
+                  >
+                    <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+                    <Text style={hw.whatsappBtnText}>WhatsApp</Text>
+                  </TouchableOpacity>
+                </View>
+                <Image
+                  source={images.whatsappSupportAgent}
+                  resizeMode="contain"
+                  style={hw.assistCardImage}
+                />
               </View>
-            </View>
-            <Image
-              source={images.cust_rep}
-              resizeMode="contain"
-              style={hw.careTeamImage}
-            />
-          </View> */}
+
+              {/* <View style={hw.helpCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={hw.assistCardTitle}>Need help getting started?</Text>
+                  <Text style={hw.assistCardSubtitle}>
+                    Browse our FAQs and guides
+                  </Text>
+                  <TouchableOpacity
+                    style={hw.helpCardBtn}
+                    activeOpacity={0.8}
+                    onPress={() => router.push("/help")}
+                  >
+                    <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
+                    <Text style={hw.helpCardBtnText}>Help Center</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={hw.helpCardIconWrap}>
+                  <Ionicons name="help-circle" size={56} color={colors.primary} />
+                </View>
+              </View> */}
+            </>
+          )}
         </View>
 
         {/* Footer tagline */}
@@ -807,23 +853,158 @@ function HealthWorkerHome() {
         </View>
       </ScrollViewWithHeaders>
       <UserGuideModal visible={showGuide} onClose={() => setShowGuide(false)} />
-    </LinearGradient>
+    </View>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PATIENT HOME  (original code — completely untouched)
+// PATIENT HOME
 // ─────────────────────────────────────────────────────────────────────────────
+
+// PLACEHOLDER content — swap in real patient testimonials (and photos, if
+// available) before shipping; these are not real quotes.
+const TESTIMONIALS = [
+  {
+    name: "Asha R.",
+    role: "Patient",
+    quote:
+      "The UACR test was so easy to do at home. Results came back within minutes and gave me real peace of mind.",
+    avatar: images.femaleProfile,
+  },
+  {
+    name: "Rajesh K.",
+    role: "Patient",
+    quote:
+      "I was worried about my kidney health, but HelloKidney made it simple to track and understand my results.",
+    avatar: images.maleProfile,
+  },
+  {
+    name: "Priya M.",
+    role: "Patient",
+    quote:
+      "Quick, reliable and affordable. I recommend this to anyone managing diabetes who wants to stay on top of things.",
+    avatar: images.femaleProfile,
+  },
+  {
+    name: "Suresh V.",
+    role: "Patient",
+    quote:
+      "The app guided me step by step through the test. No need to visit a lab every time — huge time saver.",
+    avatar: images.maleProfile,
+  },
+] as const;
+
+// The carousel sits inside the screen's ScrollView, which has
+// paddingHorizontal: 22 (see pt.scrollContent) — that's the FlatList's own
+// rendered width, i.e. the "viewport" each card snaps within.
+const TESTIMONIAL_VIEWPORT_WIDTH = screenWidth - 44;
+const TESTIMONIAL_CARD_GAP = 10;
+// Sized so one snapped card fills ~90% of the viewport, leaving ~10% of the
+// next card peeking in at the edge.
+const TESTIMONIAL_CARD_WIDTH =
+  Math.round(TESTIMONIAL_VIEWPORT_WIDTH * 0.9) - TESTIMONIAL_CARD_GAP;
+const TESTIMONIAL_AUTOSCROLL_MS = 3500;
+
+function TestimonialsCarousel() {
+  const listRef = useRef<FlatList>(null);
+  const indexRef = useRef(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      indexRef.current = (indexRef.current + 1) % TESTIMONIALS.length;
+      listRef.current?.scrollToIndex({ index: indexRef.current, animated: true });
+    }, TESTIMONIAL_AUTOSCROLL_MS);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <FlatList
+      ref={listRef}
+      data={TESTIMONIALS}
+      keyExtractor={(item) => item.name}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      snapToInterval={TESTIMONIAL_CARD_WIDTH + TESTIMONIAL_CARD_GAP}
+      decelerationRate="fast"
+      contentContainerStyle={{ gap: TESTIMONIAL_CARD_GAP }}
+      onScrollToIndexFailed={(info) => {
+        listRef.current?.scrollToOffset({
+          offset: info.index * (TESTIMONIAL_CARD_WIDTH + TESTIMONIAL_CARD_GAP),
+          animated: true,
+        });
+      }}
+      renderItem={({ item }) => (
+        <View style={[pt.testimonialCard, { width: TESTIMONIAL_CARD_WIDTH }]}>
+          <View style={{ flexDirection: "row", gap: 2, marginBottom: 8 }}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Ionicons key={i} name="star" size={14} color="#FFC107" />
+            ))}
+          </View>
+          <Text style={pt.testimonialQuote}>"{item.quote}"</Text>
+          <View style={pt.testimonialFooter}>
+            <Image source={item.avatar} style={pt.testimonialAvatar} />
+            <View>
+              <Text style={pt.testimonialName}>{item.name}</Text>
+              <Text style={pt.testimonialRole}>{item.role}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+    />
+  );
+}
+
 function PatientHome() {
   const [showGuide, setShowGuide] = useState(false);
+  const [kitContentHeight, setKitContentHeight] = useState(0);
   const insets = useSafeAreaInsets();
+  const tabBarScrollHandler = useTabBarScrollHandler();
+  const { user } = useUserStore();
+  const isReturningUser = useUserStore((s) => s.isReturningUser);
+  // This screen has no data fetch of its own — the brief skeleton here is
+  // purely to avoid the WhatsApp/Help cards popping in right as the screen
+  // mounts, matching the loading treatment used on the health-worker Home.
+  const [linksReady, setLinksReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLinksReady(true), 400);
+    return () => clearTimeout(t);
+  }, []);
+
+  const [latestResult, setLatestResult] = useState<LatestUacrResult | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchLatestResult = async () => {
+        if (!user?.userId) return;
+        try {
+          const data = await axiosClient.get("/users/tests", {
+            params: { patient_id: user.userId, page: 1, limit: 1 },
+          });
+          const item = Array.isArray(data) ? data[0] : null;
+          if (!item || !isActive) return;
+          const metrics = JSON.parse(item.output_metrics || "{}");
+          setLatestResult({
+            uacr: metrics?.uacrInfo?.value,
+            stage: metrics?.uacrInfo?.stage,
+            albumin: metrics?.microalbuminInfo?.value,
+            creatinine: metrics?.creatinineInfo?.value,
+            date: item.created_timestamp,
+          });
+        } catch (error) {
+          console.error("Failed to fetch latest uACR result:", error);
+        }
+      };
+      fetchLatestResult();
+      return () => {
+        isActive = false;
+      };
+    }, [user?.userId]),
+  );
+
   const startTest = () => {
     router.push({
-      pathname: "/components/TimerCameraUploader",
+      pathname: "/components/start-test",
     });
-    //  router.push({
-    //   pathname: "/components/camera/TimerCameraUploader",
-    // });
   };
 
   return (
@@ -831,21 +1012,47 @@ function PatientHome() {
       style={{
         flex: 1,
         backgroundColor: colors.bg_primary,
-        paddingTop: insets.top,
+        paddingTop: insets.top + 12,
       }}
     >
       {/* <StatusBar backgroundColor={colors.bg_home} barStyle={"light-content"} /> */}
       <StatusBar barStyle={"dark-content"} backgroundColor={colors.bg_home} animated />
-      <View style={pt.container}>
-        <View style={pt.logoSection}>
-          <Image
-            source={images.logoFull}
-            resizeMode="contain"
-            style={pt.logoImage}
-          />
+      <View style={hw.header}>
+        <View style={hw.headerLeft}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            hitSlop={10}
+            onPress={() => router.push("/profile")}
+          >
+            <MenuIcon size={28} color={colors.black} />
+          </TouchableOpacity>
+          <View style={hw.headerTextWrap}>
+            <Text style={hw.welcomeText}>
+              {isReturningUser ? "Welcome back!" : "Welcome!"}
+            </Text>
+            <Text style={hw.nameText}>{capitalizeName(user?.userName)}</Text>
+          </View>
         </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          hitSlop={10}
+          style={hw.helpBtn}
+          onPress={() => router.push("/help")}
+        >
+          <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
+          <Text style={hw.helpBtnText}>Help</Text>
+        </TouchableOpacity>
+      </View>
+      <ReanimatedAnimated.ScrollView
+        style={pt.container}
+        contentContainerStyle={pt.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={tabBarScrollHandler}
+        scrollEventThrottle={16}
+      >
         <View style={pt.startSection}>
-          <RoundButton
+          {/* Previous circular "START TEST" button — replaced with the card below */}
+          {/* <RoundButton
             size={200}
             borderWidth={22}
             content="START TEST"
@@ -853,21 +1060,291 @@ function PatientHome() {
             textColor="red"
             borderColor="#3A4665"
             onPress={startTest}
-          />
+          /> */}
+          {/* TEMP: both "Start uACR Test" card designs shown together for
+              manager review — once a design is picked, delete the other
+              block (and its unused _Old or non-_Old styles). */}
+          {!latestResult && (
+            <View style={pt.startCard}>
+              <Text style={pt.startCardTitleSmall}>Check your</Text>
+              <Text style={pt.startCardTitleLarge}>Kidney Health</Text>
+              <Text style={pt.startCardSubtitle}>in 60 seconds</Text>
+              <Image
+                source={images.kidneyThemeTest}
+                resizeMode="contain"
+                style={pt.startCardImage}
+              />
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={startTest}
+                style={pt.startCardCtaWrapper}
+              >
+                <LinearGradient
+                  colors={["#E1121B", "#BA1A22"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={pt.startCardCta}
+                >
+                  <Text style={pt.startCardCtaText}>Start uACR Test</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          )}
+          {/* <TouchableOpacity activeOpacity={0.85} onPress={startTest} style={pt.startCardWrapperOld}>
+            <LinearGradient
+              colors={[colors.primary, "#FF7A63"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={pt.startCardOld}
+            >
+              <View style={pt.startCardIconWrapOld}>
+                <Ionicons name="pulse" size={28} color={colors.white} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={pt.startCardTitleOld}>Check your Kidney health</Text>
+                <Text style={pt.startCardSubtitleOld}>in 60 seconds</Text>
+                <View style={pt.startCardCtaOld}>
+                  <Text style={pt.startCardCtaTextOld}>Start uACR Test</Text>
+                  <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity> */}
         </View>
-        <View style={pt.bottomBackground}>
-          <Text style={pt.bottomTitle}>{`Screen Early-Act Early`}</Text>
-          <View style={{ alignItems: "center", flexDirection: "row" }}>
-            <Text style={[pt.subtitle, { marginRight: 10 }]}>
-              Detects Kidney Disease in 60 seconds.
-            </Text>
+
+        {latestResult && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={pt.resultCard}
+            onPress={() => {
+              const patientData = {
+                address: null,
+                age: user?.age ? Number(user.age) : null,
+                city: null,
+                created_on: "",
+                district: null,
+                email_id: null,
+                full_name: user?.userName || "",
+                gender: user?.gender || "",
+                locality: null,
+                mobile_no: user?.phone || "",
+                patient_id: user?.userId,
+                patient_uniqueid: null,
+                pincode: null,
+                state: null,
+                user_name: user?.userName || null,
+              };
+              router.push({
+                pathname: "/patients/[id]",
+                params: {
+                  id: user?.userId || "",
+                  data: JSON.stringify(patientData),
+                },
+              });
+            }}
+          >
+            <View style={pt.resultCardHeader}>
+              <SvgXml xml={KIDNEY_RESULT_SVG} width={48} height={65} />
+              <View style={{ flex: 1 }}>
+                <Text style={pt.resultCardTitle}>uACR test results</Text>
+                <Text style={pt.resultCardDate}>
+                  {latestResult.date
+                    ? dayjs(latestResult.date).format("Do, MMM")
+                    : ""}
+                </Text>
+
+                <View style={pt.resultPrimaryBox}>
+                  <View
+                    style={{
+                      flex: 1,
+                      flexDirection: "row",
+                      alignItems: "baseline",
+                      marginRight: 8,
+                    }}
+                  >
+                    <Text
+                      style={[
+                        pt.resultStageValue,
+                        {
+                          color:
+                            UACR_STAGE_META[
+                              getUacrStage(latestResult.uacr) || ""
+                            ]?.color ?? colors.black,
+                        },
+                      ]}
+                    >
+                      {getUacrStage(latestResult.uacr) || "—"}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        pt.resultStageLabel,
+                        {
+                          flexShrink: 1,
+                          color:
+                            UACR_STAGE_META[
+                              getUacrStage(latestResult.uacr) || ""
+                            ]?.color ?? "#1a1a1a",
+                        },
+                      ]}
+                    >
+                      {UACR_STAGE_META[getUacrStage(latestResult.uacr) || ""]
+                        ?.label ?? ""}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text numberOfLines={1} style={pt.resultStatLabel}>uACR</Text>
+                    <Text numberOfLines={1} style={pt.resultStatValue}>
+                      {latestResult.uacr || "N/A"}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={pt.resultStatRow}>
+                  <View style={pt.resultStatBox}>
+                    <Text numberOfLines={1} style={pt.resultStatLabel}>Microalbumin</Text>
+                    <Text numberOfLines={1} style={pt.resultStatValue}>
+                      {latestResult.albumin || "N/A"}
+                    </Text>
+                  </View>
+                  <View style={pt.resultStatBox}>
+                    <Text numberOfLines={1} style={pt.resultStatLabel}>Creatinine</Text>
+                    <Text numberOfLines={1} style={pt.resultStatValue}>
+                      {latestResult.creatinine || "N/A"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        <Text
+          style={{
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.black,
+            marginTop: 14,
+          }}
+        >
+          Get your Kit
+        </Text>
+        <View style={pt.kitCard}>
+          <Image
+            source={images.uacrKit}
+            resizeMode="contain"
+            style={[
+              pt.kitCardImage,
+              {
+                height: (kitContentHeight || 135) - 15,
+                width: ((kitContentHeight || 135) - 15) * (870 / 1178),
+              },
+            ]}
+          />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <View
+              onLayout={(e) => setKitContentHeight(e.nativeEvent.layout.height)}
+            >
+              <Text style={pt.kitCardTitle}>
+                Early Kidney Health Screening, Right at Home!
+              </Text>
+              <Text style={pt.kitCardSubtitle}>
+                Detect Early Signs of Kidney Damage at Home with HelloKidney UACR Kit.
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => Linking.openURL("https://hellokidney.ai/uacr.html")}
+              style={pt.kitCardBtnWrapper}
+            >
+              <LinearGradient
+                colors={["#E1121B", "#BA1A22"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={pt.kitCardBtn}
+              >
+                <Text style={pt.kitCardBtnText}>Buy Now</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </View>
-        {/* Patient uses the same UserGuideCard but positioned absolutely */}
-        <View style={pt.infoCardWrapper}>
-          <UserGuideCard onPress={() => setShowGuide(true)} />
-        </View>
-      </View>
+
+        <Text
+          style={{
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.black,
+            marginTop: 14,
+          }}
+        >
+          Other Links
+        </Text>
+        {/* <UserGuideCard onPress={() => setShowGuide(true)} /> */}
+
+        {!linksReady ? (
+          <>
+            <AssistCardSkeleton cardStyle={hw.whatsappCard} />
+            <AssistCardSkeleton cardStyle={hw.helpCard} />
+          </>
+        ) : (
+          <>
+            <View style={hw.whatsappCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={hw.assistCardTitle}>Need further assistance?</Text>
+                <Text style={hw.assistCardSubtitle}>We are here to help you!</Text>
+                <TouchableOpacity
+                  style={hw.whatsappBtn}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    Linking.openURL(
+                      `https://wa.me/${SUPPORT_PHONE_NUMBER.replace("+", "")}`
+                    )
+                  }
+                >
+                  <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+                  <Text style={hw.whatsappBtnText}>WhatsApp</Text>
+                </TouchableOpacity>
+              </View>
+              <Image
+                source={images.whatsappSupportAgent}
+                resizeMode="contain"
+                style={hw.assistCardImage}
+              />
+            </View>
+
+            {/* <View style={hw.helpCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={hw.assistCardTitle}>Need help getting started?</Text>
+                <Text style={hw.assistCardSubtitle}>Browse our FAQs and guides</Text>
+                <TouchableOpacity
+                  style={hw.helpCardBtn}
+                  activeOpacity={0.8}
+                  onPress={() => router.push("/help")}
+                >
+                  <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
+                  <Text style={hw.helpCardBtnText}>Help Center</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={hw.helpCardIconWrap}>
+                <Ionicons name="help-circle" size={56} color={colors.primary} />
+              </View>
+            </View> */}
+          </>
+        )}
+
+        <Text
+          style={{
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.black,
+            marginTop: 14,
+            marginBottom: 0,
+          }}
+        >
+          What Our Patients Say
+        </Text>
+        <TestimonialsCarousel />
+      </ReanimatedAnimated.ScrollView>
       <UserGuideModal visible={showGuide} onClose={() => setShowGuide(false)} />
     </View>
   );
@@ -895,7 +1372,7 @@ const shared = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: "hidden",
-    height: screenHeight * 0.65,
+    maxHeight: screenHeight * 0.65,
   },
   modalHeader: {
     flexDirection: "row",
@@ -990,13 +1467,18 @@ const shared = StyleSheet.create({
 // HEALTH WORKER STYLES
 // ─────────────────────────────────────────────────────────────────────────────
 const hw = StyleSheet.create({
-  headerAccent: {
+  cornerAccent: {
     position: "absolute",
     top: 0,
     right: 0,
+    width: CORNER_ACCENT_WIDTH,
+    height: CORNER_ACCENT_HEIGHT,
+    // Large radius so the bottom-left corner reads as a soft curve/wave
+    // instead of a hard rectangular edge cutting into the page.
+    borderBottomLeftRadius: CORNER_ACCENT_HEIGHT,
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingTop: 0,
     paddingBottom: 16,
     flexDirection: "row",
@@ -1005,6 +1487,25 @@ const hw = StyleSheet.create({
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
   headerTextWrap: {},
+  helpBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: Platform.OS === "android" ? 3 : 0,
+  },
+  helpBtnText: {
+    fontSize: rf(14),
+    fontWeight: "600",
+    color: colors.primary,
+  },
   addPatientBtn: {
     fontSize: rf(14),
     fontWeight: "700",
@@ -1032,7 +1533,7 @@ const hw = StyleSheet.create({
   // initialsText: { fontSize: rf(22), fontWeight: "700", color: "#FFFFFF" },
   profileName: {
     fontSize: rf(20),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
@@ -1040,7 +1541,7 @@ const hw = StyleSheet.create({
   nameText: {
     fontSize: rf(20),
     color: "#000000",
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: -0.2,
   },
   searchBar: {
@@ -1053,60 +1554,100 @@ const hw = StyleSheet.create({
     borderColor: colors.BORDER1,
     paddingHorizontal: 16,
     height: 40,
-    marginHorizontal: 16,
+    marginHorizontal: 22,
     marginBottom: 20,
   },
   searchPlaceholder: { fontSize: rf(14), color: "#8A8A8E" },
 
   lightSection: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 22,
     paddingTop: 0,
     paddingBottom: 24,
     gap: 10,
   },
 
-  careTeamCard: {
-    backgroundColor: "#DDEEDD",
-    borderRadius: 14,
+  // Shared "need assistance" card shape — WhatsApp and Help Center reuse the
+  // same layout (title/subtitle/pill button on the left, illustration on
+  // the right) with different background, button, and image per card.
+  assistCardTitle: {
+    fontSize: rf(16),
+    fontWeight: "700",
+    color: colors.black,
+    marginBottom: 4,
+  },
+  assistCardSubtitle: {
+    fontSize: rf(12),
+    color: "#5B6170",
+    marginBottom: 14,
+  },
+  assistCardImage: { width: 72, height: 72 },
+  helpCardIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.bg_primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  whatsappCard: {
+    backgroundColor: "#E8F5EC",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 18,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  careTeamTitle: {
-    fontSize: rf(17),
-    fontWeight: "800",
-    color: colors.black,
-    marginBottom: 4,
-  },
-  careTeamSubtitle: {
-    fontSize: rf(12),
-    color: colors.black,
-    marginBottom: 14,
-  },
-  careTeamBtnRow: { flexDirection: "row", gap: 10 },
-  careTeamBtn: {
+  whatsappBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#111111",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 30,
+    justifyContent: "center",
+    alignSelf: "flex-start",
+    gap: 8,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "#25D366",
+    height: 38,
+    paddingHorizontal: 18,
+    borderRadius: 19,
   },
-  careTeamBtnText: { color: colors.white, fontWeight: "700", fontSize: rf(13) },
-  careTeamImage: { width: 84, height: 84 },
+  whatsappBtnText: { color: colors.black, fontWeight: "700", fontSize: rf(14) },
+  helpCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  helpCardBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-start",
+    gap: 8,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    height: 38,
+    paddingHorizontal: 18,
+    borderRadius: 19,
+  },
+  helpCardBtnText: { color: colors.primary, fontWeight: "700", fontSize: rf(14) },
 
   footerTagline: {
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
     paddingTop: 28,
-    paddingBottom: 8,
+    paddingBottom: 40,
     gap: 10,
   },
   footerTaglineTitle: {
     fontSize: rf(26),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#F2B4BA",
     textAlign: "center",
   },
@@ -1140,15 +1681,16 @@ const hw = StyleSheet.create({
   // should inherit that shape rather than override it.
   skeletonBlock: { backgroundColor: "#DDE6F5" },
   skeletonLine: { height: 12, borderRadius: 6, backgroundColor: "#E2E8F0" },
+  skeletonBtn: { width: 130, height: 38, borderRadius: 30, marginTop: 4 },
   statLabel: { fontSize: rf(12), color: colors.black },
   statValue: {
     fontSize: rf(20),
-    fontWeight: "800",
+    fontWeight: "700",
     color: colors.black,
     letterSpacing: -0.5,
   },
 
-  sectionTitle: { fontSize: rf(16), fontWeight: "800", color: "#0D1B2E" },
+  sectionTitle: { fontSize: rf(16), fontWeight: "700", color: "#0D1B2E" },
 
   // Empty state
   emptyCard: {
@@ -1158,7 +1700,7 @@ const hw = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     borderWidth: 1.5,
-    borderColor: "#DDE6F5",
+    borderColor: "#D2D2D5",
     borderStyle: "dashed",
   },
   emptyCircle: {
@@ -1256,34 +1798,240 @@ const hw = StyleSheet.create({
 // ─────────────────────────────────────────────────────────────────────────────
 const pt = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg_primary },
-  logoSection: { alignItems: "center", paddingTop: "18%" },
-  logoImage: { width: 200 },
-  startSection: { alignItems: "center", marginVertical: 20, marginTop: 55 },
-  bottomBackground: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
+  scrollContent: {
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_BOTTOM_MARGIN,
+    gap: 10,
+  },
+  startSection: { alignItems: "center", gap: 14 },
+  startCard: {
     width: "100%",
-    height: "35%",
-    backgroundColor: colors.bg_home,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.white,
+    paddingVertical: 24,
+    paddingHorizontal: 18,
     alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: 80,
   },
-  bottomTitle: {
-    fontSize: 34,
+  startCardTitleSmall: {
+    fontSize: rf(16),
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  startCardTitleLarge: {
+    fontSize: rf(26),
+    fontWeight: "700",
+    color: colors.primary,
+    marginTop: 2,
+  },
+  startCardSubtitle: {
+    fontSize: rf(14),
+    fontWeight: "600",
+    color: colors.primary,
+    marginTop: 6,
+  },
+  startCardImage: {
+    width: 150,
+    height: 150,
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  startCardCtaWrapper: {
+    borderRadius: 30,
+  },
+  startCardCta: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 44,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+  },
+  // --- Previous red-gradient "Start uACR Test" card styles — kept for the
+  // commented-out JSX above, not deleted. ---
+  startCardWrapperOld: {
+    width: "100%",
+    borderRadius: 16,
+  },
+  startCardOld: {
+    borderRadius: 16,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  startCardIconWrapOld: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  startCardTitleOld: {
+    fontSize: rf(15),
+    fontWeight: "700",
+    color: colors.white,
+    marginBottom: 4,
+  },
+  startCardSubtitleOld: {
+    fontSize: rf(12),
+    color: "rgba(255,255,255,0.85)",
+    marginBottom: 14,
+  },
+  startCardCtaOld: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 4,
+    backgroundColor: colors.white,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  startCardCtaTextOld: {
+    fontSize: rf(12),
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  startCardCtaText: {
+    fontSize: rf(14),
+    fontWeight: "700",
+    color: colors.white,
+  },
+  kitCard: {
+    width: "100%",
+    borderRadius: 16,
+    backgroundColor: colors.black,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  kitCardImage: { alignSelf: "flex-start", paddingRight: 8 },
+  kitCardTitle: {
+    fontSize: rf(15),
+    fontWeight: "700",
+    color: colors.white,
+    marginBottom: 6,
+  },
+  kitCardSubtitle: {
+    fontSize: rf(11),
+    color: "rgba(255,255,255,0.7)",
+    marginBottom: 14,
+  },
+  kitCardBtnWrapper: {
+    alignSelf: "flex-start",
+    borderRadius: 24,
+  },
+  kitCardBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 40,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+  },
+  kitCardBtnText: {
+    fontSize: rf(14),
+    fontWeight: "700",
+    color: colors.white,
+  },
+  resultCard: {
+    width: "100%",
+    borderRadius: 16,
+    backgroundColor: "#FAE3E4",
+    padding: 16,
+    borderColor: "#E3B3B3",
+    borderWidth: 1,
+  },
+  resultCardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  resultCardTitle: {
+    fontSize: rf(15),
+    fontWeight: "700",
+    color: colors.black,
+  },
+  resultCardDate: {
+    fontSize: rf(12),
+    color: "#1a1a1a",
+    marginTop: 2,
+  },
+  resultPrimaryBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  resultStageValue: {
+    fontSize: rf(20),
     fontWeight: "800",
-    color: "#454d69",
-    textAlign: "center",
   },
-  subtitle: { fontSize: 18, fontWeight: "400", color: "white" },
-  infoCardWrapper: {
-    position: "absolute",
-    bottom: "28%",
-    width: "85%",
-    alignSelf: "center",
+  resultStageLabel: {
+    fontSize: rf(11),
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginLeft: 6,
+  },
+  resultStatRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  resultStatBox: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  resultStatLabel: {
+    fontSize: rf(11),
+    color: "#1a1a1a",
+    marginBottom: 4,
+  },
+  resultStatValue: {
+    fontSize: rf(14),
+    fontWeight: "700",
+    color: colors.black,
+  },
+  testimonialCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
+  },
+  testimonialQuote: {
+    fontSize: rf(13),
+    color: colors.text,
+    lineHeight: rf(19),
+  },
+  testimonialFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 14,
+    gap: 10,
+  },
+  testimonialAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  testimonialName: {
+    fontSize: rf(13),
+    fontWeight: "700",
+    color: colors.black,
+  },
+  testimonialRole: {
+    fontSize: rf(11),
+    color: colors.textSecondary,
   },
   profileAvatar: {
     width: 48,
@@ -1300,7 +2048,7 @@ const pt = StyleSheet.create({
   initialsText: { fontSize: rf(22), fontWeight: "700", color: "#FFFFFF" },
   profileName: {
     fontSize: rf(20),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },

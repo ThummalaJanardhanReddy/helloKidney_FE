@@ -1,15 +1,8 @@
 // components/CommonModal.tsx
 
 import React from "react";
-import {
-  Modal,
-  StyleProp,
-  StyleSheet,
-  Text,
-  TextStyle,
-  View,
-  ViewStyle,
-} from "react-native";
+import { Modal, StyleProp, StyleSheet, TextStyle, View, ViewStyle } from "react-native";
+import Text from "../components/Text";
 import PrimaryButton from "./PrimaryButton";
 import { colors } from "./commonStyles";
 
@@ -69,7 +62,6 @@ const CommonModal: React.FC<CommonModalProps> = ({
                   {
                     backgroundColor: "transparent",
                     minWidth: 100,
-                    paddingVertical: 12,
                     paddingHorizontal: 18,
                     borderRadius: 8,
                     borderWidth: 1,
@@ -95,7 +87,6 @@ const CommonModal: React.FC<CommonModalProps> = ({
                 {
                   minWidth: 100,
                   width: "40%",
-                  paddingVertical: 12,
                   paddingHorizontal: 18,
                   borderRadius: 8,
                 },

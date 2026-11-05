@@ -1,17 +1,7 @@
 import { COUNTRIES, Country } from "@/src/utils/constants";
 import React, { useState, useEffect } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  Dimensions,
-  Platform,
-  StatusBar,
-} from "react-native";
+import { Modal, View, TextInput, TouchableOpacity, FlatList, StyleSheet, Dimensions, Platform, StatusBar } from "react-native";
+import Text from "./Text";
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 

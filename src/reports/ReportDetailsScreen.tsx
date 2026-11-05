@@ -1,70 +1,202 @@
 import { useUserStore } from "@/app/stores/userStore";
 import { images } from "@/assets";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
   Image,
+  ScrollView,
   Share,
-  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from "react-native-svg";
+import Text from "../../app/components/Text";
 import { generatePDF } from "../utils/helper";
-import PrimaryButton from "@/app/shared/PrimaryButton";
 import Toast from "@/app/shared/Toast";
 import { colors } from "@/app/shared/commonStyles";
 
-// Format date and time
-const formatDateTime = (timestamp: string | number) => {
-  if (!timestamp) return "N/A";
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleString("en-US", {
-      month: "numeric",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  } catch {
-    return "N/A";
+// ── Hero "dome" shape: a blue gradient block whose top edge dips then arches
+// up around the kidney illustration. HERO_CURVE is traced directly from the
+// reference design (sampled pixel-by-pixel off the mockup, then normalized
+// to width/height fractions), so the dip/rise/peak proportions match it
+// exactly rather than being hand-guessed. The path is built from the card's
+// real measured width (via onLayout), so the rounded corners stay perfectly
+// circular on every device instead of being squashed by non-uniform scaling.
+const HERO_H = 108; // 20px below the icon/title row's bottom (heroArch+18 top + 40 icon height + 20)
+// arch height as a fraction of the card's own width (105/734 measured off the
+// reference mockup) — tying it to width, the same way HERO_CURVE's x values
+// are fractions of width, keeps the dome's proportions correct at any device
+// size instead of distorting when the real width differs from a fixed guess.
+const HERO_ARCH_RATIO = 0.1431;
+const HERO_RADIUS = 22;
+const HERO_PEAK_FRAC = 0.6254; // x-fraction of HERO_CURVE's peak point
+const KIDNEY_W_RATIO = 0.52; // kidney art width as a fraction of card width (padded in from the edges)
+const KIDNEY_ASPECT = 1536 / 1024; // source asset aspect ratio
+const KIDNEY_H_SCALE = 0.8; // shrinks the art's height a bit shorter than its natural aspect
+
+// [fractionOfWidth, fractionOfArchHeight] pairs tracing the dome's rise,
+// peak, and fall — everything outside this range is the flat baseline.
+// These sit on a raised-cosine ease (y = (1 - cos(pi * t)) / 2 going up to
+// the peak, mirrored coming down), which has zero slope at the rise/fall
+// start, at the peak, and at the fall's end by construction — a curve built
+// this way can't kink at the joins no matter how it's sampled/interpolated.
+// The rise/fall span (0.30 to 0.97) is deliberately wide so the dome reads
+// as one broad mountain rather than a narrow, contained hump, with enough
+// flat run-up on the left before the icon/title row for it not to feel cramped.
+const HERO_CURVE: [number, number][] = [
+  [0.3, 0.0],
+  [0.325, 0.0145],
+  [0.3501, 0.0573],
+  [0.3751, 0.1257],
+  [0.4001, 0.216],
+  [0.4252, 0.3227],
+  [0.4502, 0.4397],
+  [0.4752, 0.5603],
+  [0.5002, 0.6773],
+  [0.5253, 0.784],
+  [0.5503, 0.8743],
+  [0.5753, 0.9427],
+  [0.6004, 0.9855],
+  [0.6254, 1.0],
+  [0.6519, 0.9855],
+  [0.6784, 0.9427],
+  [0.7049, 0.8743],
+  [0.7314, 0.784],
+  [0.7579, 0.6773],
+  [0.7844, 0.5603],
+  [0.811, 0.4397],
+  [0.8375, 0.3227],
+  [0.864, 0.216],
+  [0.8905, 0.1257],
+  [0.917, 0.0573],
+  [0.9435, 0.0145],
+  [0.97, 0.0],
+];
+
+// Catmull-Rom → cubic-bezier through a point list — gives a C1-continuous
+// (truly smooth, no faceting) curve through every sample, unlike drawing a
+// quadratic to each midpoint.
+const smoothThroughPoints = (pts: number[][]) => {
+  let d = "";
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += `C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)} `;
   }
+  return d;
+};
+
+// evenly-spaced flat (y=0) points strictly between x0 and x1, exclusive
+const buildHeroPath = (w: number, arch: number) => {
+  const r = HERO_RADIUS;
+  const curvePts = HERO_CURVE.map(([fx, fy]) => [fx * w, -fy * arch]);
+  // the curve itself has zero slope at its first/last points (cosine ease),
+  // so a single flat anchor on each side joins cleanly with no kink.
+  const pts = [[r, 0], ...curvePts, [w - r, 0]];
+
+  let d = `M ${r},0 `;
+  d += smoothThroughPoints(pts);
+  d += `A ${r},${r} 0 0 1 ${w},${r} `;
+  d += `L ${w},${HERO_H} L 0,${HERO_H} L 0,${r} `;
+  d += `A ${r},${r} 0 0 1 ${r},0 Z`;
+  return d;
+};
+
+// ── uACR stage → risk label/color/explanation ──────────────────────────────
+type StageKey = "A1" | "A2" | "A3";
+
+const STAGE_INFO: Record<
+  StageKey,
+  { label: string; color: string; tint: string; meaning: string }
+> = {
+  A1: {
+    label: "Low Risk",
+    color: "#1A9F5C",
+    tint: "#E3F8EC",
+    meaning:
+      "Your uACR is in the A1 range, which indicates normal kidney function.",
+  },
+  A2: {
+    label: "Slightly Abnormal",
+    color: "#D98B1F",
+    tint: "#FDF1DE",
+    meaning:
+      "Your uACR is in the A2 range, which indicates mildly increased albumin — worth keeping an eye on.",
+  },
+  A3: {
+    label: "High Risk",
+    color: colors.primary,
+    tint: "#FBE6E4",
+    meaning:
+      "Your uACR is in the A3 range, which indicates high risk of kidney problem.",
+  },
+};
+
+const getStageKey = (stage?: string): StageKey => {
+  const match = stage?.toUpperCase().match(/A[123]/);
+  return (match?.[0] as StageKey) || "A1";
+};
+
+// value/unit come through as a single "40.0 mg/g" string — split for display
+const splitValue = (raw?: string) => {
+  const [value, unit] = (raw || "").split(" ");
+  return { value: value || "N/A", unit: unit || "" };
 };
 
 export default function ReportDetails({ report }: { report: any }) {
-  //   const { report } = route.params;
+  const router = useRouter();
   const user = useUserStore((s) => s.user);
+  const { width: winWidth } = useWindowDimensions();
+  const [heroWidth, setHeroWidth] = useState(winWidth - 36);
+  const heroArch = heroWidth * HERO_ARCH_RATIO;
+  const kidneyImgW = heroWidth * KIDNEY_W_RATIO;
+  const kidneyImgH = (kidneyImgW / KIDNEY_ASPECT) * KIDNEY_H_SCALE;
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
 
+  const stageKey = getStageKey(report?.stage);
+  const stageInfo = STAGE_INFO[stageKey];
+
+  const uacr = splitValue(report?.uacr);
+  const uacrSi = splitValue(report?.si?.value);
+  const albumin = splitValue(report?.albumin);
+  const creatinine = splitValue(report?.creatinine);
+  // report.date is "DD MMM YYYY: hh:mm A" — the pill only shows the date part
+  const dateOnly = (report?.date || "N/A").split(":")[0].trim();
+
   const shareReport = async () => {
     try {
       await Share.share({
         message: `
-UACR Report
+HelloKidney — uACR Test
 
-Patient ID: ${report.patientId}
-Test ID: ${report.testId}
+Patient: ${report?.patientName || "N/A"}
+Date: ${report?.date || "N/A"}
 
-Albumin: ${report.albumin}
-Creatinine: ${report.creatinine}
-UACR: ${report.uacr}
+uACR: ${report?.uacr || "N/A"}${report?.si?.value ? ` (${report.si.value})` : ""}
+Microalbumin: ${report?.albumin || "N/A"}
+Creatinine: ${report?.creatinine || "N/A"}
 
-Stage: ${report.stage}
-Reference: ${report.reference}
-Confidence: ${report.confidence}%
-        `,
+Stage ${stageKey} — ${stageInfo.label}
+        `.trim(),
       });
     } catch (error) {
       console.log(error);
     }
   };
 
-  const handlegeneratePDF = async () => {
+  const handleGeneratePDF = async () => {
     try {
       await generatePDF(report);
     } catch (error) {
@@ -73,520 +205,504 @@ Confidence: ${report.confidence}%
     }
   };
 
-  // Reusable Components
-  const DetailRow = ({ label, value }: { label: string; value?: string }) => (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}:</Text>
-      <Text style={styles.detailValue}>{value || "N/A"}</Text>
+  const handleTestAgain = () => {
+    router.push({ pathname: "/components/TimerCameraUploader" });
+  };
+
+  const MetricRow = ({
+    icon,
+    iconColor,
+    label,
+    value,
+    unit,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    iconColor: string;
+    label: string;
+    value: string;
+    unit: string;
+  }) => (
+    <View style={styles.metricRow}>
+      <Ionicons name={icon} size={18} color={iconColor} />
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue}>
+        {value} <Text style={styles.metricUnit}>{unit}</Text>
+      </Text>
     </View>
   );
 
-  const headerSection = (
-    <View style={styles.reportContainer}>
-      {/* Patient Details Section */}
-      <View style={styles.section}>
-        <View style={styles.patientDetailsGrid}>
-          <DetailRow label="Name" value={report?.patientName} />
-          <DetailRow
-            label="Age"
-            value={`${report?.age ? report.age + " years" : "N/A"}`}
-          />
-          <DetailRow label="Gender" value={report?.gender} />
-          <DetailRow
-            label="Patient ID"
-            value={String(report?.patientId)?.padStart(4, "0")}
-          />
-          <DetailRow label="Test ID" value={report?.testId} />
-          <DetailRow
-            label="Report Date & Time"
-            value={report?.date ? report.date : "N/A"}
-          />
-          {report?.testedBy && (
-            <DetailRow label="Test done by" value={report.testedBy} />
-          )}
-        </View>
+  const RangeChip = ({ stage, range }: { stage: StageKey; range: string }) => {
+    const info = STAGE_INFO[stage];
+    return (
+      <View style={[styles.rangeChip, { backgroundColor: info.tint }]}>
+        <Text style={[styles.rangeChipStage, { color: info.color }]}>{stage}</Text>
+        <Text style={styles.rangeChipText}>{range}</Text>
       </View>
-    </View>
-  );
-
-  const NoteItem = ({ text }: { text: string }) => (
-    <View style={styles.noteRow}>
-      <Text style={styles.bullet}>{`\u2022`}</Text>
-      <Text style={styles.noteText}>{text}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={[styles.card, { padding: 0, margin: 5 }]}>
-        <View style={styles.content}>
-          {/* TITLE */}
-          <Text style={styles.sectionTitle}>Urine Test Result</Text>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+      <View
+        style={styles.reportCard}
+        onLayout={(e) => setHeroWidth(e.nativeEvent.layout.width)}
+      >
+        {/* ── Hero dome: curved blue gradient background the kidney art sits on ── */}
+        <Svg
+          width={heroWidth}
+          height={HERO_H + heroArch}
+          viewBox={`0 ${-heroArch} ${heroWidth} ${HERO_H + heroArch}`}
+          style={styles.heroSvg}
+        >
+          <Defs>
+            <SvgLinearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={colors.bg_home} />
+              <Stop offset="1" stopColor={colors.blue} />
+            </SvgLinearGradient>
+          </Defs>
+          <Path d={buildHeroPath(heroWidth, heroArch)} fill="url(#heroGrad)" />
+        </Svg>
 
-          {/* TABLE */}
-          <View style={styles.table}>
-            {/* TABLE HEADER */}
-            <View style={[styles.tableRow, styles.tableHeader]}>
-              <Text style={[styles.headerCell, { flex: 2 }]}>
-                Investigation
-              </Text>
-              <Text style={styles.headerCell}>Observed Values</Text>
-              <Text style={styles.headerCell}>Units</Text>
-              <Text style={[styles.headerCell, { flex: 2 }]}>
-                Reference Range
-              </Text>
+        {/* ── White result body, flush below the dome's flat rectangle ── */}
+        <View style={styles.cardBody}>
+          <View style={styles.riskRow}>
+            <View style={[styles.riskCircle, { borderColor: stageInfo.color }]}>
+              <Text style={[styles.riskStage, { color: stageInfo.color }]}>{stageKey}</Text>
+              <Text style={styles.riskLabel}>{stageInfo.label}</Text>
             </View>
 
-            {/* GROUP TITLE */}
-            <View style={styles.groupTitleRow}>
-              <Text style={styles.groupTitleText}>
-                URINE ALBUMIN / CREATININE RATIO
-              </Text>
-            </View>
-
-            {/* UACR */}
-            <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
-              <Text style={[styles.cell, { flex: 2 }]}>uACR</Text>
-
-              <Text style={styles.cell}>{report?.uacr?.split(" ")[0] || "N/A"}</Text>
-
-              <Text style={styles.cell}>{report?.uacr?.split(" ")[1] || "N/A"}</Text>
-
-              <View style={[styles.cell, { flex: 2 }]}>
-                <Text style={styles.referenceText}>
-                  Normal : A1 (&lt; 30 mg/g)
-                </Text>
-
-                <Text style={styles.referenceText}>
-                  Slightly Abnormal : A2 (30 - 300 mg/g)
-                </Text>
-
-                <Text style={styles.referenceText}>
-                  Abnormal : A3 (&gt; 300 mg/g)
-                </Text>
+            <View style={styles.metricsCol}>
+              <View>
+                <MetricRow
+                  icon="clipboard-outline"
+                  iconColor="#6B5FD3"
+                  label="uACR"
+                  value={uacr.value}
+                  unit={uacr.unit}
+                />
+                {report?.si?.value && (
+                  <Text style={styles.metricSubValue}>
+                    {uacrSi.value} {uacrSi.unit}
+                  </Text>
+                )}
               </View>
-            </View>
-
-            <View style={styles.tableRow}>
-              <Text style={[styles.cell, { flex: 2 }]}></Text>
-
-              <Text style={[styles.cell, {borderTopWidth: 1, borderTopColor: "#DADADA"}]}>{report?.si?.value?.split(" ")[0] || "N/A"}</Text>
-
-              <Text style={[styles.cell, {borderTopWidth: 1, borderTopColor: "#DADADA"}]}>{report?.si?.value?.split(" ")[1] || "N/A"}</Text>
-
-              <View style={[styles.cell, { flex: 2, borderTopWidth: 1, borderTopColor: "#DADADA" }]}>
-                <Text style={styles.referenceText}>
-                  Normal : A1 (&lt; 3 mg/mmol)
-                </Text>
-
-                <Text style={styles.referenceText}>
-                  Slightly Abnormal : A2 (3 - 30 mg/mmol)
-                </Text>
-
-                <Text style={styles.referenceText}>
-                  Abnormal : A3 (&gt; 30 mg/mmol)
-                </Text>
-              </View>
-            </View>
-
-            {/* MICROALBUMIN */}
-            <View style={styles.tableRow}>
-              <Text style={[styles.cell, { flex: 2 }]}>Microalbumin</Text>
-
-              <Text style={styles.cell}>{report?.albumin?.split(" ")[0] || "N/A"}</Text>
-
-              <Text style={styles.cell}>{report?.albumin?.split(" ")[1] || "N/A"}</Text>
-
-              <Text style={[styles.cell, { flex: 2 }]}>&lt; 20 mg/L</Text>
-            </View>
-
-            {/* CREATININE */}
-            <View style={styles.tableRow}>
-              <Text style={[styles.cell, { flex: 2 }]}>Creatinine</Text>
-
-              <Text style={styles.cell}>{report?.creatinine?.split(" ")[0] || "N/A"}</Text>
-
-              <Text style={styles.cell}>{report?.creatinine?.split(" ")[1] || "N/A"}</Text>
-
-              <Text style={[styles.cell, { flex: 2 }]}>10 - 300 mg/dL</Text>
+              <MetricRow
+                icon="water-outline"
+                iconColor={colors.primary}
+                label="Microalbumin"
+                value={albumin.value}
+                unit={albumin.unit}
+              />
+              <MetricRow
+                icon="flask-outline"
+                iconColor={colors.blue}
+                label="Creatinine"
+                value={creatinine.value}
+                unit={creatinine.unit}
+              />
             </View>
           </View>
 
-          {/* NOTES */}
-          <View style={styles.noteContainer}>
-            <Text style={styles.noteTitle}>Note</Text>
-
-            <NoteItem text="The urine routine is a screening test." />
-
-            <NoteItem text="Pre-test conditions to be observed while testing: first void, mid-stream urine, collected in a clean, dry, sterile container is recommended for routine urine analysis to avoid contamination with any discharge from the vagina and urethra." />
-
-            <NoteItem text="Negative nitrite test does not exclude the presence of bacteria or urinary tract infections." />
-
-            <NoteItem text="Trace proteinuria can be seen with many physiological conditions like prolonged recumbency, exercise, high protein diet, etc." />
-
-            {/* <NoteItem text="False reactions for bile pigments, proteins, glucose, and nitrites can be caused by disinfectants, therapeutic dyes, ascorbic acid, and certain drugs." /> */}
-
-            <NoteItem text="Physiological variations may affect the test results." />
-
-            {/* <NoteItem text="When trace results occur, it is recommended to retest using a fresh specimen from the same patient." /> */}
-
-            {/* <NoteItem text="Ketones may occur in urine during fasting, pregnancy, and strenuous exercise." /> */}
-
-            {/* <NoteItem text="Blood is often, but not invariably, found in the urine of menstruating females." /> */}
+          {/* ── Reference range legend ── */}
+          <View style={styles.refCard}>
+            <View style={styles.refHeaderRow}>
+              <Ionicons name="information-circle-outline" size={16} color="#6B7280" />
+              <Text style={styles.refHeaderText}>uACR Reference Range</Text>
+            </View>
+            <View style={styles.refChipsRow}>
+              <RangeChip stage="A1" range="< 30 mg/g" />
+              <RangeChip stage="A2" range="30 – 300 mg/g" />
+              <RangeChip stage="A3" range="> 300 mg/g" />
+            </View>
           </View>
 
-          {/* FOOTER */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>*** End of Report ***</Text>
+          {/* ── What it means ── */}
+          <View style={styles.meaningCard}>
+            <View style={styles.meaningIconWrap}>
+              <Ionicons name="medical-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.meaningTitle}>What it means?</Text>
+              <Text style={styles.meaningText}>{stageInfo.meaning}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+          </View>
+
+          {/* ── Share / Download ── */}
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.outlineBtn}
+              activeOpacity={0.8}
+              onPress={shareReport}
+            >
+              <Ionicons name="share-social-outline" size={18} color={colors.blue} />
+              <Text style={styles.outlineBtnText}>Share</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.filledBtn}
+              activeOpacity={0.85}
+              onPress={handleGeneratePDF}
+            >
+              <Ionicons name="download-outline" size={18} color={colors.white} />
+              <Text style={styles.filledBtnText}>Download</Text>
+            </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.shareBtnWrap}>
-          <PrimaryButton
-            title="Share Report"
-            onPress={handlegeneratePDF}
-            style={styles.shareBtn}
-            textStyle={styles.shareBtnText}
-          />
+
+        {/* ── Overlays on top of the dome: title row + kidney art ──
+            heroTopRow's right edge stops a little left of the kidney art's
+            horizontal center (its narrow tube/neck, not the wide blobs up
+            top, which sit higher than this row anyway) — enough room for
+            the date pill to be pushed to that edge via space-between, the
+            same way "40.0 mg/g" is pushed to the right of its metric row,
+            without the row's own content wrapping. */}
+        <View
+          style={[
+            styles.heroTopRow,
+            {
+              top: heroArch + 18,
+              right: heroWidth * (1 - HERO_PEAK_FRAC) + 24,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <View style={styles.heroIconWrap}>
+            <Ionicons name="flask-outline" size={20} color={colors.blue} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroTestName}>uACR Test</Text>
+            <View style={styles.nameDateRow}>
+              <Text
+                style={styles.heroPatientName}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {report?.patientName || user?.userName || "N/A"}
+              </Text>
+              <View style={styles.datePill}>
+                <Ionicons name="calendar-outline" size={11} color={colors.black} />
+                <Text style={styles.dateText}>{dateOnly}</Text>
+              </View>
+            </View>
+          </View>
         </View>
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
+
+        <Image
+          source={images.kidneyGlow}
+          style={[
+            styles.heroKidneyImage,
+            {
+              width: kidneyImgW,
+              height: kidneyImgH,
+              right: heroWidth * (1 - HERO_PEAK_FRAC) - kidneyImgW / 2,
+            },
+          ]}
+          resizeMode="contain"
+        />
       </View>
-    </ScrollView>
+
+      <TouchableOpacity
+        style={styles.testAgainBtn}
+        activeOpacity={0.88}
+        onPress={handleTestAgain}
+      >
+        <Ionicons name="refresh" size={20} color={colors.white} />
+        <Text style={styles.testAgainText}>Test Again</Text>
+      </TouchableOpacity>
+      </ScrollView>
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#F5F7FB",
-    flex: 1,
+    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingBottom: 30,
+    backgroundColor: colors.bg_primary,
   },
-  card: {
-    backgroundColor: "#fff",
-    margin: 16,
-    padding: 20,
-    borderRadius: 10,
-    // elevation: 3,
-    borderWidth: 0,
-    borderColor: "#E0E0E0",
+  reportCard: {
+    position: "relative",
+    marginTop: 12,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    backgroundColor: "#E8F0FE",
-    marginBottom: 4,
+  heroSvg: {
+    // the dome itself; overlays below are positioned absolutely on top of it
   },
-  sub: {
-    fontSize: 13,
-    color: "#555",
+  heroKidneyImage: {
+    // the dome's peak sits at reportCard's own top edge (y=0); this offset
+    // is the halo's breathing room above it, into the page background.
+    // width/height/right are set inline (they depend on the measured
+    // heroWidth).
+    
+    position: "absolute",
+    top: 10,
+    left:130,
+    zIndex: 5,
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#eee",
-    // marginVertical: 5,
-  },
-  row: {
+  heroTopRow: {
+    // top/right are set inline (depend on the measured heroArch/heroWidth)
+    position: "absolute",
+    left: 18,
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  label: {
-    fontWeight: "600",
-    color: "#333",
-  },
-  value: {
-    color: "#111",
-  },
-  highlight: {
-    color: "#2E7BE0",
-    fontWeight: "700",
-  },
-  image: {
-    height: 200,
-    marginTop: 20,
-    borderRadius: 8,
-  },
-  shareBtnWrap: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
-  shareBtn: {
+    alignItems: "center",
+    gap: 12,
     width: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 6,
-    paddingVertical: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
   },
-  shareBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-
-  // Logo Header
-  logoHeader: {
-    backgroundColor: "#2C3E50",
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  logoText: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  logoKidney: {
-    color: "#E74C3C",
-  },
-  logoIcon: {
+  heroIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#E74C3C",
+    backgroundColor: colors.white,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
   },
-  kidneyIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#fff",
+  heroTestName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.white,
   },
-
-  // Section
-  section: {
-    // paddingHorizontal: 24,
-    // paddingVertical: 20,
-    // borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  sectionHeader: {
-    backgroundColor: "#F5F5F5",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginHorizontal: -24,
-    marginTop: -20,
-    marginBottom: 16,
-  },
-  // sectionTitle: {
-  //   fontSize: 16,
-  //   fontWeight: "700",
-  //   color: "#333",
-  // },
-
-  // Patient Details
-  patientDetailsGrid: {
-    gap: 10,
-  },
-  // detailRow: {
-  //   flexDirection: "row",
-  //   alignItems: "flex-start",
-  // },
-  // detailLabel: {
-  //   fontSize: 15,
-  //   fontWeight: "700",
-  //   color: "#333",
-  //   width: 150,
-  // },
-  // detailValue: {
-  //   fontSize: 15,
-  //   color: "#333",
-  //   flex: 1,
-  // },
-  // Report Container (for screenshot)
-  reportContainer: {
-    backgroundColor: "#ffffff",
-    // margin: 16,
-    // marginVertical: 10,
-    paddingBottom: 10,
-    borderRadius: 8,
-    // overflow: "hidden",
-    // ...Platform.select({
-    //   ios: {
-    //     shadowColor: "#000",
-    //     shadowOffset: { width: 0, height: 2 },
-    //     shadowOpacity: 0.1,
-    //     shadowRadius: 8,
-    //   },
-    //   android: {
-    //     elevation: 4,
-    //   },
-    // }),
-  },
-
-  topHeader: {
-    backgroundColor: "#0E1833",
-    paddingVertical: 28,
-    paddingHorizontal: 20,
+  nameDateRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
+    marginTop: 2,
+    
   },
-
-  brandText: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#fff",
+  heroPatientName: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: "rgba(255,255,255,0.8)",
   },
-
-  brandKidney: {
-    color: "#E74C3C",
+  datePill: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 4,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    position: "absolute",
+    right: 30,
+    
   },
-
-  reportTitle: {
-    color: "#fff",
-    fontSize: 18,
+  dateText: {
+    fontSize: 8,
     fontWeight: "600",
+    color: colors.black,
   },
 
-  content: {
-    padding: 16,
+  // ── White result body, flush below the dome ──
+  cardBody: {
+    // sits directly below the Svg, which already occupies HERO_H + heroArch
+    // of normal-flow space above it — no extra margin needed here.
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: HERO_RADIUS,
+    borderBottomRightRadius: HERO_RADIUS,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+    padding: 18,
+    paddingTop: 26,
+    gap: 16,
   },
-
-  patientSection: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
+  riskRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
   },
-
-  patientGrid: {
+  riskCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.white,
+  },
+  riskStage: {
+    fontSize: 26,
+    fontWeight: "800",
+  },
+  riskLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.black,
+    textAlign: "center",
+    marginTop: 2,
+  },
+  metricsCol: {
+    flex: 1,
     gap: 10,
   },
-
-  detailRow: {
+  metricRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-  },
-
-  detailLabel: {
-    fontWeight: "700",
-    color: "#222",
-    marginRight: 5,
-  },
-
-  detailValue: {
-    color: "#444",
-    flexShrink: 1,
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-    color: "#2C3E50",
-    marginBottom: 18,
-  },
-
-  table: {
-    borderWidth: 1,
-    borderColor: "#DADADA",
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: "#fff",
-  },
-
-  tableHeader: {
-    backgroundColor: "#F4F6F8",
-  },
-
-  tableRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#DADADA",
-  },
-
-  headerCell: {
-    flex: 1,
-    padding: 10,
-    fontWeight: "700",
-    fontSize: 12,
-    color: "#222",
-  },
-
-  cell: {
-    flex: 1,
-    padding: 10,
-    fontSize: 12,
-    color: "#333",
-    borderRightWidth: 1,
-    borderRightColor: "#DADADA",
-  },
-
-  groupTitleRow: {
-    backgroundColor: "#F9FAFB",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#DADADA",
-  },
-
-  groupTitleText: {
-    fontWeight: "700",
-    color: "#2C3E50",
-    fontSize: 13,
-  },
-
-  referenceText: {
-    color: "#666",
-    fontSize: 11,
-    marginBottom: 4,
-  },
-
-  noteContainer: {
-    marginTop: 28,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-  },
-
-  noteTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 14,
-    color: "#2C3E50",
-  },
-
-  noteRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 10,
-  },
-
-  bullet: {
-    fontSize: 14,
-    marginRight: 8,
-    lineHeight: 20,
-  },
-
-  noteText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 20,
-    color: "#444",
-  },
-
-  footer: {
-    marginTop: 30,
-    marginBottom: 40,
     alignItems: "center",
+    gap: 8,
+  },
+  metricLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#1A1A1A",
+  },
+  metricValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.black,
+  },
+  metricUnit: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#1A1A1A",
+  },
+  metricSubValue: {
+    alignSelf: "flex-end",
+    fontSize: 11,
+    color: "#1A1A1A",
+    marginTop: 1,
   },
 
-  footerText: {
-    fontSize: 11,
-    color: "#666",
+  // ── Reference range ──
+  refCard: {
+    backgroundColor: "#F4F5FB",
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+  },
+  refHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  refHeaderText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.black,
+  },
+  refChipsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  rangeChip: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+    gap: 2,
+  },
+  rangeChipStage: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  rangeChipText: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: "#1A1A1A",
+  },
+
+  // ── What it means ──
+  meaningCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#F4F5FB",
+    borderRadius: 14,
+    padding: 14,
+  },
+  meaningIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  meaningTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.black,
+    marginBottom: 2,
+  },
+  meaningText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#1A1A1A",
+  },
+
+  // ── Share / Download ──
+  actionsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  outlineBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: colors.blue,
+    borderRadius: 24,
+    paddingVertical: 13,
+  },
+  outlineBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.blue,
+  },
+  filledBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.blue,
+    borderRadius: 24,
+    paddingVertical: 13,
+  },
+  filledBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.white,
+  },
+
+  // ── Test again ──
+  testAgainBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: colors.primary,
+    borderRadius: 26,
+    paddingVertical: 15,
+    marginTop: 18,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  testAgainText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.white,
   },
 });

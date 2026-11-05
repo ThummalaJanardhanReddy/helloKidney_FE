@@ -3,18 +3,8 @@ import { getAccessToken } from "@/src/services/tokenStorage";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Keyboard,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from "react-native";
+import { ActivityIndicator, Keyboard, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
+import Text from "./Text";
 
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import {
@@ -27,7 +17,7 @@ import { colors } from "../shared/commonStyles";
 import Toast from "../shared/Toast";
 import { useUserStore } from "../stores/userStore";
 
-const FORGOT_PASSWORD_BG = "#FDF4F5";
+const FORGOT_PASSWORD_BG = "#FCF2ED";
 
 // To-Do:
 // Author: Janardhan
@@ -293,7 +283,7 @@ function Rule({ text, valid }: { text: string; valid: boolean }) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingBottom: 24,
     paddingTop: 20,
     backgroundColor: FORGOT_PASSWORD_BG,
@@ -308,7 +298,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#d4d4d9",
+    borderColor: "#D2D2D5",
     backgroundColor: "white",
     borderRadius: 8,
     paddingHorizontal: 10,

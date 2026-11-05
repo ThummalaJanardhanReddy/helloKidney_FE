@@ -5,16 +5,8 @@ import {
 } from "@codeherence/react-native-header";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useState } from "react";
-import {
-  Dimensions,
-  Image,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Dimensions, Image, Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import Text from "../../components/Text";
 import * as Animatable from "react-native-animatable";
 import {
   interpolate,
@@ -279,7 +271,11 @@ export default function PatientsScreen() {
           )
         }
         LargeHeaderComponent={() => (
-          <View>
+          // The pinned search header above (collapsed, invisible at rest)
+          // already reserves ~60px of space before this renders — see its
+          // SearchInput's height:40 + marginBottom:20 — so adding `insets.top`
+          // again here double-clears the status bar. Just breathing room.
+          <View style={{ paddingTop: 12 }}>
             <View style={[styles.header, { paddingTop: 0, paddingBottom: 16 }]}>
               <Text style={styles.headerTitle}>Patient List</Text>
             </View>
@@ -314,7 +310,7 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingBottom: 18,
     flexDirection: "row",
     alignItems: "center",
@@ -329,7 +325,7 @@ const styles = StyleSheet.create({
 
   searchWrapper: {
     backgroundColor: HEADER_BG,
-    paddingHorizontal: 16,
+    paddingHorizontal: 22,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.08)",
     shadowColor: "#000",
@@ -363,7 +359,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 22,
     paddingVertical: 14,
     backgroundColor: "#FFFFFF",
     gap: 14,

@@ -1,16 +1,8 @@
 import { images } from "@/assets";
 import { router } from "expo-router";
 import React, { useRef, useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Image,
-  Animated,
-  Platform,
-} from "react-native";
+import { View, TouchableOpacity, StyleSheet, Dimensions, Image, Animated, Platform } from "react-native";
+import Text from "./Text";
 import { StatusBar } from "expo-status-bar";
 import { colors } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
@@ -22,7 +14,7 @@ const { width, height } = Dimensions.get("window");
 const scale = width / 390;
 const rf = (size: number) => Math.round(size * scale);
 
-const LOGIN_TYPE_BG = "#FDF4F5";
+const LOGIN_TYPE_BG = "#FCF2ED";
 
 export default function LoginTypeScreen({ navigation }) {
   // Animation values
@@ -252,7 +244,7 @@ const styles = StyleSheet.create({
   // Content panel
   contentPanel: {
     width: "100%",
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
     paddingTop: 50,
     paddingBottom: 28,
     backgroundColor: "transparent",
@@ -270,7 +262,7 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: rf(30),
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0D1B2A",
     lineHeight: rf(36),
     letterSpacing: -0.5,

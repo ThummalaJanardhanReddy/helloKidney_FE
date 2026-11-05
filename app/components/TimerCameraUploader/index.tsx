@@ -4,28 +4,16 @@ import {
   BarcodeScanningResult,
 } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
-import { router, useNavigation } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, {
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Dimensions,
-  Image,
-  Modal,
-  PanResponder,
-  PixelRatio,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import Svg, { Circle, SvgXml } from "react-native-svg";
+import { ActivityIndicator, Alert, Animated, Dimensions, Image, Modal, PanResponder, PixelRatio, StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "../Text";
+import { SvgXml } from "react-native-svg";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -46,15 +34,12 @@ import {
   CAMERA_TIMEOUT,
   ANALYSIS_INTERVAL,
   STABLE_TICKS_NEEDED,
-  C_SIZE,
-  C_STROKE,
-  C_RADIUS,
-  C_CIRC,
   FRAME_VISUAL,
   FrameState,
 } from "./constants";
 import { CameraOverlay } from "./CameraOverlay";
 import { runQualityGate, runChecksInOrder, decodeBase64Jpeg, QualityKey } from "./imageQuality";
+import CountdownRing, { CountdownRingHandle } from "./CountdownRing";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -83,14 +68,26 @@ export default function TimerCameraUploader() {
   const patient    = useUserStore((s) => s.patient);
   const userType   = useUserStore((s) => s.user?.userType);
 
+  // Set when this test was started for someone other than the logged-in
+  // user/selected patient (see app/components/start-test.tsx and
+  // other-patient-details.tsx) — forwarded to the backend alongside the
+  // existing fields so that subject's details aren't lost.
+  const { subjectType, relationType, fullName, age, gender } = useLocalSearchParams<{
+    subjectType?: string;
+    relationType?: string;
+    fullName?: string;
+    age?: string;
+    gender?: string;
+  }>();
+
   // ── Camera permission
   const [permission, requestPermission] = useCameraPermissions();
   useEffect(() => { if (!permission?.granted) requestPermission(); }, []);
 
   // ── Wait screen
   const [started,    setStarted]    = useState(false);
-  const [countdown,  setCountdown]  = useState(TOTAL_WAIT);
   const [showCamera, setShowCamera] = useState(false);
+  const countdownRingRef = useRef<CountdownRingHandle>(null);
 
   // ── Step guide swiper (wait screen)
   const [currentStep, setCurrentStep] = useState(0);
@@ -176,20 +173,25 @@ export default function TimerCameraUploader() {
   const visual = qualityGateFailed
     ? { color: "#F87171", label: "Card not detected" }
     : FRAME_VISUAL[frameState];
-  const strokeDashoffset = C_CIRC - C_CIRC * (countdown / TOTAL_WAIT);
 
   // Keep refs in sync with state
   useEffect(() => { previewUriRef.current = previewUri; }, [previewUri]);
   useEffect(() => { qrDataRef.current = qrData; }, [qrData]);
 
   // ─── Wait countdown ───────────────────────────────────────────────────────
+  // Actual elapsed-time tracking lives in CountdownRing (a stored end
+  // timestamp, re-synced on AppState changes) — this screen just reacts to
+  // its start/complete transitions.
 
-  useEffect(() => {
-    if (!started) return;
-    if (countdown === 0) { setShowCamera(true); setStarted(false); return; }
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [started, countdown]);
+  const handleStartTimer = useCallback(() => {
+    setStarted(true);
+    countdownRingRef.current?.start();
+  }, []);
+
+  const handleTimerComplete = useCallback(() => {
+    setStarted(false);
+    setShowCamera(true);
+  }, []);
 
   // ─── Deadline timer (20 s after camera opens) ─────────────────────────────
 
@@ -637,6 +639,14 @@ export default function TimerCameraUploader() {
       formData.append("hw_id",      user?.userId       || "unknown");
       formData.append("patient_id", patient.patient_id?.toString() || "null");
 
+      if (subjectType === "other") {
+        formData.append("subject_type",   "other");
+        formData.append("relation_type",  relationType || "");
+        formData.append("subject_name",   fullName     || "");
+        formData.append("subject_age",    age          || "");
+        formData.append("subject_gender", gender       || "");
+      }
+
       const response = await axiosClient.post("/users/process-test", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -706,7 +716,7 @@ export default function TimerCameraUploader() {
     setShowExitModal(false);
     resetAll();
     setShowCamera(false);
-    setCountdown(TOTAL_WAIT);
+    countdownRingRef.current?.reset();
     setStarted(false);
     navigation.goBack();
   }, [resetAll, navigation]);
@@ -780,24 +790,15 @@ export default function TimerCameraUploader() {
           {/* ── Timer / start section ── */}
           <View style={[styles.whiteSection, { paddingBottom: insets.bottom + 10 }]}>
             <View style={styles.timerBlock}>
-              <View style={styles.circleWrapper}>
-                <Svg width={C_SIZE} height={C_SIZE}>
-                  <Circle
-                    stroke="#3a4665" fill="none"
-                    cx={C_SIZE / 2} cy={C_SIZE / 2} r={C_RADIUS} strokeWidth={C_STROKE}
-                  />
-                  <Circle
-                    stroke="#12791a" fill="none"
-                    cx={C_SIZE / 2} cy={C_SIZE / 2} r={C_RADIUS} strokeWidth={C_STROKE}
-                    strokeDasharray={C_CIRC} strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    transform={`rotate(90, ${C_SIZE / 2}, ${C_SIZE / 2}) scale(-1, 1) translate(-${C_SIZE}, 0)`}
-                  />
-                </Svg>
-                <View style={styles.circleButton}>
-                  <Text style={styles.timerText}>{countdown}</Text>
-                </View>
-              </View>
+              <CountdownRing
+                ref={countdownRingRef}
+                durationSec={TOTAL_WAIT}
+                size={180}
+                strokeWidth={16}
+                progressColor="#2E8B5E"
+                trackColor="#E3ECE6"
+                onComplete={handleTimerComplete}
+              />
               <Text style={styles.waitText}>
                 Please wait for <Text style={{ fontWeight: "700" }}>{TOTAL_WAIT} seconds</Text>
               </Text>
@@ -809,15 +810,14 @@ export default function TimerCameraUploader() {
               </Text>
 
               <PrimaryButton
-                onPress={() => setStarted(true)}
-                title="Start timer"
+                onPress={handleStartTimer}
+                title={started ? "Timer running…" : "Start timer"}
                 style={{
                   width: "100%",
                   alignSelf: "center",
                   marginTop: 10,
                   backgroundColor: colors.primary,
                   borderRadius: 8,
-                  paddingVertical: 12,
                 }}
                 textStyle={{ color: "#fff", fontWeight: "700", letterSpacing: 0.3 }}
                 disabled={started}
@@ -1027,21 +1027,21 @@ const styles = StyleSheet.create({
   // ── Wait screen: header
   guideHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10,
+    paddingHorizontal: 22, paddingTop: 14, paddingBottom: 10,
   },
   guideHeaderTitle: { fontSize: 18, fontWeight: "600", color: "#FFFFFF" },
 
   // ── Wait screen: step guide swiper
   swiperSection: { flex: 1.05, backgroundColor: colors.bg_home, paddingTop: 0 },
-  slideCard: { width: screenWidth, alignItems: "center", paddingHorizontal: 24 },
-  slideStep: { color: colors.primary, fontSize: 13, fontWeight: "600", marginVertical: 14 },
+  slideCard: { width: screenWidth, alignItems: "center", paddingHorizontal: 22 },
+  slideStep: { color: colors.primary, fontSize: 18, fontWeight: "600", marginVertical: 14 },
   slideHeading: {
     fontSize: 15, fontWeight: "300", textAlign: "center",
     color: "#FFFFFF", marginBottom: 8,
   },
   slideImage: { width: "100%", height: 170 },
   slideDescription: {
-    fontSize: 14, textAlign: "center", color: "#FFFFFF", lineHeight: 18,
+    fontSize: 16, textAlign: "center", color: "#FFFFFF", lineHeight: 18,
   },
   dotsRow: {
     flexDirection: "row", justifyContent: "center", alignItems: "center",
@@ -1053,15 +1053,9 @@ const styles = StyleSheet.create({
   // ── Wait screen: timer / start section
   whiteSection: {
     flex: 1, backgroundColor: colors.white,
-    alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20,
+    alignItems: "center", justifyContent: "space-between", paddingHorizontal: 22,
   },
   timerBlock: { flex: 1, alignItems: "center", justifyContent: "center" },
-  circleWrapper: { justifyContent: "center", alignItems: "center" },
-  circleButton: {
-    position: "absolute", width: 145, height: 145, borderRadius: 72.5,
-    justifyContent: "center", alignItems: "center",
-  },
-  timerText: { fontSize: 42, fontWeight: "700", color: colors.black },
   waitText: {
     fontSize: 14, textAlign: "center", color: "#8A8C95", marginTop: 12,
   },
@@ -1101,7 +1095,7 @@ const styles = StyleSheet.create({
 
   // ── Preview screen
   previewHeader: {
-    backgroundColor: "#0E1833", paddingHorizontal: 20,
+    backgroundColor: "#0E1833", paddingHorizontal: 22,
     paddingBottom: 12, alignItems: "center",
   },
   previewHeaderText: { color: "#fff", fontSize: 18, fontWeight: "700" },
@@ -1114,7 +1108,7 @@ const styles = StyleSheet.create({
 
   previewFooter: {
     flexDirection: "row", gap: 12,
-    paddingHorizontal: 20, paddingTop: 16, backgroundColor: "#fff",
+    paddingHorizontal: 22, paddingTop: 16, backgroundColor: "#fff",
   },
   previewBtn: {
     flex: 1, height: 48, borderRadius: 8, alignItems: "center", justifyContent: "center",
