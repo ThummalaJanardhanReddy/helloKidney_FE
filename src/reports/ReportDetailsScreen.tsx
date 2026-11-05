@@ -522,6 +522,8 @@ const styles = StyleSheet.create({
     padding: 18,
     paddingTop: 26,
     gap: 16,
+    position: "relative",
+    bottom: 30,
   },
   riskRow: {
     flexDirection: "row",
