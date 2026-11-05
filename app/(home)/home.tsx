@@ -50,6 +50,7 @@ type LatestUacrResult = {
   albumin?: string;
   creatinine?: string;
   date?: string;
+  raw?: any;
 };
 
 const UACR_STAGE_META: Record<string, { label: string; color: string }> = {
@@ -989,6 +990,7 @@ function PatientHome() {
             albumin: metrics?.microalbuminInfo?.value,
             creatinine: metrics?.creatinineInfo?.value,
             date: item.created_timestamp,
+            raw: item,
           });
         } catch (error) {
           console.error("Failed to fetch latest uACR result:", error);
@@ -1135,10 +1137,10 @@ function PatientHome() {
                 user_name: user?.userName || null,
               };
               router.push({
-                pathname: "/patients/[id]",
+                pathname: "/components/test-results",
                 params: {
-                  id: user?.userId || "",
-                  data: JSON.stringify(patientData),
+                  data: JSON.stringify(latestResult.raw || {}),
+                  patientData: JSON.stringify(patientData),
                 },
               });
             }}
@@ -1147,9 +1149,12 @@ function PatientHome() {
               <SvgXml xml={KIDNEY_RESULT_SVG} width={48} height={65} />
               <View style={{ flex: 1 }}>
                 <Text style={pt.resultCardTitle}>uACR test results</Text>
+                <Text style={pt.resultCardPatientName} numberOfLines={1}>
+                  {user?.userName || ""}
+                </Text>
                 <Text style={pt.resultCardDate}>
                   {latestResult.date
-                    ? dayjs(latestResult.date).format("Do, MMM")
+                    ? dayjs(latestResult.date).format("Do MMM, YYYY")
                     : ""}
                 </Text>
 
@@ -1951,8 +1956,14 @@ const pt = StyleSheet.create({
   },
   resultCardTitle: {
     fontSize: rf(15),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
+  },
+  resultCardPatientName: {
+    fontSize: rf(12),
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginTop: 1,
   },
   resultCardDate: {
     fontSize: rf(12),

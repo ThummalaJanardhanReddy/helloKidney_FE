@@ -223,7 +223,7 @@ Stage ${stageKey} — ${stageInfo.label}
     unit: string;
   }) => (
     <View style={styles.metricRow}>
-      <Ionicons name={icon} size={18} color={iconColor} />
+      <Ionicons name={icon} size={16} color={iconColor} />
       <Text style={styles.metricLabel}>{label}</Text>
       <Text style={styles.metricValue}>
         {value} <Text style={styles.metricUnit}>{unit}</Text>
@@ -276,7 +276,7 @@ Stage ${stageKey} — ${stageInfo.label}
             </View>
 
             <View style={styles.metricsCol}>
-              <View>
+              <View style={styles.metricTableRow}>
                 <MetricRow
                   icon="clipboard-outline"
                   iconColor="#6B5FD3"
@@ -290,20 +290,24 @@ Stage ${stageKey} — ${stageInfo.label}
                   </Text>
                 )}
               </View>
-              <MetricRow
-                icon="water-outline"
-                iconColor={colors.primary}
-                label="Microalbumin"
-                value={albumin.value}
-                unit={albumin.unit}
-              />
-              <MetricRow
-                icon="flask-outline"
-                iconColor={colors.blue}
-                label="Creatinine"
-                value={creatinine.value}
-                unit={creatinine.unit}
-              />
+              <View style={styles.metricTableRow}>
+                <MetricRow
+                  icon="water-outline"
+                  iconColor={colors.primary}
+                  label="Microalbumin"
+                  value={albumin.value}
+                  unit={albumin.unit}
+                />
+              </View>
+              <View style={styles.metricTableRowLast}>
+                <MetricRow
+                  icon="flask-outline"
+                  iconColor={colors.blue}
+                  label="Creatinine"
+                  value={creatinine.value}
+                  unit={creatinine.unit}
+                />
+              </View>
             </View>
           </View>
 
@@ -323,7 +327,11 @@ Stage ${stageKey} — ${stageInfo.label}
           {/* ── What it means ── */}
           <View style={styles.meaningCard}>
             <View style={styles.meaningIconWrap}>
-              <Ionicons name="medical-outline" size={20} color={colors.primary} />
+              <Image
+                source={images.kidneyThemeTest}
+                style={styles.meaningIconImg}
+                resizeMode="contain"
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.meaningTitle}>What it means?</Text>
@@ -466,7 +474,7 @@ const styles = StyleSheet.create({
   },
   heroTestName: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
   },
   nameDateRow: {
@@ -478,7 +486,7 @@ const styles = StyleSheet.create({
   },
   heroPatientName: {
     fontSize: 13,
-    fontWeight: "400",
+    fontWeight: "600",
     color: "rgba(255,255,255,0.8)",
   },
   datePill: {
@@ -519,7 +527,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 3,
-    padding: 18,
+    paddingHorizontal: 12,
+    paddingBottom: 18,
     paddingTop: 26,
     gap: 16,
     position: "relative",
@@ -527,8 +536,8 @@ const styles = StyleSheet.create({
   },
   riskRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
+    alignItems: "flex-start",
+    gap: 12,
   },
   riskCircle: {
     width: 110,
@@ -552,12 +561,25 @@ const styles = StyleSheet.create({
   },
   metricsCol: {
     flex: 1,
-    gap: 10,
+    borderWidth: 1,
+    borderColor: "#ECEDF2",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  metricTableRow: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ECEDF2",
+  },
+  metricTableRowLast: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
   metricRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   metricLabel: {
     flex: 1,
@@ -623,19 +645,23 @@ const styles = StyleSheet.create({
   // ── What it means ──
   meaningCard: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
     backgroundColor: "#F4F5FB",
     borderRadius: 14,
     padding: 14,
   },
   meaningIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 50,
     backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
+  },
+  meaningIconImg: {
+    width: 50,
+    height: 50,
   },
   meaningTitle: {
     fontSize: 14,
@@ -694,8 +720,8 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: colors.primary,
     borderRadius: 26,
-    paddingVertical: 15,
-    marginTop: 18,
+    paddingVertical: 10,
+    marginTop: 0,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
