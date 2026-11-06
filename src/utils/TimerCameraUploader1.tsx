@@ -579,7 +579,7 @@ export default function TimerCameraUploader1() {
                       : colors.primary,
                     opacity: takePhotoDisabled ? 0.6 : 1,
                   }}
-                  textStyle={{ color: "#fff", fontWeight: "700" }}
+                  textStyle={{ color: "#fff", fontWeight: "600" }}
                   onPress={handleTakePhoto}
                 />
               </View>
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
 
   timerText: {
     fontSize: 42,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
   },
 
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
 
   previewTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: 10,
   },
 
@@ -816,7 +816,7 @@ const styles = StyleSheet.create({
 
   previewText: {
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "600",
   },
 
   buttonsContainer: {
@@ -837,7 +837,7 @@ const styles = StyleSheet.create({
 
   actionText: {
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "600",
   },
 
   // ----------------- MODAL -----------------
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
 
   statusText: {
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 16,
     textAlign: "center",
   },
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
 
   closeBtnText: {
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "600",
   },
 
   overlay: {
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
 
   errorTitle: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#DC3545",
     marginBottom: 8,
   },

@@ -13,7 +13,7 @@ import {
 } from "./constants";
 import { CornerBrackets } from "./Atoms";
 import BackButton from "../../shared/BackButton";
-import { colors } from "@/app/shared/commonStyles";
+import { colors, pageTitle } from "@/app/shared/commonStyles";
 import PrimaryButton from "@/app/shared/PrimaryButton";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -158,14 +158,13 @@ export function CameraOverlay({
 
 const s = StyleSheet.create({
   screenTitle: {
+    ...pageTitle,
     position: "absolute",
     top: 30,
     left: 0,
     right: 0,
     textAlign: "center",
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
     zIndex: 20,
   },
   mask: {
@@ -210,7 +209,7 @@ const s = StyleSheet.create({
   bannerText: {
     color: "#fff",
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "400",
     textAlign: "center",
   },
 

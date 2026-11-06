@@ -5,12 +5,14 @@ import utc from "dayjs/plugin/utc";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, RefreshControl, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
+import { SvgXml } from "react-native-svg";
 import Text from "../components/Text";
 import * as Animatable from "react-native-animatable";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import axiosClient from "../../src/services/axiosClient";
-import { colors } from "../shared/commonStyles";
+import { colors, pageTitle } from "../shared/commonStyles";
+import { KIDNEY_RESULT_SVG } from "../shared/resultSvgs";
 import { useUserStore } from "../stores/userStore";
 import { IPatient } from "@/src/utils/constants";
 import {
@@ -18,6 +20,35 @@ import {
   FLOATING_TAB_BAR_BOTTOM_MARGIN,
   useTabBarScrollHandler,
 } from "@/src/navigation/tabBarVisibility";
+
+const UACR_STAGE_META: Record<string, { label: string; color: string }> = {
+  A1: { label: "Normal", color: "#1FA24A" },
+  A2: { label: "Slightly Abnormal", color: "#F5A623" },
+  A3: { label: "Abnormal", color: "#D51E16" },
+};
+
+// Stage derived from the observed uACR value itself (mg/g): <30 Normal,
+// 30–300 Slightly Abnormal, >300 Abnormal.
+const getUacrStage = (uacrText?: string): "A1" | "A2" | "A3" | undefined => {
+  if (!uacrText) return undefined;
+  const value = parseFloat(uacrText);
+  if (Number.isNaN(value)) return undefined;
+  if (value < 30) return "A1";
+  if (value <= 300) return "A2";
+  return "A3";
+};
+
+// Pulls just the uACR value out of a test row's output_metrics JSON,
+// without surfacing microalbumin/creatinine — this list intentionally only
+// shows the headline uACR result, not the full panel.
+const getUacrValue = (outputMetrics?: string): string | undefined => {
+  if (!outputMetrics) return undefined;
+  try {
+    return JSON.parse(outputMetrics)?.uacrInfo?.value;
+  } catch {
+    return undefined;
+  }
+};
 
 const AnimatedFlatList = Animated.FlatList;
 
@@ -389,65 +420,116 @@ export default function TestList() {
   );
 
   const renderTestItem = useCallback(
-    ({ item }: { item: HealthworkerTestResponse | TestResponse }) => (
-      <TouchableOpacity
-        style={styles.item}
-        onPress={() => navigateToTestResults(item)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.iconBox}>
-          <Ionicons name="document-text-outline" size={26} />
-        </View>
-
-        <View style={{ flex: 1 }}>
-          {item.full_name && (
-            <Text style={styles.patientname}>
-              {item.full_name?.replaceAll(",", "")}
-              {(item.age || item.gender) && (
-                <Text style={styles.patientMetaInline}>
-                  , {item.age} years, {item.gender}
+    ({ item }: { item: HealthworkerTestResponse | TestResponse }) => {
+      const uacrValue = getUacrValue(item.output_metrics);
+      const stage = getUacrStage(uacrValue);
+      const stageMeta = stage ? UACR_STAGE_META[stage] : undefined;
+      return (
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigateToTestResults(item)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.cardHeader}>
+            <SvgXml xml={KIDNEY_RESULT_SVG} width={36} height={49} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>uACR test results</Text>
+              {item.full_name && (
+                <Text style={styles.cardPatientName} numberOfLines={1}>
+                  {item.full_name?.replaceAll(",", "")}
+                  {(item.age || item.gender) && (
+                    <Text style={styles.cardPatientMeta}>
+                      , {item.age} years, {item.gender}
+                    </Text>
+                  )}
                 </Text>
               )}
-            </Text>
-          )}
-          {/* <Text style={styles.testId}>PID: {String(item.patient_uniqueid || item.patient_id).padStart(4, "0")}</Text> */}
-          <Text style={styles.dateTime}>
-            Id: {item.test_id} |{" "}
-            {formatDate(item.created_timestamp || item.created_on)}
-          </Text>
-          {/* <Text style={styles.dateTime}>
-            {formatDate(item.created_timestamp || item.created_on)}
-          </Text> */}
-        </View>
+              <Text style={styles.cardDate}>
+                {formatDate(item.created_timestamp || item.created_on)}
+              </Text>
+            </View>
+          </View>
 
-        <Ionicons name="chevron-forward" size={20} color="#999" />
-      </TouchableOpacity>
-    ),
+          <View style={styles.cardPrimaryBox}>
+            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+              <Text
+                style={[styles.cardStageValue, { color: stageMeta?.color ?? colors.black }]}
+              >
+                {stage || "—"}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.cardStageLabel,
+                  { flexShrink: 1, color: stageMeta?.color ?? "#1a1a1a" },
+                ]}
+              >
+                {stageMeta?.label ?? ""}
+              </Text>
+            </View>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={styles.cardStatLabel}>uACR</Text>
+              <Text style={styles.cardStatValue}>{uacrValue || "N/A"}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    },
     [formatDate, navigateToTestResults],
   );
 
   const renderHWTestItem = useCallback(
-    ({ item }: { item: HealthworkerTestResponse | TestResponse }) => (
-      <TouchableOpacity
-        style={styles.item}
-        onPress={() => navigateToTestResults(item)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.iconBox}>
-          <Ionicons name="document-text-outline" size={26} />
-        </View>
+    ({ item }: { item: HealthworkerTestResponse | TestResponse }) => {
+      const uacrValue = getUacrValue(item.output_metrics);
+      const stage = getUacrStage(uacrValue);
+      const stageMeta = stage ? UACR_STAGE_META[stage] : undefined;
+      return (
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigateToTestResults(item)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.cardHeader}>
+            <SvgXml xml={KIDNEY_RESULT_SVG} width={36} height={49} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>uACR test results</Text>
+              {!!user?.userName && (
+                <Text style={styles.cardPatientName} numberOfLines={1}>
+                  {user.userName}
+                </Text>
+              )}
+              <Text style={styles.cardDate}>
+                {formatDate(item.created_timestamp || item.created_on)}
+              </Text>
+            </View>
+          </View>
 
-        <View style={{ flex: 1 }}>
-          <Text style={styles.patientname}>Id: {item.test_id}</Text>
-          <Text style={styles.dateTime}>
-            {formatDate(item.created_timestamp || item.created_on)}
-          </Text>
-        </View>
-
-        <Ionicons name="chevron-forward" size={20} color="#999" />
-      </TouchableOpacity>
-    ),
-    [formatDate, navigateToTestResults],
+          <View style={styles.cardPrimaryBox}>
+            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+              <Text
+                style={[styles.cardStageValue, { color: stageMeta?.color ?? colors.black }]}
+              >
+                {stage || "—"}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.cardStageLabel,
+                  { flexShrink: 1, color: stageMeta?.color ?? "#1a1a1a" },
+                ]}
+              >
+                {stageMeta?.label ?? ""}
+              </Text>
+            </View>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={styles.cardStatLabel}>uACR</Text>
+              <Text style={styles.cardStatValue}>{uacrValue || "N/A"}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [formatDate, navigateToTestResults, user?.userName],
   );
 
   const renderEmptyState = useCallback(
@@ -561,56 +643,73 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerText: {
-    fontSize: 18,
+    ...pageTitle,
     color: "#000000",
-    fontWeight: "600",
   },
 
-  item: {
-    backgroundColor: "#fff",
-    padding: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 22,
-    // borderRadius: 14,
+  card: {
+    borderRadius: 16,
+    backgroundColor: "#FAE3E4",
+    padding: 16,
+    borderColor: "#E3B3B3",
+    borderWidth: 1,
+    marginHorizontal: 16,
+    marginBottom: 14,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  cardTitle: {
+    fontSize: rf(15),
+    fontWeight: "600",
+    color: colors.black,
+  },
+  cardPatientName: {
+    fontSize: rf(12),
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginTop: 1,
+  },
+  cardPatientMeta: {
+    fontSize: rf(12),
+    fontWeight: "400",
+    color: "#1a1a1a",
+  },
+  cardDate: {
+    fontSize: rf(12),
+    color: "#1a1a1a",
+    marginTop: 2,
+  },
+  cardPrimaryBox: {
     flexDirection: "row",
     alignItems: "center",
-    borderColor: colors.border,
-    borderBottomWidth: 0.8,
+    justifyContent: "space-between",
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 14,
   },
-
-  iconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: "#ECF4FF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
-  },
-
-  patientname: {
-    fontSize: 14,
+  cardStageValue: {
+    fontSize: rf(20),
     fontWeight: "700",
-    color: colors.black,
-    marginBottom: 3,
   },
-
-  patientMetaInline: {
-    fontSize: 12,
-    fontWeight: "400",
-    color: colors.black,
-  },
-
-  testId: {
-    fontSize: 12,
+  cardStageLabel: {
+    fontSize: rf(11),
     fontWeight: "600",
-    color: "#333",
+    marginLeft: 6,
   },
-
-  dateTime: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
+  cardStatLabel: {
+    fontSize: rf(11),
+    color: "#1a1a1a",
+    marginBottom: 4,
+  },
+  cardStatValue: {
+    fontSize: rf(14),
+    fontWeight: "600",
+    color: colors.black,
   },
   skeletonContainer: {
     paddingHorizontal: 22,
@@ -641,7 +740,7 @@ const styles = StyleSheet.create({
     width: "70%",
   },
   listContent: {
-    paddingVertical: 0,
+    paddingTop: 16,
     paddingBottom: FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_BOTTOM_MARGIN,
   },
   listFooter: {
@@ -664,7 +763,7 @@ const styles = StyleSheet.create({
   },
   empty: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyIcon: { fontSize: 40 },
-  emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "500" },
+  emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "400" },
   navigatingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255,255,255,0.5)",

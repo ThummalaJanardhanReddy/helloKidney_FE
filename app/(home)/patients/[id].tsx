@@ -9,7 +9,8 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useEffect, useCallback } from "react";
-import { Animated, Dimensions, FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Animated, Dimensions, FlatList, Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { images } from "@/assets";
 import Text from "../../components/Text";
 import * as Animatable from "react-native-animatable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,6 +27,14 @@ dayjs.extend(timezone);
 
 const { width } = Dimensions.get("window");
 const rf = (size: number) => Math.round(size * (width / 390));
+
+// ── Gender avatar ──────────────────────────────────────────────────────────────
+const getGenderAvatar = (gender?: string | null) => {
+  const g = gender?.trim().toLowerCase();
+  if (g === "male") return images.maleProfile;
+  if (g === "female") return images.femaleProfile;
+  return images.noProfile;
+};
 
 // ── Placeholder reports data ──────────────────────────────────────────────────
 const MOCK_REPORTS = [
@@ -270,7 +279,7 @@ export default function PatientProfileScreen() {
   const handleStartNewTest = () => {
     useUserStore.getState().setSelectedPatient(patient);
     router.push({
-      pathname: "/components/TimerCameraUploader",
+      pathname: "/components/health-conditions",
     });
   };
 
@@ -306,23 +315,11 @@ export default function PatientProfileScreen() {
         >
           {/* Avatar + name */}
           <View style={styles.profileTop}>
-            {/* {patient.avatar ? (
-              <Image
-                source={{ uri: patient.avatar }}
-                style={styles.profileAvatar}
-              />
-            ) : ( */}
-            <View style={[styles.profileAvatar, styles.initialsAvatar]}>
-              <Text style={styles.initialsText}>
-                {patient.full_name
-                  .split(",")
-                  .map((w: string) => w.trim()[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase()}
-              </Text>
-            </View>
-            {/* )} */}
+            <Image
+              source={getGenderAvatar(patient.gender)}
+              style={styles.profileAvatar}
+              resizeMode="cover"
+            />
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={styles.profileName}>
                 {patient.full_name?.replaceAll(",", "")}
@@ -435,7 +432,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backArrow: { fontSize: rf(20), color: "#FFFFFF", lineHeight: rf(22) },
-  backLabel: { fontSize: rf(16), color: "#FFFFFF", fontWeight: "500" },
+  backLabel: { fontSize: rf(16), color: "#FFFFFF", fontWeight: "400" },
 
   profileCard: {
     backgroundColor: "#EFADE5",
@@ -466,15 +463,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  initialsText: { fontSize: rf(22), fontWeight: "700", color: "#FFFFFF" },
+  initialsText: { fontSize: rf(22), fontWeight: "600", color: "#FFFFFF" },
   profileName: {
     fontSize: rf(20),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
-  profileMetaInline: { fontSize: rf(14), fontWeight: "500", color: "#0D1B2E" },
-  profileMeta: { fontSize: rf(13), color: "#2D3E50", fontWeight: "500" },
+  profileMetaInline: { fontSize: rf(14), fontWeight: "400", color: "#0D1B2E" },
+  profileMeta: { fontSize: rf(13), color: "#2D3E50", fontWeight: "400" },
 
   cardDivider: {
     height: 1,
@@ -489,8 +486,8 @@ const styles = StyleSheet.create({
   },
   statBlock: { flex: 1, alignItems: "center", gap: 4 },
   statSep: { width: 1, height: 36, backgroundColor: "rgba(0,0,0,0.12)" },
-  statLabel: { fontSize: rf(12.5), color: "#3D5068", fontWeight: "500" },
-  statValue: { fontSize: rf(15), fontWeight: "700", color: "#0D1B2E" },
+  statLabel: { fontSize: rf(12.5), color: "#3D5068", fontWeight: "400" },
+  statValue: { fontSize: rf(15), fontWeight: "600", color: "#0D1B2E" },
 
   listContent: {
     paddingHorizontal: 22,
@@ -500,7 +497,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
     marginBottom: 8,
   },
@@ -545,7 +542,7 @@ const styles = StyleSheet.create({
   },
   pdfLabel: {
     fontSize: rf(9),
-    fontWeight: "700",
+    fontWeight: "600",
     color: ACCENT,
     letterSpacing: 0.5,
     marginTop: 4,
@@ -554,7 +551,7 @@ const styles = StyleSheet.create({
   reportInfo: { flex: 1, gap: 4 },
   reportTestId: { fontSize: rf(13.5), color: "#4A5E74" },
   reportDate: { fontSize: rf(13), color: "#4A5E74" },
-  bold: { fontWeight: "700", color: "#0D1B2E" },
+  bold: { fontWeight: "600", color: "#0D1B2E" },
 
   chevron: { fontSize: rf(22), color: "#B0C0D8", lineHeight: rf(26) },
 
@@ -589,7 +586,7 @@ const styles = StyleSheet.create({
   },
   ctaLabel: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     letterSpacing: 0.3,
   },
@@ -609,11 +606,11 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     letterSpacing: 0.3,
   },
   empty: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyIcon: { fontSize: 40 },
-  emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "500" },
+  emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "400" },
 });

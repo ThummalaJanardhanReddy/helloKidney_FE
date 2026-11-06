@@ -588,7 +588,7 @@ export default function TimerCameraUploader2() {
             title={waitStarted ? "Timer Running…" : "Start Timer"}
             disabled={waitStarted}
             style={[styles.startBtn, { marginBottom: insets.bottom + 20 }]}
-            textStyle={{ color: "#fff", fontWeight: "700", fontSize: 16 }}
+            textStyle={{ color: "#fff", fontWeight: "600", fontSize: 16 }}
           />
         </View>
       )}
@@ -874,17 +874,17 @@ const styles = StyleSheet.create({
   // Permission
   permissionText:    { color: "#94A3B8", fontSize: 16, textAlign: "center", maxWidth: 260, marginTop: 16 },
   permissionBtn:     { marginTop: 20, backgroundColor: "#38BDF8", paddingVertical: 12, paddingHorizontal: 32, borderRadius: 10 },
-  permissionBtnText: { color: "#050E1A", fontWeight: "700" },
+  permissionBtnText: { color: "#050E1A", fontWeight: "600" },
 
   // Wait screen
   waitScreen: { flex: 1, backgroundColor: "#050E1A" },
   waitBody:   { flex: 1, alignItems: "center", paddingHorizontal: 24, paddingTop: 12, gap: 24 },
   row:        { flexDirection: "row", alignItems: "center", gap: 10 },
-  screenTitle: { color: "#E2E8F0", fontSize: 20, fontWeight: "700", letterSpacing: 0.4 },
+  screenTitle: { color: "#E2E8F0", fontSize: 20, fontWeight: "600", letterSpacing: 0.4 },
 
   ringWrapper: { justifyContent: "center", alignItems: "center" },
   ringInner:   { position: "absolute", alignItems: "center" },
-  ringNum:     { color: "#F1F5F9", fontSize: 48, fontWeight: "700", letterSpacing: -2 },
+  ringNum:     { color: "#F1F5F9", fontSize: 48, fontWeight: "600", letterSpacing: -2 },
   ringSub:     { color: "#64748B", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginTop: -4 },
 
   stepCard: {
@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
     width: 40, height: 4, backgroundColor: "#334155",
     borderRadius: 2, alignSelf: "center", marginBottom: 20,
   },
-  previewTitle: { color: "#E2E8F0", fontSize: 18, fontWeight: "700", marginBottom: 4 },
+  previewTitle: { color: "#E2E8F0", fontSize: 18, fontWeight: "600", marginBottom: 4 },
   previewSub:   { color: "#64748B", fontSize: 13, marginBottom: 16, lineHeight: 18 },
   previewImage: {
     width: "100%", height: 360, borderRadius: 12,
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
     flex: 1.6, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8,
     paddingVertical: 14, borderRadius: 12, backgroundColor: "#38BDF8",
   },
-  uploadBtnText: { color: "#050E1A", fontWeight: "700", fontSize: 15 },
+  uploadBtnText: { color: "#050E1A", fontWeight: "600", fontSize: 15 },
 
   // Result modal
   resultBox: {
@@ -1008,7 +1008,7 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: 36, borderWidth: 2,
     justifyContent: "center", alignItems: "center", marginBottom: 16,
   },
-  resultTitle: { color: "#E2E8F0", fontSize: 20, fontWeight: "700", marginBottom: 8 },
+  resultTitle: { color: "#E2E8F0", fontSize: 20, fontWeight: "600", marginBottom: 8 },
   resultSub:   { color: "#64748B", fontSize: 14, textAlign: "center", lineHeight: 20, maxWidth: 260 },
   retryBtn: {
     marginTop: 24, backgroundColor: "#1E2D45",

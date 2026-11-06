@@ -178,13 +178,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: rf(22),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     letterSpacing: -0.3,
   },
   addBtn: {
     fontSize: rf(14),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#4DB8FF",
     letterSpacing: 0.2,
   },
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   },
   avatarInitials: {
     fontSize: rf(18),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#3A6BA8",
   },
 
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   patientName: {
     fontSize: rf(15.5),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
     letterSpacing: -0.1,
   },
@@ -298,6 +298,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: rf(15),
     color: "#9BADC4",
-    fontWeight: "500",
+    fontWeight: "400",
   },
 });

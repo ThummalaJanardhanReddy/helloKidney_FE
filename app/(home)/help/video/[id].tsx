@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     marginBottom: 14,
   },
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   watchBtnText: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
   },
 });

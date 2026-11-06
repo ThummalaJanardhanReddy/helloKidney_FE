@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
 
   subtitle: {
     fontSize: rf(13),
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#E07080",
     letterSpacing: 1.4,
     textTransform: "uppercase",
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: rf(30),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2A",
     lineHeight: rf(36),
     letterSpacing: -0.5,
@@ -332,13 +332,13 @@ const styles = StyleSheet.create({
 
   cardLabel: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1A2B3C",
     letterSpacing: 0.2,
   },
   cardLabelSub: {
     fontSize: rf(11),
-    fontWeight: "500",
+    fontWeight: "400",
     color: colors.textSecondary,
     letterSpacing: 0.1,
   },

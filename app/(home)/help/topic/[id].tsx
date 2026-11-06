@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   },
   question: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     marginBottom: 14,
   },

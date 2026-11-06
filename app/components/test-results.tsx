@@ -7,7 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
-import { colors } from "../shared/commonStyles";
+import { colors, pageTitle } from "../shared/commonStyles";
 import ReportDetails from "@/src/reports/ReportDetailsScreen";
 import { useUserStore } from "../stores/userStore";
 import { formatDate, generatePDF } from "@/src/utils/helper";
@@ -322,8 +322,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
+    ...pageTitle,
     color: "#000",
   },
 
@@ -369,7 +368,7 @@ const styles = StyleSheet.create({
   },
   logoText: {
     fontSize: 28,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#fff",
   },
   logoKidney: {
@@ -407,7 +406,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#333",
   },
 
@@ -421,7 +420,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#333",
     width: 150,
   },
@@ -482,7 +481,7 @@ const styles = StyleSheet.create({
   },
   diseaseRiskText: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#333",
     marginBottom: 8,
   },
@@ -520,7 +519,7 @@ const styles = StyleSheet.create({
   },
   doneButtonText: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#fff",
   },
 });

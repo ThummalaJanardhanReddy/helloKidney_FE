@@ -366,7 +366,7 @@
 //   },
 //   permBtnText: {
 //     color: "#020817",
-//     fontWeight: "700",
+//     fontWeight: "600",
 //   },
 
 //   // ── Modals ─────────────────────────────────────────────────────────────────
@@ -389,7 +389,7 @@
 //   modalTitle: {
 //     color: "#F1F5F9",
 //     fontSize: 20,
-//     fontWeight: "700",
+//     fontWeight: "600",
 //   },
 //   modalMsg: {
 //     color: "#94A3B8",
@@ -415,7 +415,7 @@
 //   previewTitle: {
 //     color: "#F1F5F9",
 //     fontSize: 18,
-//     fontWeight: "700",
+//     fontWeight: "600",
 //     marginBottom: 4,
 //   },
 //   previewSub: {
@@ -452,7 +452,7 @@
 //   },
 //   previewBtnText: {
 //     color: "#fff",
-//     fontWeight: "700",
+//     fontWeight: "600",
 //     fontSize: 14,
 //   },
 // });

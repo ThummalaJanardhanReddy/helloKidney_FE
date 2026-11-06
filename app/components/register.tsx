@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: "600",
     textAlign: "left",
     marginBottom: 24,
     color: colors.black,
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   },
   genderText: {
     color: "#374151",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   passwordWrapper: {
     flexDirection: "row",

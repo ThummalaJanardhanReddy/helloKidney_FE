@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   backLabel: {
     fontSize: rf(16),
     color: "#FFFFFF",
-    fontWeight: "500",
+    fontWeight: "400",
   },
 
   // Profile card
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   },
   avatarInitials: {
     fontSize: rf(22),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
   },
   profileNameBlock: {
@@ -297,14 +297,14 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: rf(20),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
   profileMeta: {
     fontSize: rf(13),
     color: "#2D3E50",
-    fontWeight: "500",
+    fontWeight: "400",
   },
 
   cardDivider: {
@@ -332,11 +332,11 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: rf(12.5),
     color: "#3D5068",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   statValue: {
     fontSize: rf(15),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
     letterSpacing: -0.2,
   },
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
     marginBottom: 14,
     letterSpacing: -0.2,
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   },
   pdfIconText: {
     fontSize: rf(9),
-    fontWeight: "700",
+    fontWeight: "600",
     color: ACCENT,
     letterSpacing: 0.5,
     marginTop: 4,
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   reportTestIdBold: {
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
   },
   reportDate: {
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   reportDateBold: {
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
   },
   reportChevron: {
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   ctaLabel: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     letterSpacing: 0.3,
   },

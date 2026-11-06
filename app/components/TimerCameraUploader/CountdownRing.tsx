@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   timerText: {
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     fontVariant: ["tabular-nums"],
   },

@@ -20,7 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 
 import axiosClient from "../../../src/services/axiosClient";
-import { colors } from "../../shared/commonStyles";
+import { colors, pageTitle } from "../../shared/commonStyles";
 import PrimaryButton from "../../shared/PrimaryButton";
 import CommonModal from "../../shared/CommonModel";
 import { useUserStore } from "../../stores/userStore";
@@ -72,12 +72,13 @@ export default function TimerCameraUploader() {
   // user/selected patient (see app/components/start-test.tsx and
   // other-patient-details.tsx) — forwarded to the backend alongside the
   // existing fields so that subject's details aren't lost.
-  const { subjectType, relationType, fullName, age, gender } = useLocalSearchParams<{
+  const { subjectType, relationType, fullName, age, gender, healthConditions } = useLocalSearchParams<{
     subjectType?: string;
     relationType?: string;
     fullName?: string;
     age?: string;
     gender?: string;
+    healthConditions?: string;
   }>();
 
   // ── Camera permission
@@ -646,6 +647,11 @@ export default function TimerCameraUploader() {
         formData.append("subject_age",    age          || "");
         formData.append("subject_gender", gender       || "");
       }
+      if (healthConditions) {
+        // comma-joined condition keys selected on the Health Details screen
+        // (see app/components/health-conditions.tsx), e.g. "diabetes,obesity"
+        formData.append("health_conditions", healthConditions);
+      }
 
       const response = await axiosClient.post("/users/process-test", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -729,7 +735,7 @@ export default function TimerCameraUploader() {
         <StatusBar style="light" animated />
         <Text style={{ color: "#fff", marginBottom: 12 }}>Camera access required</Text>
         <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
-          <Text style={{ color: "#020817", fontWeight: "700" }}>Grant Permission</Text>
+          <Text style={{ color: "#020817", fontWeight: "600" }}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
     );
@@ -800,7 +806,7 @@ export default function TimerCameraUploader() {
                 onComplete={handleTimerComplete}
               />
               <Text style={styles.waitText}>
-                Please wait for <Text style={{ fontWeight: "700" }}>{TOTAL_WAIT} seconds</Text>
+                Please wait for <Text style={{ fontWeight: "600" }}>{TOTAL_WAIT} seconds</Text>
               </Text>
             </View>
 
@@ -819,7 +825,7 @@ export default function TimerCameraUploader() {
                   backgroundColor: colors.primary,
                   borderRadius: 8,
                 }}
-                textStyle={{ color: "#fff", fontWeight: "700", letterSpacing: 0.3 }}
+                textStyle={{ color: "#fff", fontWeight: "600", letterSpacing: 0.3 }}
                 disabled={started}
               />
             </View>
@@ -1029,7 +1035,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 22, paddingTop: 14, paddingBottom: 10,
   },
-  guideHeaderTitle: { fontSize: 18, fontWeight: "600", color: "#FFFFFF" },
+  guideHeaderTitle: { ...pageTitle, color: "#FFFFFF" },
 
   // ── Wait screen: step guide swiper
   swiperSection: { flex: 1.05, backgroundColor: colors.bg_home, paddingTop: 0 },
@@ -1061,7 +1067,7 @@ const styles = StyleSheet.create({
   },
   startBlock: { width: "100%", alignItems: "center" },
   scanNote: {
-    fontSize: 15, fontWeight: "700", textAlign: "center",
+    fontSize: 15, fontWeight: "600", textAlign: "center",
     color: colors.black,
   },
 
@@ -1091,14 +1097,14 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  capturingText: { fontSize: 14, fontWeight: "500", color: "#000" },
+  capturingText: { fontSize: 14, fontWeight: "400", color: "#000" },
 
   // ── Preview screen
   previewHeader: {
     backgroundColor: "#0E1833", paddingHorizontal: 22,
     paddingBottom: 12, alignItems: "center",
   },
-  previewHeaderText: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  previewHeaderText: { color: "#fff", fontSize: 18, fontWeight: "600" },
 
   previewImageWrap: {
     flex: 1, alignItems: "center", justifyContent: "center",
@@ -1115,7 +1121,7 @@ const styles = StyleSheet.create({
   },
   previewBtnRetake:   { backgroundColor: "#555" },
   previewBtnContinue: { backgroundColor: "#EF3024" },
-  previewBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  previewBtnText: { color: "#fff", fontWeight: "600", fontSize: 15 },
 
   previewLoader: {
     ...StyleSheet.absoluteFillObject,
@@ -1126,7 +1132,7 @@ const styles = StyleSheet.create({
     width: 160, height: 160,
   },
   previewLoaderTitle: {
-    color: "#111", fontSize: 20, fontWeight: "700", textAlign: "center", marginTop: 8,
+    color: "#111", fontSize: 20, fontWeight: "600", textAlign: "center", marginTop: 8,
   },
   previewLoaderSubtitle: {
     color: "#555", fontSize: 15, fontWeight: "400", textAlign: "center",
@@ -1142,9 +1148,9 @@ const styles = StyleSheet.create({
     padding: 28, width: "100%", maxWidth: 360,
     alignItems: "center", gap: 12,
   },
-  warningTitle:   { fontSize: 22, fontWeight: "700", color: "#e53935" },
+  warningTitle:   { ...pageTitle, color: "#e53935" },
   warningIcon:    { fontSize: 60, lineHeight: 72 },
-  warningMessage: { fontSize: 15, fontWeight: "700", color: "#1a2340", textAlign: "center" },
+  warningMessage: { fontSize: 15, fontWeight: "600", color: "#1a2340", textAlign: "center" },
   warningBullet:  { fontSize: 13, color: "#1a2340", alignSelf: "flex-start", lineHeight: 20 },
 
   warningActionBtn: {

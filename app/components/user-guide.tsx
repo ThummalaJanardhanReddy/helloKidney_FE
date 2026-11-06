@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     borderColor: "#D2D2D5",
   },
 
-  title: { fontSize: 20, fontWeight: "700" },
+  title: { fontSize: 20, fontWeight: "600" },
   closeIcon: { width: 24, height: 24 },
 
   stepCard: {
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     // backgroundColor: "red",
   },
 
-  counter: { fontSize: 18, fontWeight: "700", marginBottom: 10 },
+  counter: { fontSize: 18, fontWeight: "600", marginBottom: 10 },
   topText: {
     fontSize: 22,
     fontWeight: "600",
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
   },
 
-  buttonText: { color: "white", fontWeight: "700", fontSize: 16 },
+  buttonText: { color: "white", fontWeight: "600", fontSize: 16 },
 
   dots: {
     flexDirection: "row",

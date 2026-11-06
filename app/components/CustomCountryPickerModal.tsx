@@ -2,6 +2,7 @@ import { COUNTRIES, Country } from "@/src/utils/constants";
 import React, { useState, useEffect } from "react";
 import { Modal, View, TextInput, TouchableOpacity, FlatList, StyleSheet, Dimensions, Platform, StatusBar } from "react-native";
 import Text from "./Text";
+import { pageTitle } from "../shared/commonStyles";
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -178,8 +179,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E0EAF5",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    ...pageTitle,
     color: "#1A2B3C",
   },
   closeButton: {
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: "#1A2B3C",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   dialCode: {
     fontSize: 15,

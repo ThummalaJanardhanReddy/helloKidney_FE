@@ -5,7 +5,7 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Text from "./Text";
-import { colors } from "../shared/commonStyles";
+import { colors, pageTitle } from "../shared/commonStyles";
 
 type Subject = "self" | "other";
 
@@ -36,10 +36,18 @@ export default function StartTestScreen() {
 
   const handleSelect = (subject: Subject) => {
     setSelected(subject);
+    // replace (not push): this screen is a transparentModal, and native
+    // stack modals always render above regular "card" screens regardless of
+    // push order — pushing the next screen left it mounted underneath this
+    // modal instead of on top. Replacing swaps this modal out for the next
+    // screen instead of stacking a card beneath it.
     if (subject === "self") {
-      router.push({ pathname: "/components/TimerCameraUploader" });
+      router.replace({
+        pathname: "/components/health-conditions",
+        params: { subjectType: "self" },
+      });
     } else {
-      router.push({ pathname: "/components/other-patient-details" });
+      router.replace({ pathname: "/components/other-patient-details" });
     }
   };
 
@@ -128,8 +136,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    ...pageTitle,
     color: colors.black,
   },
   closeBtn: {
@@ -142,7 +149,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "400",
     color: colors.textSecondary,
     marginTop: 6,
     marginBottom: 16,
@@ -172,7 +179,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
   },
   cardCaption: {

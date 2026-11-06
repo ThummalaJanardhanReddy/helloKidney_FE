@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     justifyContent: "center",
   },
-  title: { fontSize: 26, fontWeight: "700", marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: "600", marginBottom: 20 },
   input: {
     borderWidth: 1,
     borderColor: "#D2D2D5",
@@ -73,5 +73,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  buttonText: { color: "white", fontWeight: "700", fontSize: 16 },
+  buttonText: { color: "white", fontWeight: "600", fontSize: 16 },
 });

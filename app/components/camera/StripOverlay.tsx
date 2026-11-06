@@ -407,7 +407,7 @@
 //   qrBadgeText: {
 //     color: "#22C55E",
 //     fontSize: 11,
-//     fontWeight: "700",
+//     fontWeight: "600",
 //   },
 //   ringContainer: {
 //     position: "absolute",

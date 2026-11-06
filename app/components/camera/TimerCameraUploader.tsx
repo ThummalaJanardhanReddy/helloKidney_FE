@@ -241,7 +241,7 @@
 //         onPress={handleStartTimer}
 //         disabled={started}
 //         style={[styles.cta, { marginBottom: insets.bottom + 20 }]}
-//         textStyle={{ color: "#fff", fontWeight: "700" }}
+//         textStyle={{ color: "#fff", fontWeight: "600" }}
 //       />
 
 //       {/* ── Exit modal ── */}
@@ -310,7 +310,7 @@
 //   heading: {
 //     color: "#F1F5F9",
 //     fontSize: 26,
-//     fontWeight: "700",
+//     fontWeight: "600",
 //     letterSpacing: -0.5,
 //     marginBottom: 8,
 //     textAlign: "center",
@@ -334,7 +334,7 @@
 //   },
 //   countdownNum: {
 //     fontSize: 48,
-//     fontWeight: "700",
+//     fontWeight: "600",
 //     color: "#334155",
 //   },
 //   countdownActive: {
@@ -403,7 +403,7 @@
 //   bulletText: {
 //     color: "#22D3EE",
 //     fontSize: 12,
-//     fontWeight: "700",
+//     fontWeight: "600",
 //   },
 //   instructionText: {
 //     flex: 1,

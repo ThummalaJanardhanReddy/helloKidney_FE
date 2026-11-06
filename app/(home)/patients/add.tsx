@@ -1,4 +1,4 @@
-import { colors } from "@/app/shared/commonStyles";
+import { colors, pageTitle } from "@/app/shared/commonStyles";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { withTiming } from "react-native-reanimated";
@@ -893,10 +893,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerTitle: {
-    fontSize: rf(20),
-    fontWeight: "600",
+    ...pageTitle,
     color: "#000000",
-    //letterSpacing: -0.3,
   },
   closeBtn: {
     width: 36,
@@ -1056,7 +1054,7 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: rf(14),
     color: "#1A2B3C",
-    fontWeight: "500",
+    fontWeight: "400",
   },
 
   // Footer / Save
@@ -1079,7 +1077,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     letterSpacing: 0.3,
   },

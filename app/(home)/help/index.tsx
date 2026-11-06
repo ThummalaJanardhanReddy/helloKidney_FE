@@ -5,7 +5,7 @@ import React from "react";
 import { Image, Linking, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import Text from "../../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors } from "@/app/shared/commonStyles";
+import { colors, pageTitle } from "@/app/shared/commonStyles";
 import {
   helpVideos,
   helpTopics,
@@ -124,8 +124,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
+    ...pageTitle,
     color: colors.black,
   },
   scrollContent: {
@@ -135,7 +134,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     marginBottom: 12,
   },
@@ -206,7 +205,7 @@ const styles = StyleSheet.create({
   },
   emailTitle: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
   },
   emailSubtitle: {

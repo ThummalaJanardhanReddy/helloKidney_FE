@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 32,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#000",
     textAlign: "center",
     marginBottom: 8,
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
 
   mainMessage: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     textAlign: "center",
     color: "#111",
     lineHeight: 30,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#FFFFFF",
     fontSize: 17,
-    fontWeight: "700",
+    fontWeight: "600",
   },
 
   secondaryButton: {
@@ -185,6 +185,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: "#1E1E2D",
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "400",
   },
 });

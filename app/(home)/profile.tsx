@@ -10,7 +10,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { logout } from "../../src/services/auth";
-import { colors } from "../shared/commonStyles";
+import { colors, pageTitle } from "../shared/commonStyles";
 import { images } from "@/assets";
 import { useUserStore } from "@/app/stores/userStore";
 import { CustomCountryPickerModal } from "@/app/components/CustomCountryPickerModal";
@@ -159,7 +159,7 @@ export default function ProfilePage() {
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.white,
+        backgroundColor: "#F4F4F4",
       }}
     >
       <StatusBar style="dark" backgroundColor={colors.white} animated />
@@ -439,17 +439,15 @@ const BORDER = colors.BORDER;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#F4F4F4",
     position: "relative",
   },
 
   header: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.bg_primary,
     paddingHorizontal: 22,
     paddingBottom: 24,
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   headerTopRow: {
     flexDirection: "row",
@@ -459,8 +457,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
+    ...pageTitle,
     color: colors.black,
   },
   avatarWrap: {
@@ -490,14 +487,14 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     marginBottom: 14,
   },
   editProfileBtn: {
     backgroundColor: colors.bg_primary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary,
     borderRadius: 20,
     paddingHorizontal: 22,
     paddingVertical: 8,
@@ -515,7 +512,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     marginBottom: 10,
   },
@@ -523,8 +520,6 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "white",
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
     paddingHorizontal: 4,
   },
 
@@ -570,8 +565,8 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
+    ...pageTitle,
+    color: colors.black,
   },
 
   modalMsg: {
@@ -631,8 +626,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(0,0,0,0.08)",
   },
   editHeaderTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    ...pageTitle,
     color: colors.black,
   },
   editCloseBtn: {
@@ -713,7 +707,7 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: 14,
     color: "#1A2B3C",
-    fontWeight: "500",
+    fontWeight: "400",
   },
 
   phoneRow: {
@@ -764,7 +758,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     letterSpacing: 0.3,
   },

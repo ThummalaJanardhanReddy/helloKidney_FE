@@ -4,7 +4,7 @@ import React from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import Text from "./Text";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../shared/commonStyles";
+import { colors, pageTitle } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
 import { StatusBar } from "expo-status-bar";
 
@@ -254,8 +254,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
   },
   header: {
-    fontSize: 18,
-    fontWeight: "600",
+    ...pageTitle,
     color: "#000000",
   },
   card: {
@@ -273,7 +272,7 @@ const styles = StyleSheet.create({
   },
   testName: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: 4,
     color: "#333",
   },
@@ -386,7 +385,7 @@ const styles = StyleSheet.create({
 
   metricTitle: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "400",
     color: colors.black,
     textTransform: "capitalize",
   },
@@ -402,7 +401,7 @@ const styles = StyleSheet.create({
 
   metricValue: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
   },
 
@@ -426,7 +425,7 @@ const styles = StyleSheet.create({
 
   uacrValue: {
     fontSize: 26,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "black",
   },
 
@@ -491,7 +490,7 @@ const styles = StyleSheet.create({
 
   warningTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#2E2E2E",
     lineHeight: 24,
     marginBottom: 10,

@@ -37,6 +37,15 @@ export const colors = {
   green: "#4ADE80",
 };
 
+// Shared title style for every page header, tab header, and modal header —
+// change fontSize/fontWeight here once and it applies everywhere. Each
+// screen still sets its own `color` (headers sit on light and dark
+// backgrounds) by spreading this first: `{ ...pageTitle, color: "#fff" }`.
+export const pageTitle = {
+  fontSize: 18,
+  fontWeight: "600" as const,
+};
+
 // Typography constants
 export const typography = {
   h1: {

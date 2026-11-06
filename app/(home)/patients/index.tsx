@@ -18,7 +18,7 @@ import { StatusBar } from "expo-status-bar";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getAllPatients } from "@/src/services/healthworkerService";
 import { useUserStore } from "@/app/stores/userStore";
-import commonStyles, { colors } from "@/app/shared/commonStyles";
+import commonStyles, { colors, pageTitle } from "@/app/shared/commonStyles";
 import { images } from "@/assets";
 import {
   FLOATING_TAB_BAR_HEIGHT,
@@ -316,10 +316,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: "#000000" },
+  headerTitle: { ...pageTitle, color: "#000000" },
   addBtn: {
     fontSize: rf(14),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.DARKBLUE,
   },
 
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   rowInfo: { flex: 1, gap: 3 },
-  rowName: { fontSize: rf(14), fontWeight: "700", color: colors.black, marginBottom: 3 },
+  rowName: { fontSize: rf(14), fontWeight: "600", color: colors.black, marginBottom: 3 },
   rowMetaInline: { fontSize: rf(12), fontWeight: "400", color: colors.black },
   rowMeta: { fontSize: rf(12), color: colors.black },
   chevron: { fontSize: rf(22), color: "#B0C0D8", lineHeight: rf(26) },
@@ -394,5 +394,5 @@ const styles = StyleSheet.create({
 
   empty: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyIcon: { fontSize: 40 },
-  emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "500" },
+  emptyText: { fontSize: rf(15), color: "#9BADC4", fontWeight: "400" },
 });

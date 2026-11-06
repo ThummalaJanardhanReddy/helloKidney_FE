@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 import Text from "./Text";
-import { colors } from "../shared/commonStyles";
+import { colors, pageTitle } from "../shared/commonStyles";
 
 const ACCENT = colors.ACCENT;
 const BORDER = colors.BORDER;
@@ -131,7 +131,7 @@ export default function OtherPatientDetailsScreen() {
     if (!validateForm()) return;
 
     router.push({
-      pathname: "/components/TimerCameraUploader",
+      pathname: "/components/health-conditions",
       params: {
         subjectType: "other",
         relationType: form.relationType,
@@ -160,7 +160,7 @@ export default function OtherPatientDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <Text style={styles.headerTitle}>Other's Details</Text>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -309,8 +309,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(0,0,0,0.08)",
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
+    ...pageTitle,
     color: "#000000",
   },
   closeBtn: {
@@ -410,7 +409,7 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: 14,
     color: "#1A2B3C",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   footer: {
     backgroundColor: colors.white,
@@ -428,7 +427,7 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     letterSpacing: 0.3,
   },
@@ -467,8 +466,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E0EAF5",
   },
   modalHeaderTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...pageTitle,
     color: "#1A2B3C",
   },
   modalCloseBtn: {
@@ -492,7 +490,7 @@ const styles = StyleSheet.create({
   relationText: {
     fontSize: 15,
     color: "#1A2B3C",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   relationTextSelected: {
     color: "#2E7BE0",

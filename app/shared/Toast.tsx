@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   toastText: {
     color: "#fff",
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "400",
   },
 });
 

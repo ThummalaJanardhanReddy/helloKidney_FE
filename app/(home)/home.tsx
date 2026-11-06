@@ -28,7 +28,7 @@ import {
 } from "react-native-safe-area-context";
 // import { StatusBar } from "expo-status-bar";
 import RoundButton from "../shared/RoundButton";
-import { colors } from "../shared/commonStyles";
+import { colors, pageTitle } from "../shared/commonStyles";
 import { useUserStore } from "../stores/userStore";
 import { steps } from "../shared/userGuideSteps";
 import { KIDNEY_RESULT_SVG } from "../shared/resultSvgs";
@@ -707,7 +707,7 @@ function HealthWorkerHome() {
                   margin: 0,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: "700" }}>
+                <Text style={{ fontSize: 13, fontWeight: "600" }}>
                   Registered Patients
                 </Text>
                 <TouchableOpacity
@@ -764,7 +764,7 @@ function HealthWorkerHome() {
                           {
                             textAlign: "left",
                             fontSize: 12,
-                            fontWeight: "500",
+                            fontWeight: "400",
                             paddingLeft: 71,
                             marginBottom: 6,
                           },
@@ -786,7 +786,7 @@ function HealthWorkerHome() {
         </View>
         <View style={[hw.lightSection, { paddingTop: 0 }]}>
           <Text
-            style={{ fontSize: 13, fontWeight: "700", color: colors.black }}
+            style={{ fontSize: 13, fontWeight: "600", color: colors.black }}
           >
             Other Links
           </Text>
@@ -867,28 +867,28 @@ function HealthWorkerHome() {
 const TESTIMONIALS = [
   {
     name: "Asha R.",
-    role: "Patient",
+    role: "Kukatpally",
     quote:
       "The UACR test was so easy to do at home. Results came back within minutes and gave me real peace of mind.",
     avatar: images.femaleProfile,
   },
   {
     name: "Rajesh K.",
-    role: "Patient",
+    role: "Guntur",
     quote:
       "I was worried about my kidney health, but HelloKidney made it simple to track and understand my results.",
     avatar: images.maleProfile,
   },
   {
     name: "Priya M.",
-    role: "Patient",
+    role: "Miyapur",
     quote:
       "Quick, reliable and affordable. I recommend this to anyone managing diabetes who wants to stay on top of things.",
     avatar: images.femaleProfile,
   },
   {
     name: "Suresh V.",
-    role: "Patient",
+    role: "Hydrabad",
     quote:
       "The app guided me step by step through the test. No need to visit a lab every time — huge time saver.",
     avatar: images.maleProfile,
@@ -1227,7 +1227,7 @@ function PatientHome() {
         <Text
           style={{
             fontSize: 13,
-            fontWeight: "700",
+            fontWeight: "600",
             color: colors.black,
             marginTop: 14,
           }}
@@ -1277,7 +1277,7 @@ function PatientHome() {
         <Text
           style={{
             fontSize: 13,
-            fontWeight: "700",
+            fontWeight: "600",
             color: colors.black,
             marginTop: 14,
           }}
@@ -1337,10 +1337,43 @@ function PatientHome() {
           </>
         )}
 
+        <View style={hw.rateCard}>
+          <View style={hw.rateCardIconWrap}>
+            <Ionicons name="star" size={28} color="#F5A623" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={hw.assistCardTitle}>Enjoying Nephkare?</Text>
+            <Text style={hw.assistCardSubtitle}>
+              Your review helps us reach more people
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={hw.rateBtnWrapper}
+              onPress={() => {
+                const androidUrl =
+                  "https://play.google.com/store/apps/details?id=ai.hellokidney";
+                const iosUrl =
+                  "https://apps.apple.com/in/app/hellokidney/id1619042064";
+                Linking.openURL(Platform.OS === "ios" ? iosUrl : androidUrl);
+              }}
+            >
+              <LinearGradient
+                colors={["#E1121B", "#BA1A22"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={hw.rateBtn}
+              >
+                <Ionicons name="star" size={16} color={colors.white} />
+                <Text style={hw.rateBtnText}>Rate our App</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <Text
           style={{
             fontSize: 13,
-            fontWeight: "700",
+            fontWeight: "600",
             color: colors.black,
             marginTop: 14,
             marginBottom: 0,
@@ -1387,7 +1420,7 @@ const shared = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#b0b2b8",
   },
-  modalTitle: { fontSize: 20, fontWeight: "700", color: "#0e1833" },
+  modalTitle: { ...pageTitle, color: "#0e1833" },
   closeIcon: { width: 26, height: 26 },
   stepCard: {
     width: screenWidth,
@@ -1403,7 +1436,7 @@ const shared = StyleSheet.create({
   },
   stepTopText: {
     fontSize: 18,
-    fontWeight: "500",
+    fontWeight: "400",
     marginBottom: 10,
     textAlign: "center",
     color: "#0e1833",
@@ -1427,7 +1460,7 @@ const shared = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
-  stepButtonText: { color: "white", fontSize: 16, fontWeight: "700" },
+  stepButtonText: { color: "white", fontSize: 16, fontWeight: "600" },
   dotContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -1454,7 +1487,7 @@ const shared = StyleSheet.create({
     alignItems: "center",
   },
   infoImage: { height: 60, width: 60 },
-  infoText: { fontSize: 16, fontWeight: "500" },
+  infoText: { fontSize: 16, fontWeight: "400" },
   userGuideBtn: {
     marginTop: 6,
     backgroundColor: "white",
@@ -1465,7 +1498,7 @@ const shared = StyleSheet.create({
     borderColor: "#EF3024",
     borderWidth: 1,
   },
-  userGuideBtnText: { color: "red", fontWeight: "700", fontSize: 14 },
+  userGuideBtnText: { color: "red", fontWeight: "600", fontSize: 14 },
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1485,7 +1518,7 @@ const hw = StyleSheet.create({
   header: {
     paddingHorizontal: 22,
     paddingTop: 0,
-    paddingBottom: 16,
+    paddingBottom: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1513,7 +1546,7 @@ const hw = StyleSheet.create({
   },
   addPatientBtn: {
     fontSize: rf(14),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.DARKBLUE,
   },
   headerAvatar: {
@@ -1535,18 +1568,18 @@ const hw = StyleSheet.create({
   //   alignItems: "center",
   //   justifyContent: "center",
   // },
-  // initialsText: { fontSize: rf(22), fontWeight: "700", color: "#FFFFFF" },
+  // initialsText: { fontSize: rf(22), fontWeight: "600", color: "#FFFFFF" },
   profileName: {
     fontSize: rf(20),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },
-  welcomeText: { fontSize: rf(15), color: "#000000", fontWeight: "500" },
+  welcomeText: { fontSize: rf(15), color: "#000000", fontWeight: "400" },
   nameText: {
     fontSize: rf(20),
     color: "#000000",
-    fontWeight: "700",
+    fontWeight: "600",
     letterSpacing: -0.2,
   },
   searchBar: {
@@ -1576,7 +1609,7 @@ const hw = StyleSheet.create({
   // the right) with different background, button, and image per card.
   assistCardTitle: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     marginBottom: 4,
   },
@@ -1594,6 +1627,41 @@ const hw = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  rateCard: {
+    backgroundColor: "#FFF8E8",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginTop: 14,
+  },
+  rateCardIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rateBtnWrapper: {
+    alignSelf: "flex-start",
+    borderRadius: 19,
+  },
+  rateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 38,
+    paddingHorizontal: 18,
+    borderRadius: 19,
+  },
+  rateBtnText: { color: colors.white, fontWeight: "600", fontSize: rf(14) },
   whatsappCard: {
     backgroundColor: "#E8F5EC",
     borderRadius: 16,
@@ -1617,7 +1685,7 @@ const hw = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 19,
   },
-  whatsappBtnText: { color: colors.black, fontWeight: "700", fontSize: rf(14) },
+  whatsappBtnText: { color: colors.black, fontWeight: "600", fontSize: rf(14) },
   helpCard: {
     backgroundColor: colors.white,
     borderRadius: 16,
@@ -1641,7 +1709,7 @@ const hw = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 19,
   },
-  helpCardBtnText: { color: colors.primary, fontWeight: "700", fontSize: rf(14) },
+  helpCardBtnText: { color: colors.primary, fontWeight: "600", fontSize: rf(14) },
 
   footerTagline: {
     alignItems: "center",
@@ -1652,13 +1720,13 @@ const hw = StyleSheet.create({
   },
   footerTaglineTitle: {
     fontSize: rf(26),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#F2B4BA",
     textAlign: "center",
   },
   footerTaglineSubtitle: {
     fontSize: rf(15),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     textAlign: "center",
   },
@@ -1690,12 +1758,12 @@ const hw = StyleSheet.create({
   statLabel: { fontSize: rf(12), color: colors.black },
   statValue: {
     fontSize: rf(20),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     letterSpacing: -0.5,
   },
 
-  sectionTitle: { fontSize: rf(16), fontWeight: "700", color: "#0D1B2E" },
+  sectionTitle: { fontSize: rf(16), fontWeight: "600", color: "#0D1B2E" },
 
   // Empty state
   emptyCard: {
@@ -1718,7 +1786,7 @@ const hw = StyleSheet.create({
     justifyContent: "center",
   },
   emptyPlus: { fontSize: rf(22), color: "#1A2B3C", lineHeight: rf(26) },
-  emptyText: { fontSize: rf(15), fontWeight: "700", color: "#1A2B3C" },
+  emptyText: { fontSize: rf(15), fontWeight: "600", color: "#1A2B3C" },
 
   // Single patient card
   patientCard: {
@@ -1768,7 +1836,7 @@ const hw = StyleSheet.create({
   },
   startTestBtnText: {
     fontSize: rf(15),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     letterSpacing: 0.2,
   },
@@ -1792,7 +1860,7 @@ const hw = StyleSheet.create({
   },
   footerSub: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
     textAlign: "center",
   },
@@ -1805,9 +1873,9 @@ const pt = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg_primary },
   scrollContent: {
     paddingHorizontal: 22,
-    paddingTop: 10,
+    paddingTop: 5,
     paddingBottom: FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_BOTTOM_MARGIN,
-    gap: 10,
+    gap: 5,
   },
   startSection: { alignItems: "center", gap: 14 },
   startCard: {
@@ -1822,12 +1890,12 @@ const pt = StyleSheet.create({
   },
   startCardTitleSmall: {
     fontSize: rf(16),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.primary,
   },
   startCardTitleLarge: {
     fontSize: rf(26),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.primary,
     marginTop: 2,
   },
@@ -1876,7 +1944,7 @@ const pt = StyleSheet.create({
   },
   startCardTitleOld: {
     fontSize: rf(15),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
     marginBottom: 4,
   },
@@ -1897,12 +1965,12 @@ const pt = StyleSheet.create({
   },
   startCardCtaTextOld: {
     fontSize: rf(12),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.primary,
   },
   startCardCtaText: {
     fontSize: rf(14),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
   },
   kitCard: {
@@ -1916,7 +1984,7 @@ const pt = StyleSheet.create({
   kitCardImage: { alignSelf: "flex-start", paddingRight: 8 },
   kitCardTitle: {
     fontSize: rf(15),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
     marginBottom: 6,
   },
@@ -1938,7 +2006,7 @@ const pt = StyleSheet.create({
   },
   kitCardBtnText: {
     fontSize: rf(14),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
   },
   resultCard: {
@@ -1983,7 +2051,7 @@ const pt = StyleSheet.create({
   },
   resultStageValue: {
     fontSize: rf(20),
-    fontWeight: "800",
+    fontWeight: "700",
   },
   resultStageLabel: {
     fontSize: rf(11),
@@ -2009,7 +2077,7 @@ const pt = StyleSheet.create({
   },
   resultStatValue: {
     fontSize: rf(14),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
   },
   testimonialCard: {
@@ -2037,7 +2105,7 @@ const pt = StyleSheet.create({
   },
   testimonialName: {
     fontSize: rf(13),
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
   },
   testimonialRole: {
@@ -2056,10 +2124,10 @@ const pt = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  initialsText: { fontSize: rf(22), fontWeight: "700", color: "#FFFFFF" },
+  initialsText: { fontSize: rf(22), fontWeight: "600", color: "#FFFFFF" },
   profileName: {
     fontSize: rf(20),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#0D1B2E",
     letterSpacing: -0.3,
   },

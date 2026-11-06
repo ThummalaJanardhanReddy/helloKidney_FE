@@ -550,11 +550,11 @@ const styles = StyleSheet.create({
   },
   riskStage: {
     fontSize: 26,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   riskLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     textAlign: "center",
     marginTop: 2,
@@ -584,17 +584,17 @@ const styles = StyleSheet.create({
   metricLabel: {
     flex: 1,
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#1A1A1A",
   },
   metricValue: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
   },
   metricUnit: {
     fontSize: 11,
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#1A1A1A",
   },
   metricSubValue: {
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   },
   refHeaderText: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
   },
   refChipsRow: {
@@ -634,11 +634,11 @@ const styles = StyleSheet.create({
   },
   rangeChipStage: {
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   rangeChipText: {
     fontSize: 10,
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#1A1A1A",
   },
 
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
   },
   meaningTitle: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.black,
     marginBottom: 2,
   },
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
   },
   outlineBtnText: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.blue,
   },
   filledBtn: {
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
   },
   filledBtnText: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
   },
 
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
   },
   testAgainText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.white,
   },
 });
