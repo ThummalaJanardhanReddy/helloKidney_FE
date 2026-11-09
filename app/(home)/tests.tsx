@@ -565,23 +565,23 @@ export default function TestList() {
   );
 
   // Loading State
-  if (loading) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Test List</Text>
-        </View>
-        <View style={styles.skeletonContainer}>
-          {Array.from({ length: SKELETON_CARD_COUNT }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </View>
-      </View>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <View style={[styles.container, { paddingTop: insets.top }]}>
+  //       <View style={styles.header}>
+  //         <Text style={styles.headerText}>Test List</Text>
+  //       </View>
+  //       <View style={styles.skeletonContainer}>
+  //         {Array.from({ length: SKELETON_CARD_COUNT }).map((_, i) => (
+  //           <SkeletonCard key={i} />
+  //         ))}
+  //       </View>
+  //     </View>
+  //   );
+  // }
 
   // Main Render
-  return (
+  return ( 
     <View style={[styles.container]}>
       <StatusBar backgroundColor={colors.white} barStyle={"dark-content"} />
       {/* Header */}
@@ -633,14 +633,14 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.white,
     paddingHorizontal: 22,
-    paddingBottom: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.08)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingBottom: 8,
+    // borderBottomWidth: 1,
+    // borderBottomColor: "rgba(0,0,0,0.08)",
+    // shadowColor: "#000",
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.06,
+    // shadowRadius: 4,
+    // elevation: 3,
   },
   headerText: {
     ...pageTitle,
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderColor: "#E3B3B3",
     borderWidth: 1,
-    marginHorizontal: 16,
+    marginHorizontal: 22,
     marginBottom: 14,
   },
   cardHeader: {
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
     width: "70%",
   },
   listContent: {
-    paddingTop: 16,
+    paddingTop: 5,
     paddingBottom: FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_BOTTOM_MARGIN,
   },
   listFooter: {

@@ -31,7 +31,10 @@ const CONDITIONS: {
   { key: "kidney_disease", label: "Kidney Disease earlier (AKI)", image: images.kidneyCondition, grayImage: images.kidneyConditionGray },
   { key: "brain_stroke", label: "Brain Stroke", emoji: "🧠" },
   { key: "obesity", label: "Obesity", image: images.obesity, grayImage: images.obesityGray },
-  { key: "no_issues", label: "No Issues", image: images.noIssue, grayImage: images.noIssueGray },
+  // The supplied no_issue.svg is a glossy emoji-style smiley — a different
+  // art style from the flat line icons the other cards use — so this one
+  // uses a matching Ionicon instead rather than looking out of place.
+  { key: "no_issues", label: "No Issues", iconName: "happy-outline" },
 ];
 
 export default function HealthConditionsScreen() {
@@ -119,7 +122,11 @@ export default function HealthConditionsScreen() {
                       resizeMode="contain"
                     />
                   ) : condition.iconName ? (
-                    <Ionicons name={condition.iconName} size={28} color="#8B93A1" />
+                    <Ionicons
+                      name={condition.iconName}
+                      size={28}
+                      color={isSelected ? colors.primary : "#8B93A1"}
+                    />
                   ) : (
                     // no gray artwork for this one (emoji glyphs ignore color/tint
                     // styling) — dim it instead so it still reads as "unselected"

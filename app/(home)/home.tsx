@@ -578,13 +578,13 @@ function HealthWorkerHome() {
           // double-clears the status bar — this just needs its own breathing
           // room on top of that.
           <View style={{ paddingTop: 12 }}>
-            <LinearGradient
+            {/* <LinearGradient
               pointerEvents="none"
               colors={CORNER_ACCENT_COLORS}
               start={{ x: 1, y: 0 }}
               end={{ x: 0, y: 1 }}
               style={hw.cornerAccent}
-            />
+            /> */}
             <View style={hw.header}>
               <View style={hw.headerLeft}>
                 <TouchableOpacity activeOpacity={0.7} hitSlop={10} onPress={handleMenuPress}>
@@ -843,6 +843,39 @@ function HealthWorkerHome() {
               </View> */}
             </>
           )}
+
+          <View style={hw.rateCard}>
+            <View style={hw.rateCardIconWrap}>
+              <Ionicons name="star" size={28} color="#F5A623" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={hw.assistCardTitle}>Enjoying HelloKidney?</Text>
+              <Text style={hw.assistCardSubtitle}>
+                Your review helps us reach more people
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={hw.rateBtnWrapper}
+                onPress={() => {
+                  const androidUrl =
+                    "https://play.google.com/store/apps/details?id=ai.hellokidney";
+                  const iosUrl =
+                    "https://apps.apple.com/in/app/hellokidney/id1619042064";
+                  Linking.openURL(Platform.OS === "ios" ? iosUrl : androidUrl);
+                }}
+              >
+                <LinearGradient
+                  colors={["#E1121B", "#BA1A22"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={hw.rateBtn}
+                >
+                  <Ionicons name="star" size={16} color={colors.white} />
+                  <Text style={hw.rateBtnText}>Rate our App</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         {/* Footer tagline */}

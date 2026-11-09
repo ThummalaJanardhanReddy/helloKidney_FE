@@ -49,10 +49,16 @@ const REGULAR_SIZES = {
   // knob for how much breathing room that selected background gets.
   touchablePaddingH: 16,
   labelFontSize: 11,
-  pillPaddingH: 8,
+  // Tightened from the original 8/14/16 — on narrower screens (iPhone
+  // SE/XS/mini) the 3-tab pill at full label size was running out of room
+  // beside the FAB and clipping "Patients". Shrinking the pill's own
+  // padding and nudging the whole bar left (less edge padding, less gap
+  // before the FAB) frees up width for the tab content itself without
+  // touching each tab's own icon/label/padding sizing.
+  pillPaddingH: 4,
   fabWidthMultiplier: 2.5,
-  wrapperGap: 14,
-  wrapperPaddingLeft: 16,
+  wrapperGap: 6,
+  wrapperPaddingLeft: 6,
 };
 const COMPACT_SIZES = {
   itemGap: 1,
@@ -524,6 +530,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: PILL_RADIUS,
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
+   
   },
   fabTouchable: {
     flex: 1,

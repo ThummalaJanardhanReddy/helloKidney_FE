@@ -77,7 +77,7 @@ function PatientRow({ item, onPress }: { item: Patient; onPress: () => void }) {
           {String(item.patient_id).padStart(4, "0")} | {item.mobile_no}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
+      <Ionicons name="chevron-forward" size={20} color="#B0C0D8" />
     </TouchableOpacity>
   );
 }
@@ -169,14 +169,14 @@ function PinnedSearchHeader({
           <SearchInput query={query} onChangeText={onChangeText} onClear={onClear} />
         </View>
       }
-      headerCenterStyle={{ flex: 1, paddingHorizontal: 16 }}
+      headerCenterStyle={{ flex: 1, paddingHorizontal: 22 }}
       headerLeftStyle={{ width: 0 }}
       headerRightStyle={{ width: 0 }}
       noBottomBorder
       SurfaceComponent={() => (
         <FadingView
           opacity={showNavBar}
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.white }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg_primary }]}
         />
       )}
     />
@@ -240,7 +240,7 @@ export default function PatientsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" backgroundColor={colors.white} animated/>
+      <StatusBar style="dark" backgroundColor={colors.bg_primary} animated/>
 
       {/* List */}
       <FlatListWithHeaders
@@ -276,7 +276,7 @@ export default function PatientsScreen() {
           // SearchInput's height:40 + marginBottom:20 — so adding `insets.top`
           // again here double-clears the status bar. Just breathing room.
           <View style={{ paddingTop: 12 }}>
-            <View style={[styles.header, { paddingTop: 0, paddingBottom: 16 }]}>
+            <View style={[styles.header, { paddingTop: 0, paddingBottom: 8 }]}>
               <Text style={styles.headerTitle}>Patient List</Text>
             </View>
             <View style={styles.searchWrapper}>
@@ -303,13 +303,13 @@ export default function PatientsScreen() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const HEADER_BG = colors.white;
+const HEADER_BG = colors.bg_primary;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: colors.bg_primary },
 
   header: {
-    backgroundColor: colors.white,
+    backgroundColor: HEADER_BG,
     paddingHorizontal: 22,
     paddingBottom: 18,
     flexDirection: "row",
@@ -326,13 +326,7 @@ const styles = StyleSheet.create({
   searchWrapper: {
     backgroundColor: HEADER_BG,
     paddingHorizontal: 22,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.08)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 3,
+    
   },
   searchBar: {
     backgroundColor: "#FFFFFF",
@@ -344,28 +338,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 40,
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 14,
   },
   searchIcon: { fontSize: rf(15) },
   searchInput: { flex: 1, fontSize: rf(14), color: colors.black, padding: 0 },
   clearBtn: { fontSize: rf(13), color: "#9BADC4", paddingHorizontal: 4 },
 
   listContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.bg_primary,
+    paddingTop: 5,
     paddingBottom: FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_BOTTOM_MARGIN,
   },
-  emptyListContent: { flexGrow: 1, backgroundColor: "#FFFFFF", paddingBottom: 20 },
+  emptyListContent: { flexGrow: 1, backgroundColor: colors.bg_primary, paddingBottom: 20 },
 
+  // Same internal padding (14 vertical) as the old divider row, so each
+  // card keeps the exact same height — only the flat, full-bleed list
+  // treatment changed to individual cards.
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 22,
+    paddingHorizontal: 14,
     paddingVertical: 14,
     backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     gap: 14,
-    borderColor: colors.BORDER1,
-    borderWidth: 0,
-    borderBottomWidth: 0.8
+    marginHorizontal: 22,
+    marginBottom: 10,
+    shadowColor: "#2B3A55",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
   },
   avatar: {
     width: 32,
